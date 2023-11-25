@@ -307,7 +307,7 @@ public class SDKHandler : IDisposable
     /// </summary>
     public SDKHandler(ILoggerFactory loggerFactory)
     {
-        this.logger = loggerFactory.CreateLogger<SDKHandler>();
+        logger = loggerFactory.CreateLogger<SDKHandler>();
 
         STAThread.SetLogAction(loggerFactory.CreateLogger(nameof(STAThread)));
         STAThread.FatalError += STAThread_FatalError;
@@ -1289,7 +1289,7 @@ public class SDKHandler : IDisposable
         if (IsLiveViewOn)
         {
             var t = LogInfoAsync("Stopping liveview");
-            this.LVoff = true;
+            LVoff = true;
             IsLiveViewOn = false;
 
             //Wait 5 seconds for evf thread to finish, otherwise manually stop
@@ -1456,7 +1456,7 @@ public class SDKHandler : IDisposable
         if (!IsFilming)
         {
             StartFilming();
-            this.DownloadVideo = true;
+            DownloadVideo = true;
             ImageSaveDirectory = FilePath;
         }
     }
@@ -1508,7 +1508,7 @@ public class SDKHandler : IDisposable
 
             //when recording videos, it has to be saved on the camera internal memory
             SetSetting(PropID_SaveTo, (uint)EdsSaveTo.Camera);
-            this.DownloadVideo = false;
+            DownloadVideo = false;
             //start the video recording
 
             var t = LogInfoAsync("Start filming");
@@ -1587,9 +1587,9 @@ public class SDKHandler : IDisposable
 
                                                                               takePhotoCompletionSource = new TaskCompletionSource<FileInfo>();
                                                                               SetSaveToLocation(saveFile.Directory);
-                                                                              this.ImageSaveFilename = saveFile.Name;
+                                                                              ImageSaveFilename = saveFile.Name;
 
-                                                                              this.TakePhoto();
+                                                                              TakePhoto();
 
                                                                               await takePhotoCompletionSource.Task;
                                                                               if (takePhotoCompletionSource.Task.Status == TaskStatus.RanToCompletion)
@@ -1672,7 +1672,7 @@ public class SDKHandler : IDisposable
     public void SetSaveToLocation(DirectoryInfo directory)
     {
         SetSaveToHost();
-        this.ImageSaveDirectory = directory.FullName;
+        ImageSaveDirectory = directory.FullName;
     }
 
     /// <summary>
@@ -1906,7 +1906,7 @@ public class SDKHandler : IDisposable
         return volumes;
     }
 
-    public CameraFileEntry GetCamera() => new CameraFileEntry("Camera", CameraFileEntryTypes.Camera, MainCamera.Ref);
+    public CameraFileEntry GetCamera() => new("Camera", CameraFileEntryTypes.Camera, MainCamera.Ref);
 
     public void DeleteFileItem(CameraFileEntry fileItem)
     {

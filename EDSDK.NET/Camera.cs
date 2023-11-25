@@ -33,9 +33,9 @@ public class Camera
     public Camera(nint Reference)
     {
         if (Reference == 0) throw new ArgumentNullException("Camera pointer is zero");
-        this.Ref = Reference;
+        Ref = Reference;
         EdsDeviceInfo dinfo;
         Error = EdsGetDeviceInfo(Reference, out dinfo);
-        this.Info = dinfo;
+        Info = dinfo;
     }
 }

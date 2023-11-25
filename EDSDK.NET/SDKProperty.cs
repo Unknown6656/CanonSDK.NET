@@ -4,9 +4,9 @@ public class SDKProperty
 {
     public SDKProperty(string name, uint value, bool matched = true)
     {
-        this.Name = name;
-        this.Value = value;
-        this.Matched = matched;
+        Name = name;
+        Value = value;
+        Matched = matched;
     }
     public string Name { get; private set; }
     public uint Value { get; private set; }

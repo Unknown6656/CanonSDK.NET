@@ -44,8 +44,8 @@ public class CameraFileEntry
     public CameraFileEntry(string Name, CameraFileEntryTypes type, nint reference)
     {
         this.Name = Name;
-        this.Type = type;
-        this.Reference = reference;
+        Type = type;
+        Reference = reference;
     }
 
     /// <summary>
