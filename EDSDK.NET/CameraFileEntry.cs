@@ -52,19 +52,13 @@ public class CameraFileEntry
     /// Adds subentries (subfolders) to this entry
     /// </summary>
     /// <param name="Entries">the entries to add</param>
-    public void AddSubEntries(CameraFileEntry[] Entries)
-    {
-        this.Entries = Entries;
-    }
+    public void AddSubEntries(CameraFileEntry[] Entries) => this.Entries = Entries;
 
     /// <summary>
     /// Adds a thumbnail to this entry
     /// </summary>
     /// <param name="Thumbnail">The thumbnail to add</param>
-    public void AddThumb(Bitmap Thumbnail)
-    {
-        this.Thumbnail = Thumbnail;
-    }
+    public void AddThumb(Bitmap Thumbnail) => this.Thumbnail = Thumbnail;
 
     public EdsVolumeInfo Volume { get; set; }
 }

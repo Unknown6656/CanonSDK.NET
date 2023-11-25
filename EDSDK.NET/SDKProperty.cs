@@ -16,8 +16,5 @@ public class SDKProperty
     /// </summary>
     public bool Matched { get; private set; }
 
-    internal object ValueToString()
-    {
-        return "0x" + Value.ToString("X");
-    }
+    internal object ValueToString() => "0x" + Value.ToString("X");
 }

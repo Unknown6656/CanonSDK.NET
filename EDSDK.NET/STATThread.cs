@@ -14,15 +14,9 @@ public static class STAThread
 
     public static event EventHandler<EventArgs> FatalError;
 
-    static void OnFatalError()
-    {
-        FatalError?.Invoke(null, EventArgs.Empty);
-    }
+    static void OnFatalError() => FatalError?.Invoke(null, EventArgs.Empty);
 
-    public static void SetLogAction(ILogger logger)
-    {
-        STAThread.logger = logger;
-    }
+    public static void SetLogAction(ILogger logger) => STAThread.logger = logger;
 
     /// <summary>
     /// The object that is used to lock the live view thread
@@ -114,10 +108,7 @@ public static class STAThread
     /// </summary>
     /// <param name="a">The command to run on this thread</param>
     /// <returns>An STA thread</returns>
-    public static Thread Create(Action a)
-    {
-        return Create(a, "STA thread: " + Guid.NewGuid().ToString());
-    }
+    public static Thread Create(Action a) => Create(a, "STA thread: " + Guid.NewGuid().ToString());
 
     /// <summary>
     /// Creates an STA thread that can safely execute SDK commands
@@ -164,35 +155,32 @@ public static class STAThread
     /// Safely executes an SDK command
     /// </summary>
     /// <param name="a">The SDK command</param>
-    public static void ExecuteSafely(Action a)
-    {
-        TryLockAndExecute(runLock, nameof(runLock), TimeSpan.FromSeconds(30), () =>
-        {
+    public static void ExecuteSafely(Action a) => TryLockAndExecute(runLock, nameof(runLock), TimeSpan.FromSeconds(30), () =>
+                                                       {
 
-            if (!isRunning)
-            {
-                return;
-            }
+                                                           if (!isRunning)
+                                                           {
+                                                               return;
+                                                           }
 
-            if (IsSTAThread)
-            {
-                runAction = a;
-                TryLockAndExecute(threadLock, nameof(threadLock), TimeSpan.FromSeconds(30), () =>
-                {
-                    Monitor.Pulse(threadLock);
-                    Monitor.Wait(threadLock);
-                });
-                if (runException != null) throw runException;
-            }
-            else
-            {
-                TryLockAndExecute(ExecLock, nameof(ExecLock), TimeSpan.FromSeconds(30), () =>
-                {
-                    a();
-                });
-            }
-        });
-    }
+                                                           if (IsSTAThread)
+                                                           {
+                                                               runAction = a;
+                                                               TryLockAndExecute(threadLock, nameof(threadLock), TimeSpan.FromSeconds(30), () =>
+                                                               {
+                                                                   Monitor.Pulse(threadLock);
+                                                                   Monitor.Wait(threadLock);
+                                                               });
+                                                               if (runException != null) throw runException;
+                                                           }
+                                                           else
+                                                           {
+                                                               TryLockAndExecute(ExecLock, nameof(ExecLock), TimeSpan.FromSeconds(30), () =>
+                                                               {
+                                                                   a();
+                                                               });
+                                                           }
+                                                       });
 
     /// <summary>
     /// Safely executes an SDK command with return value
@@ -206,35 +194,32 @@ public static class STAThread
         return result;
     }
 
-    private static void SafeExecutionLoop()
-    {
-        TryLockAndExecute(threadLock, nameof(threadLock), TimeSpan.FromSeconds(30), () => 
-        {
-            Thread cThread = Thread.CurrentThread;
-            while (true)
-            {
-                Monitor.Wait(threadLock);
-                if (!isRunning)
-                {
-                    return;
-                }
-                runException = null;
-                try
-                {
-                    TryLockAndExecute(ExecLock, nameof(ExecLock), TimeSpan.FromSeconds(30), () =>
-                    {
+    private static void SafeExecutionLoop() => TryLockAndExecute(threadLock, nameof(threadLock), TimeSpan.FromSeconds(30), () =>
+                                                    {
+                                                        Thread cThread = Thread.CurrentThread;
+                                                        while (true)
+                                                        {
+                                                            Monitor.Wait(threadLock);
+                                                            if (!isRunning)
+                                                            {
+                                                                return;
+                                                            }
+                                                            runException = null;
+                                                            try
+                                                            {
+                                                                TryLockAndExecute(ExecLock, nameof(ExecLock), TimeSpan.FromSeconds(30), () =>
+                                                                {
 
-                        logger.LogInformation("Executing action on ThreadName: {ThreadName}, ApartmentState: {ApartmentState}", cThread.Name, cThread.GetApartmentState());
-                        runAction();
-                    });
-                }
-                catch (Exception ex)
-                {
-                    logger.LogInformation("Exception on ThreadName: {ThreadName}, ApartmentState: {ApartmentState}", cThread.Name, cThread.GetApartmentState());
-                    runException = ex;
-                }
-                Monitor.Pulse(threadLock);
-            }
-        });
-    }
+                                                                    logger.LogInformation("Executing action on ThreadName: {ThreadName}, ApartmentState: {ApartmentState}", cThread.Name, cThread.GetApartmentState());
+                                                                    runAction();
+                                                                });
+                                                            }
+                                                            catch (Exception ex)
+                                                            {
+                                                                logger.LogInformation("Exception on ThreadName: {ThreadName}, ApartmentState: {ApartmentState}", cThread.Name, cThread.GetApartmentState());
+                                                                runException = ex;
+                                                            }
+                                                            Monitor.Pulse(threadLock);
+                                                        }
+                                                    });
 }
