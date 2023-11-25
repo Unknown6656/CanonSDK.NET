@@ -1,9 +1,10 @@
-﻿using System;
-using System.Drawing;
+﻿using System.Drawing;
+using System;
 
-using static EDSDKLib.EDSDK;
+using EDSDK.Native;
 
 namespace EDSDK.NET;
+
 
 public enum CameraFileEntryTypes
 {

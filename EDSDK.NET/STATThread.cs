@@ -1,7 +1,8 @@
+using System.Threading;
+using System;
+
 using Microsoft.Extensions.Logging;
 
-using System;
-using System.Threading;
 
 namespace EDSDK.NET;
 

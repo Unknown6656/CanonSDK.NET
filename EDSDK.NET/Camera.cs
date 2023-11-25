@@ -1,6 +1,7 @@
 ﻿using System;
 
-using static EDSDKLib.EDSDK;
+using EDSDK.Native;
+
 
 namespace EDSDK.NET;
 

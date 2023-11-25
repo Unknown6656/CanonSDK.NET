@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 using Microsoft.Extensions.Logging;
 
-using static EDSDKLib.EDSDK;
+using EDSDK.Native;
 
 namespace EDSDK.NET;
 
