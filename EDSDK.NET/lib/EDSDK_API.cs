@@ -255,6 +255,16 @@ public enum EdsETTL2Mode
     kEdsETTL2ModeAverage = 1,
 }
 
+public enum EdsBracket
+    : uint
+{
+    Bracket_AEB = 0x01,
+    Bracket_ISOB = 0x02,
+    Bracket_WBB = 0x04,
+    Bracket_FEB = 0x08,
+    Bracket_Unknown = 0xffffffff,
+}
+
 /// <summary>
 /// DC Strobe
 /// </summary>
@@ -443,10 +453,10 @@ public struct EdsTime
 [StructLayout(LayoutKind.Sequential)]
 public struct EdsDeviceInfo
 {
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = PInvoke.EDS_MAX_NAME)]
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = EDSDK_API.EDS_MAX_NAME)]
     public string szPortName;
 
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = PInvoke.EDS_MAX_NAME)]
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = EDSDK_API.EDS_MAX_NAME)]
     public string szDeviceDescription;
 
     public uint DeviceSubType;
@@ -462,7 +472,7 @@ public struct EdsVolumeInfo
     public ulong MaxCapacity;
     public ulong FreeSpaceInBytes;
 
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = PInvoke.EDS_MAX_NAME)]
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = EDSDK_API.EDS_MAX_NAME)]
     public string szVolumeLabel;
 }
 
@@ -474,7 +484,7 @@ public struct EdsDirectoryItemInfo
     public uint GroupID;
     public uint Option;
 
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = PInvoke.EDS_MAX_NAME)]
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = EDSDK_API.EDS_MAX_NAME)]
     public string szFileName;
 
     public uint format;
@@ -595,7 +605,7 @@ public struct EdsManualWBData
     public byte[] data;
 }
 
-public static unsafe class PInvoke
+public static unsafe class EDSDK_API
 {
     /// <summary>
     /// Path to the EDSDK DLL
@@ -936,14 +946,54 @@ public static unsafe class PInvoke
     public const uint AEMode_BackgroundBlur = 62;
     public const uint AEMode_Unknown = 0xffffffff;
 
-    /*-----------------------------------------------------------------------------
-     Bracket
-    -----------------------------------------------------------------------------*/
-    public const uint Bracket_AEB = 0x01;
-    public const uint Bracket_ISOB = 0x02;
-    public const uint Bracket_WBB = 0x04;
-    public const uint Bracket_FEB = 0x08;
-    public const uint Bracket_Unknown = 0xffffffff;
+    
+    
+    
+    
+    
+
+
+    //public enum EdsBracket
+    //    : uint
+    //{
+    //}
+    //public enum EdsBracket
+    //    : uint
+    //{
+    //}
+    //public enum EdsBracket
+    //    : uint
+    //{
+    //}
+    //public enum EdsBracket
+    //    : uint
+    //{
+    //}
+    //public enum EdsBracket
+    //    : uint
+    //{
+    //}
+
+    //public enum EdsBracket
+    //    : uint
+    //{
+    //}
+
+    //public enum EdsBracket
+    //    : uint
+    //{
+    //}
+
+    //public enum EdsBracket
+    //    : uint
+    //{
+    //}
+
+    //public enum EdsBracket
+    //    : uint
+    //{
+    //}
+
 
 
     /*-----------------------------------------------------------------------------
