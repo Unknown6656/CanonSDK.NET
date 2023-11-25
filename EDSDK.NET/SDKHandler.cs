@@ -11,9 +11,9 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Microsoft.Extensions.Logging;
-
 using EDSDK.Native;
+
+using Microsoft.Extensions.Logging;
 
 namespace EDSDK.NET;
 
@@ -239,18 +239,12 @@ public class SDKHandler : IDisposable
     #endregion
     #region Basic SDK and Session handling
 
-    public SDKProperty SDKObjectEventToProperty(uint objectEvent)
-    {
-        return FindProperty(SDKObjectEvents, objectEvent);
-    }
+    public SDKProperty SDKObjectEventToProperty(uint objectEvent) => FindProperty(SDKObjectEvents, objectEvent);
 
     private SDKProperty[] _sDKObjectEvents;
     public SDKProperty[] SDKObjectEvents => _sDKObjectEvents;
 
-    public SDKProperty SDKErrorToProperty(uint error)
-    {
-        return FindProperty(SDKErrors, error);
-    }
+    public SDKProperty SDKErrorToProperty(uint error) => FindProperty(SDKErrors, error);
 
     private SDKProperty[] _sDKErrors;
     public SDKProperty[] SDKErrors => _sDKErrors;
@@ -276,25 +270,13 @@ public class SDKHandler : IDisposable
         return search;
     }
 
-    public void SetSaveToHost()
-    {
-        SetSetting(EDSDKLib.EDSDK.PropID_SaveTo, (uint)EDSDKLib.EDSDK.EdsSaveTo.Host);
-    }
+    public void SetSaveToHost() => SetSetting(EDSDKLib.EDSDK.PropID_SaveTo, (uint)EDSDKLib.EDSDK.EdsSaveTo.Host);
 
-    public SDKProperty GetStateEvent(uint stateEvent)
-    {
-        return FindProperty(SDKStateEvents, stateEvent);
-    }
+    public SDKProperty GetStateEvent(uint stateEvent) => FindProperty(SDKStateEvents, stateEvent);
 
-    public SDKProperty GetSDKProperty(string property)
-    {
-        return FindProperty(SDKProperties, property);
-    }
+    public SDKProperty GetSDKProperty(string property) => FindProperty(SDKProperties, property);
 
-    public SDKProperty GetSDKProperty(uint property)
-    {
-        return FindProperty(SDKProperties, property);
-    }
+    public SDKProperty GetSDKProperty(uint property) => FindProperty(SDKProperties, property);
 
     private SDKProperty[] _sDKProperties;
     public SDKProperty[] SDKProperties => _sDKProperties;
@@ -373,8 +355,8 @@ public class SDKHandler : IDisposable
     private static SDKProperty[] FilterFields(FieldInfo[] fields, string prefix, string prefix2 = null)
     {
         IEnumerable<SDKProperty> filteredFields = from f in fields
-                             where (f.Name.StartsWith(prefix) || (prefix2 != null && f.Name.StartsWith(prefix2))) && f.IsLiteral
-                             select new SDKProperty(f.Name, (uint)f.GetValue(null));
+                                                  where (f.Name.StartsWith(prefix) || (prefix2 != null && f.Name.StartsWith(prefix2))) && f.IsLiteral
+                                                  select new SDKProperty(f.Name, (uint)f.GetValue(null));
         return filteredFields.ToArray();
     }
 
@@ -403,10 +385,7 @@ public class SDKHandler : IDisposable
         return camList;
     }
 
-    private async Task LogInfoAsync(string message, params object[] args)
-    {
-        await Log(LogLevel.Information, message, args);
-    }
+    private async Task LogInfoAsync(string message, params object[] args) => await Log(LogLevel.Information, message, args);
 
     /// <summary>
     /// Opens a session with given camera
@@ -500,10 +479,7 @@ public class SDKHandler : IDisposable
         return EDS_ERR_OK;
     }
 
-    protected void OnCameraAdded()
-    {
-        CameraAdded?.Invoke();
-    }
+    protected void OnCameraAdded() => CameraAdded?.Invoke();
 
 
     /// <summary>
@@ -572,10 +548,7 @@ public class SDKHandler : IDisposable
         return EDS_ERR_OK;
     }
 
-    protected void OnProgressChanged(int percent)
-    {
-        ProgressChanged?.Invoke(percent);
-    }
+    protected void OnProgressChanged(int percent) => ProgressChanged?.Invoke(percent);
 
     /// <summary>
     /// A property changed
@@ -764,15 +737,9 @@ public class SDKHandler : IDisposable
         return EDS_ERR_OK;
     }
 
-    protected void OnCameraHasShutdown()
-    {
-        CameraHasShutdown?.Invoke(this, new EventArgs());
-    }
+    protected void OnCameraHasShutdown() => CameraHasShutdown?.Invoke(this, new EventArgs());
 
-    protected void OnSdkError(SDKErrorEventArgs e)
-    {
-        SdkError?.Invoke(this, e);
-    }
+    protected void OnSdkError(SDKErrorEventArgs e) => SdkError?.Invoke(this, e);
 
     #endregion Eventhandling
     #region Camera commands
@@ -917,10 +884,7 @@ public class SDKHandler : IDisposable
         }
     }
 
-    protected void OnImageDownloaded(Bitmap bitmap)
-    {
-        ImageDownloaded?.Invoke(bitmap);
-    }
+    protected void OnImageDownloaded(Bitmap bitmap) => ImageDownloaded?.Invoke(bitmap);
 
     /// <summary>
     /// Gets the thumbnail of an image (can be raw or jpg)
@@ -1437,10 +1401,7 @@ public class SDKHandler : IDisposable
     /// Fires the LiveViewUpdated event
     /// </summary>
     /// <param name="stream"></param>
-    protected void OnLiveViewUpdated(UnmanagedMemoryStream stream)
-    {
-        LiveViewUpdated?.Invoke(stream);
-    }
+    protected void OnLiveViewUpdated(UnmanagedMemoryStream stream) => LiveViewUpdated?.Invoke(stream);
 
 
     /// <summary>
@@ -1507,10 +1468,7 @@ public class SDKHandler : IDisposable
         }
     }
 
-    public void SetTFTEvf()
-    {
-        SetSetting(PropID_Evf_OutputDevice, EvfOutputDevice_TFT);
-    }
+    public void SetTFTEvf() => SetSetting(PropID_Evf_OutputDevice, EvfOutputDevice_TFT);
 
     /// <summary>
     /// Starts recording a video
@@ -1611,8 +1569,7 @@ public class SDKHandler : IDisposable
     /// Press the shutter button
     /// </summary>
     /// <param name="state">State of the shutter button</param>
-    public void PressShutterButton(EdsShutterButton state)
-    {
+    public void PressShutterButton(EdsShutterButton state) =>
         //start thread to not block everything
         SendSDKCommand(delegate
         {
@@ -1622,7 +1579,6 @@ public class SDKHandler : IDisposable
                 Error = EdsSendCommand(MainCamera.Handle, CameraCommand_PressShutterButton, (int)state);
             };
         }, true);
-    }
 
     private TaskCompletionSource<FileInfo> takePhotoCompletionSource;
     private string _imageSaveFilename;
@@ -1631,84 +1587,78 @@ public class SDKHandler : IDisposable
     /// Takes a photo and returns the file info
     /// </summary>
     /// <returns></returns>
-    public async Task<FileInfo> TakePhotoAsync(FileInfo saveFile)
-    {
-        return await Task.Run<FileInfo>(async () =>
-                                                                          {
-                                                                              if (IsFilming || IsLiveViewOn)
-                                                                              {
-                                                                                  logger.LogWarning("Ignoring attempt to take photo whilst filming or in live-view mode. Filming: {Filming}, LiveView: {LiveView}", IsFilming, IsLiveViewOn);
-                                                                                  return null;
-                                                                              }
+    public async Task<FileInfo> TakePhotoAsync(FileInfo saveFile) => await Task.Run<FileInfo>(async () =>
+                                                                                                                                            {
+                                                                                                                                                if (IsFilming || IsLiveViewOn)
+                                                                                                                                                {
+                                                                                                                                                    logger.LogWarning("Ignoring attempt to take photo whilst filming or in live-view mode. Filming: {Filming}, LiveView: {LiveView}", IsFilming, IsLiveViewOn);
+                                                                                                                                                    return null;
+                                                                                                                                                }
 
-                                                                              takePhotoCompletionSource = new TaskCompletionSource<FileInfo>();
-                                                                              SetSaveToLocation(saveFile.Directory);
-                                                                              ImageSaveFilename = saveFile.Name;
+                                                                                                                                                takePhotoCompletionSource = new TaskCompletionSource<FileInfo>();
+                                                                                                                                                SetSaveToLocation(saveFile.Directory);
+                                                                                                                                                ImageSaveFilename = saveFile.Name;
 
-                                                                              TakePhoto();
+                                                                                                                                                TakePhoto();
 
-                                                                              await takePhotoCompletionSource.Task;
-                                                                              if (takePhotoCompletionSource.Task.Status == TaskStatus.RanToCompletion)
-                                                                              {
-                                                                                  return takePhotoCompletionSource.Task.Result;
-                                                                              }
-                                                                              else
-                                                                              {
-                                                                                  LogError("Error taking photo, check previous messages");
-                                                                                  return null;
-                                                                              }
-                                                                          });
-    }
+                                                                                                                                                await takePhotoCompletionSource.Task;
+                                                                                                                                                if (takePhotoCompletionSource.Task.Status == TaskStatus.RanToCompletion)
+                                                                                                                                                {
+                                                                                                                                                    return takePhotoCompletionSource.Task.Result;
+                                                                                                                                                }
+                                                                                                                                                else
+                                                                                                                                                {
+                                                                                                                                                    LogError("Error taking photo, check previous messages");
+                                                                                                                                                    return null;
+                                                                                                                                                }
+                                                                                                                                            });
 
-    private async Task Log(LogLevel level, string message, params object[] args)
-    {
-        await Task.Run(() =>
-                                                                                         {
+    private async Task Log(LogLevel level, string message, params object[] args) => await Task.Run(() =>
+                                                                                                                                                                          {
 
-                                                                                             if (logger != null)
-                                                                                             {
-                                                                                                 switch (level)
-                                                                                                 {
-                                                                                                     case LogLevel.Trace:
-                                                                                                         logger.LogTrace(message, args);
-                                                                                                         break;
+                                                                                                                                                                              if (logger != null)
+                                                                                                                                                                              {
+                                                                                                                                                                                  switch (level)
+                                                                                                                                                                                  {
+                                                                                                                                                                                      case LogLevel.Trace:
+                                                                                                                                                                                          logger.LogTrace(message, args);
+                                                                                                                                                                                          break;
 
-                                                                                                     case LogLevel.Debug:
-                                                                                                         logger.LogDebug(message, args);
-                                                                                                         break;
+                                                                                                                                                                                      case LogLevel.Debug:
+                                                                                                                                                                                          logger.LogDebug(message, args);
+                                                                                                                                                                                          break;
 
-                                                                                                     case LogLevel.Information:
-                                                                                                         logger.LogInformation(message, args);
-                                                                                                         break;
+                                                                                                                                                                                      case LogLevel.Information:
+                                                                                                                                                                                          logger.LogInformation(message, args);
+                                                                                                                                                                                          break;
 
-                                                                                                     case LogLevel.Warning:
-                                                                                                         logger.LogWarning(message, args);
-                                                                                                         break;
+                                                                                                                                                                                      case LogLevel.Warning:
+                                                                                                                                                                                          logger.LogWarning(message, args);
+                                                                                                                                                                                          break;
 
-                                                                                                     case LogLevel.Critical:
-                                                                                                         logger.LogCritical(message, args);
-                                                                                                         break;
+                                                                                                                                                                                      case LogLevel.Critical:
+                                                                                                                                                                                          logger.LogCritical(message, args);
+                                                                                                                                                                                          break;
 
-                                                                                                     case LogLevel.None:
-                                                                                                         // breakpoint only
-                                                                                                         break;
+                                                                                                                                                                                      case LogLevel.None:
+                                                                                                                                                                                          // breakpoint only
+                                                                                                                                                                                          break;
 
-                                                                                                     case LogLevel.Error:
-                                                                                                         logger.LogError(message, args);
-                                                                                                         break;
+                                                                                                                                                                                      case LogLevel.Error:
+                                                                                                                                                                                          logger.LogError(message, args);
+                                                                                                                                                                                          break;
 
-                                                                                                     default:
-                                                                                                         logger.LogError("Unknown level: {0}{1}Message: {2}", level, Environment.NewLine, string.Format(message, args));
-                                                                                                         break;
-                                                                                                 }
-                                                                                             }
+                                                                                                                                                                                      default:
+                                                                                                                                                                                          logger.LogError("Unknown level: {0}{1}Message: {2}", level, Environment.NewLine, string.Format(message, args));
+                                                                                                                                                                                          break;
+                                                                                                                                                                                  }
+                                                                                                                                                                              }
 
-                                                                                             if (level >= LogLevel.Error)
-                                                                                             {
-                                                                                                 // throw new Exception(string.Format(message, args));
-                                                                                             }
-                                                                                         });
-    }
+                                                                                                                                                                              if (level >= LogLevel.Error)
+                                                                                                                                                                              {
+                                                                                                                                                                                  // throw new Exception(string.Format(message, args));
+                                                                                                                                                                              }
+                                                                                                                                                                          });
 
     private void HandleException(Exception ex, string message, params object[] args)
     {
@@ -1738,8 +1688,7 @@ public class SDKHandler : IDisposable
     /// <summary>
     /// Takes a photo with the current camera settings
     /// </summary>
-    public void TakePhoto()
-    {
+    public void TakePhoto() =>
         //start thread to not block everything
         SendSDKCommand(delegate
         {
@@ -1749,7 +1698,6 @@ public class SDKHandler : IDisposable
                 Error = EdsSendCommand(MainCamera.Handle, CameraCommand_TakePicture, 0);
             };
         }, true);
-    }
 
     /// <summary>
     /// Takes a photo in bulb mode with the current camera settings
@@ -1782,14 +1730,11 @@ public class SDKHandler : IDisposable
     }
 
 
-    public void FormatAllVolumes()
-    {
-        RunForEachVolume((childReference, volumeInfo) =>
-                                           {
-                                               logger.LogInformation("Formatting volume. Volume: {Volume}", volumeInfo.szVolumeLabel);
-                                               SendSDKCommand(() => Error = EdsFormatVolume(childReference));
-                                           });
-    }
+    public void FormatAllVolumes() => RunForEachVolume((childReference, volumeInfo) =>
+                                                                              {
+                                                                                  logger.LogInformation("Formatting volume. Volume: {Volume}", volumeInfo.szVolumeLabel);
+                                                                                  SendSDKCommand(() => Error = EdsFormatVolume(childReference));
+                                                                              });
 
     public float GetMinVolumeSpacePercent()
     {
@@ -1887,10 +1832,7 @@ public class SDKHandler : IDisposable
     /// Tells the camera that there is enough space on the HDD if SaveTo is set to Host
     /// This method does not use the actual free space!
     /// </summary>
-    public void SetCapacity()
-    {
-        SetCapacity(0x1000, 0x7FFFFFFF);
-    }
+    public void SetCapacity() => SetCapacity(0x1000, 0x7FFFFFFF);
 
     /// <summary>
     /// Tells the camera how much space is available on the host PC
@@ -1950,10 +1892,7 @@ public class SDKHandler : IDisposable
         }
     }
 
-    public List<CameraFileEntry> GetVolumes()
-    {
-        return GetVolumes(GetCamera());
-    }
+    public List<CameraFileEntry> GetVolumes() => GetVolumes(GetCamera());
 
     public List<CameraFileEntry> GetVolumes(CameraFileEntry camera)
     {
@@ -1980,10 +1919,7 @@ public class SDKHandler : IDisposable
         return volumes;
     }
 
-    public CameraFileEntry GetCamera()
-    {
-        return new("Camera", CameraFileEntryTypes.Camera, MainCamera.Handle);
-    }
+    public CameraFileEntry GetCamera() => new("Camera", CameraFileEntryTypes.Camera, MainCamera.Handle);
 
     public void DeleteFileItem(CameraFileEntry fileItem)
     {
@@ -2028,15 +1964,12 @@ public class SDKHandler : IDisposable
     /// Locks or unlocks the cameras UI
     /// </summary>
     /// <param name="lockState">True for locked, false to unlock</param>
-    public void UILock(bool lockState)
-    {
-        SendSDKCommand(delegate
-                                               {
-                                                   Error = lockState == true
-                                                       ? EdsSendStatusCommand(MainCamera.Handle, CameraState_UILock, 0)
-                                                       : EdsSendStatusCommand(MainCamera.Handle, CameraState_UIUnLock, 0);
-                                               });
-    }
+    public void UILock(bool lockState) => SendSDKCommand(delegate
+                                                                                      {
+                                                                                          Error = lockState == true
+                                                                                              ? EdsSendStatusCommand(MainCamera.Handle, CameraState_UILock, 0)
+                                                                                              : EdsSendStatusCommand(MainCamera.Handle, CameraState_UIUnLock, 0);
+                                                                                      });
 
     /// <summary>
     /// Gets the children of a camera folder/volume. Recursive method.
@@ -2095,10 +2028,7 @@ public class SDKHandler : IDisposable
     /// </summary>
     /// <param name="val">Value</param>
     /// <returns>A bool created from the value</returns>
-    private bool GetBool(int val)
-    {
-        return val != 0;
-    }
+    private bool GetBool(int val) => val != 0;
 
     #endregion
 
