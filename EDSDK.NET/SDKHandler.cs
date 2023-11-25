@@ -61,7 +61,7 @@ public class SDKHandler : IDisposable
         get => _imageSaveFilename;
         set
         {
-            var t = LogInfoAsync("Setting ImageSaveFilename. ImageSaveFilename: {ImageSaveFilename}", value);
+            Task t = LogInfoAsync("Setting ImageSaveFilename. ImageSaveFilename: {ImageSaveFilename}", value);
             _imageSaveFilename = value;
         }
     }
@@ -96,7 +96,7 @@ public class SDKHandler : IDisposable
         {
             if (value != EDS_ERR_OK)
             {
-                var errorProperty = SDKErrorToProperty(value);
+                SDKProperty errorProperty = SDKErrorToProperty(value);
                 LogError("SDK Error. Name: {0}, Value: {1}", errorProperty.Name, errorProperty.ValueToString());
 
 
@@ -147,7 +147,7 @@ public class SDKHandler : IDisposable
         }
 
 
-        var prop = GetSDKProperty(propertyName);
+        SDKProperty prop = GetSDKProperty(propertyName);
         if (!prop.Matched)
         {
             LogWarning("Could not find property named {0}");
@@ -172,9 +172,9 @@ public class SDKHandler : IDisposable
 
     public void DumpAllProperties()
     {
-        var t = LogInfoAsync("=========Dumping properties=========");
+        Task t = LogInfoAsync("=========Dumping properties=========");
 
-        foreach (var prop in SDKProperties)
+        foreach (SDKProperty prop in SDKProperties)
         {
             uint value = GetSetting(prop.Value);
 
@@ -246,7 +246,7 @@ public class SDKHandler : IDisposable
 
     private SDKProperty FindProperty(SDKProperty[] properties, string property)
     {
-        var search = properties.FirstOrDefault(p => p.Name == property);
+        SDKProperty search = properties.FirstOrDefault(p => p.Name == property);
         if (search == null)
         {
             search = new SDKProperty(property, 0, false);
@@ -257,7 +257,7 @@ public class SDKHandler : IDisposable
 
     private SDKProperty FindProperty(SDKProperty[] properties, uint property)
     {
-        var search = properties.FirstOrDefault(p => p.Value == property);
+        SDKProperty search = properties.FirstOrDefault(p => p.Value == property);
         if (search == null)
         {
             search = new SDKProperty("UNKNOWN", property, false);
@@ -341,7 +341,7 @@ public class SDKHandler : IDisposable
 
     private void STAThread_FatalError(object sender, EventArgs e)
     {
-        var args = new SdkErrorEventArgs() { Error = "Execution thread error", ErrorLevel = LogLevel.Critical };
+        SdkErrorEventArgs args = new() { Error = "Execution thread error", ErrorLevel = LogLevel.Critical };
         OnSdkError(args);
     }
 
@@ -361,7 +361,7 @@ public class SDKHandler : IDisposable
 
     private static SDKProperty[] FilterFields(FieldInfo[] fields, string prefix, string prefix2 = null)
     {
-        var filteredFields = from f in fields
+        IEnumerable<SDKProperty> filteredFields = from f in fields
                              where (f.Name.StartsWith(prefix) || (prefix2 != null && f.Name.StartsWith(prefix2))) && f.IsLiteral
                              select new SDKProperty(f.Name, (uint)f.GetValue(null));
         return filteredFields.ToArray();
@@ -390,7 +390,7 @@ public class SDKHandler : IDisposable
             camList.Add(new Camera(cptr));
         }
 
-        var t = LogInfoAsync("Found {CameraCount} cameras", camList.Count);
+        Task t = LogInfoAsync("Found {CameraCount} cameras", camList.Count);
 
         return camList;
     }
@@ -424,14 +424,14 @@ public class SDKHandler : IDisposable
             AddCameraHandler(() => EdsSetPropertyEventHandler(MainCamera.Ref, PropertyEvent_All, SDKPropertyEvent, MainCamera.Ref), nameof(EdsSetPropertyEventHandler));
             CameraSessionOpen = true;
 
-            var t = LogInfoAsync("Connected to Camera: {CameraName}", newCamera.Info.szDeviceDescription);
+            Task t = LogInfoAsync("Connected to Camera: {CameraName}", newCamera.Info.szDeviceDescription);
 
         }
     }
 
     private void AddCameraHandler(Func<uint> action, string handlerName)
     {
-        var t = LogInfoAsync("Adding handler: {SDKHandlerName}", handlerName);
+        Task t = LogInfoAsync("Adding handler: {SDKHandlerName}", handlerName);
 
         Error = action();
     }
@@ -507,7 +507,7 @@ public class SDKHandler : IDisposable
     /// <returns>An EDSDK errorcode</returns>
     private uint Camera_SDKObjectEvent(uint inEvent, nint inRef, nint inContext)
     {
-        var eventProperty = SDKObjectEventToProperty(inEvent);
+        SDKProperty eventProperty = SDKObjectEventToProperty(inEvent);
         //LogInfo("SDK Object Event. Name: {SDKEventName}, Value: {SDKEventHex}", eventProperty.Name, eventProperty.ValueToString());
 
         //handle object event here
@@ -696,13 +696,13 @@ public class SDKHandler : IDisposable
 
     public void LogPropertyValue(string propertyName, uint propertyValue)
     {
-        var task = LogInfoAsync($"Camera_SDKPropertyEvent. Property {propertyName} changed to {"0x" + propertyValue.ToString("X")}");
+        Task task = LogInfoAsync($"Camera_SDKPropertyEvent. Property {propertyName} changed to {"0x" + propertyValue.ToString("X")}");
     }
 
 
     public void LogPropertyValue(uint propertyID, uint propertyValue)
     {
-        var prop = GetSDKProperty(propertyID);
+        SDKProperty prop = GetSDKProperty(propertyID);
         LogPropertyValue(prop.Name, propertyValue);
         //do nothing with task, continue
     }
@@ -717,9 +717,9 @@ public class SDKHandler : IDisposable
     private uint Camera_SDKStateEvent(uint inEvent, uint inParameter, nint inContext)
     {
 
-        var stateProperty = GetStateEvent(inEvent);
+        SDKProperty stateProperty = GetStateEvent(inEvent);
 
-        var t = LogInfoAsync("SDK State Event. Name: {SDKStateEventName}, Hex {SDKStateEventHex}", stateProperty.Name, stateProperty.ValueToString());
+        Task t = LogInfoAsync("SDK State Event. Name: {SDKStateEventName}, Hex {SDKStateEventHex}", stateProperty.Name, stateProperty.ValueToString());
 
         //Handle state event here
         switch (inEvent)
@@ -813,12 +813,12 @@ public class SDKHandler : IDisposable
             }
 
 
-            var t = LogInfoAsync("Downloading data {Filename} to {SaveDirectory}", fileName, directory);
+            Task t = LogInfoAsync("Downloading data {Filename} to {SaveDirectory}", fileName, directory);
 
             SendSDKCommand(delegate
             {
 
-                var stopWatch = Stopwatch.StartNew();
+                Stopwatch stopWatch = Stopwatch.StartNew();
 
                 //create filestream to data
                 Error = EdsCreateFileStream(targetImage, EdsFileCreateDisposition.CreateAlways, EdsAccess.ReadWrite, out streamRef);
@@ -829,8 +829,8 @@ public class SDKHandler : IDisposable
 
                 stopWatch.Stop();
 
-                var downloadFile = new FileInfo(targetImage);
-                var mB = downloadFile.Length / 1000.0 / 1000;
+                FileInfo downloadFile = new(targetImage);
+                double mB = downloadFile.Length / 1000.0 / 1000;
 
                 t = LogInfoAsync("Downloaded data. Filename: {Filename}, FileLengthMB: {FileLengthMB}, DurationSeconds: {DurationSeconds}, MBPerSecond: {MBPerSecond}", targetImage, mB.ToString("0.0"), stopWatch.Elapsed.TotalSeconds.ToString("0.0"), (mB / stopWatch.Elapsed.TotalSeconds).ToString("0.0"));
 
@@ -868,7 +868,7 @@ public class SDKHandler : IDisposable
         //check the extension. Raw data cannot be read by the bitmap class
         string ext = Path.GetExtension(dirInfo.szFileName).ToLower();
 
-        var t = LogInfoAsync("Downloading image {ImageFileName}", dirInfo.szFileName);
+        Task t = LogInfoAsync("Downloading image {ImageFileName}", dirInfo.szFileName);
 
 
         if (ext == ".jpg" || ext == ".jpeg")
@@ -1153,8 +1153,8 @@ public class SDKHandler : IDisposable
         {
             SendSDKCommand(delegate
             {
-                var cThread = Thread.CurrentThread;
-                var t = LogInfoAsync("Executing SDK command. ThreadName: {ThreadName}, ApartmentState: {ApartmentState}", cThread.Name, cThread.GetApartmentState());
+                Thread cThread = Thread.CurrentThread;
+                Task t = LogInfoAsync("Executing SDK command. ThreadName: {ThreadName}, ApartmentState: {ApartmentState}", cThread.Name, cThread.GetApartmentState());
                 int propsize;
                 EdsDataType proptype;
                 //get size of property
@@ -1179,8 +1179,8 @@ public class SDKHandler : IDisposable
 
             SendSDKCommand(delegate
             {
-                var cThread = Thread.CurrentThread;
-                var t = LogInfoAsync("Executing SDK command. ThreadName: {ThreadName}, ApartmentState: {ApartmentState}", cThread.Name, cThread.GetApartmentState());
+                Thread cThread = Thread.CurrentThread;
+                Task t = LogInfoAsync("Executing SDK command. ThreadName: {ThreadName}, ApartmentState: {ApartmentState}", cThread.Name, cThread.GetApartmentState());
                 Error = EdsSendCommand(MainCamera.Ref, commandId, value);
             }, sdkAction: nameof(EdsSetPropertyData));
         }
@@ -1208,8 +1208,8 @@ public class SDKHandler : IDisposable
 
     private void LogSetProperty(uint propertyId, string value)
     {
-        var prop = GetSDKProperty(propertyId);
-        var t = LogInfoAsync("Setting property. Name: {SDKPropertyName}, Id: {SDKPropertyHex}, Value: {SDKPropertyValue}", prop.Name, prop.Value, value);
+        SDKProperty prop = GetSDKProperty(propertyId);
+        Task t = LogInfoAsync("Setting property. Name: {SDKPropertyName}, Id: {SDKPropertyHex}, Value: {SDKPropertyValue}", prop.Name, prop.Value, value);
     }
 
     /// <summary>
@@ -1269,7 +1269,7 @@ public class SDKHandler : IDisposable
     {
         if (!IsLiveViewOn)
         {
-            var t = LogInfoAsync("Starting Liveview");
+            Task t = LogInfoAsync("Starting Liveview");
 
             t = LiveViewUpdated != null
                 ? LogInfoAsync("{LiveViewUpdatedEventListeners} LiveViewUpdated listeners found", LiveViewUpdated.GetInvocationList().Length)
@@ -1295,7 +1295,7 @@ public class SDKHandler : IDisposable
     {
         if (IsLiveViewOn)
         {
-            var t = LogInfoAsync("Stopping liveview");
+            Task t = LogInfoAsync("Stopping liveview");
             LVoff = true;
             IsLiveViewOn = false;
 
@@ -1391,7 +1391,7 @@ public class SDKHandler : IDisposable
 
     private void KillLiveView()
     {
-        var t = LogInfoAsync("Killing LiveView");
+        Task t = LogInfoAsync("Killing LiveView");
         //stop the live view
         SetSetting(PropID_Evf_OutputDevice, LVoff ? 0 : EvfOutputDevice_TFT);
     }
@@ -1498,7 +1498,7 @@ public class SDKHandler : IDisposable
             SetSetting(PropID_Evf_OutputDevice, 3);
 
             //Check if the camera is ready to film
-            var recordStatus = GetSetting(PropID_Record);
+            uint recordStatus = GetSetting(PropID_Record);
             if (recordStatus != (uint)PropID_Record_Status.Movie_shooting_ready)
             {
                 //DOES NOT WORK, readonly setting?
@@ -1508,7 +1508,7 @@ public class SDKHandler : IDisposable
 
 
                 LogPropertyValue(PropID_Record, recordStatus);
-                var tx = Log(LogLevel.Information, "Camera reporting incorrect mode. expected. Continue. {expected}, was: {was}", PropID_Record_Status.Movie_shooting_ready, recordStatus);
+                Task tx = Log(LogLevel.Information, "Camera reporting incorrect mode. expected. Continue. {expected}, was: {was}", PropID_Record_Status.Movie_shooting_ready, recordStatus);
                 tx = Log(LogLevel.Information, "Camera physical switch must be in movie record mode. Leave in this mode permanently!");
                 //throw new ArgumentException("Camera in invalid mode", nameof(PropID_Record));
             }
@@ -1524,7 +1524,7 @@ public class SDKHandler : IDisposable
             DownloadVideo = false;
             //start the video recording
 
-            var t = LogInfoAsync("Start filming");
+            Task t = LogInfoAsync("Start filming");
 
             SendSDKCommand(delegate { Error = EdsSetPropertyData(MainCamera.Ref, PropID_Record, 0, sizeof(PropID_Record_Status), (uint)PropID_Record_Status.Begin_movie_shooting); });
         }
@@ -1681,12 +1681,12 @@ public class SDKHandler : IDisposable
 
     private void LogWarning(string message, params object[] args)
     {
-        var t = Log(LogLevel.Warning, message, args);
+        Task t = Log(LogLevel.Warning, message, args);
     }
 
     private void LogError(string message, params object[] args)
     {
-        var t = Log(LogLevel.Error, message, args);
+        Task t = Log(LogLevel.Error, message, args);
     }
 
 
@@ -1742,7 +1742,7 @@ public class SDKHandler : IDisposable
 
     public float GetMinVolumeSpacePercent()
     {
-        var minPercent = 1f;
+        float minPercent = 1f;
         RunForEachVolume((childReference, volumeInfo) =>
         {
             var freePc = volumeInfo.FreeSpaceInBytes / (float)volumeInfo.MaxCapacity;
@@ -1785,7 +1785,7 @@ public class SDKHandler : IDisposable
         logger.LogDebug("Formatting volume. Volume: {Volume}", volume.Name);
         SendSDKCommand(() =>
         {
-            var ptr = Marshal.AllocHGlobal(Marshal.SizeOf(volume.Volume));
+            nint ptr = Marshal.AllocHGlobal(Marshal.SizeOf(volume.Volume));
             try
             {
                 Marshal.StructureToPtr(volume.Volume, ptr, false);
@@ -1812,7 +1812,7 @@ public class SDKHandler : IDisposable
     {
         if (sdkAction != null)
         {
-            var t = LogInfoAsync("Sending SDK command: {SDKCommand}", sdkAction);
+            Task t = LogInfoAsync("Sending SDK command: {SDKCommand}", sdkAction);
         }
 
 
@@ -1944,7 +1944,7 @@ public class SDKHandler : IDisposable
         // NOTE: Get original structure from camera to delete
         SendSDKCommand(() =>
         {
-            var ptr = Marshal.AllocHGlobal(Marshal.SizeOf(fileItem));
+            nint ptr = Marshal.AllocHGlobal(Marshal.SizeOf(fileItem));
             try
             {
                 Marshal.StructureToPtr(fileItem, ptr, false);

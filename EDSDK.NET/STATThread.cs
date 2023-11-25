@@ -121,7 +121,7 @@ public static class STAThread
     [SupportedOSPlatform("windows")]
     public static Thread Create(Action a, string threadName)
     {
-        var thread = new Thread(new ThreadStart(a));
+        Thread thread = new(new ThreadStart(a));
 
         thread.SetApartmentState(ApartmentState.STA);
         thread.Name = threadName;

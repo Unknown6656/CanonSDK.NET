@@ -7,7 +7,7 @@ namespace EDSDK.NET;
 /// </summary>
 public static class CameraValues
 {
-    private static CultureInfo cInfo = new CultureInfo("en-US");
+    private static CultureInfo cInfo = new("en-US");
 
     /// <summary>
     /// Gets the Av string value from an Av ID
