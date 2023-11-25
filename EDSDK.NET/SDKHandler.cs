@@ -639,7 +639,7 @@ public sealed class SDKHandler
             case PropID_AutoPowerOffSetting:
                 break;
             case PropID_Evf_OutputDevice:
-                if (IsLiveViewOn == true)
+                if (IsLiveViewOn)
                 {
                     DownloadEvf();
                 }
@@ -1809,8 +1809,7 @@ public sealed class SDKHandler
     /// <param name="lockState">True for locked, false to unlock</param>
     public void UILock(bool lockState) => SendSDKCommand(delegate
     {
-        Error = lockState == true
-            ? EDSDK_API.EdsSendStatusCommand(MainCamera.Handle, CameraState_UILock, 0)
+        Error = lockState ? EDSDK_API.EdsSendStatusCommand(MainCamera.Handle, CameraState_UILock, 0)
             : EDSDK_API.EdsSendStatusCommand(MainCamera.Handle, CameraState_UIUnLock, 0);
     });
 
