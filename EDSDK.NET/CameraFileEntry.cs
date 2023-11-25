@@ -17,16 +17,21 @@ public enum CameraFileEntryTypes
 /// <summary>
 /// A storage for a camera filesystem entry
 /// </summary>
-public class CameraFileEntry
+/// <remarks>
+/// Creates a new instance of the CameraFileEntry class
+/// </remarks>
+/// <param name="Name">Name of this entry</param>
+/// <param name="IsFolder">True if this entry is a folder, false otherwise</param>
+public class CameraFileEntry(string Name, CameraFileEntryTypes type, nint reference)
 {
     /// <summary>
     /// Name of this entry
     /// </summary>
-    public string Name { get; private set; }
+    public string Name { get; private set; } = Name;
 
-    public CameraFileEntryTypes Type { get; private set; }
+    public CameraFileEntryTypes Type { get; private set; } = type;
 
-    public nint Reference { get; private set; }
+    public nint Reference { get; private set; } = reference;
 
     /// <summary>
     /// Thumbnail of this entry (might be null if not available)
@@ -36,18 +41,6 @@ public class CameraFileEntry
     /// Subentries of this entry (i.e. subfolders)
     /// </summary>
     public CameraFileEntry[] Entries { get; private set; }
-
-    /// <summary>
-    /// Creates a new instance of the CameraFileEntry class
-    /// </summary>
-    /// <param name="Name">Name of this entry</param>
-    /// <param name="IsFolder">True if this entry is a folder, false otherwise</param>
-    public CameraFileEntry(string Name, CameraFileEntryTypes type, nint reference)
-    {
-        this.Name = Name;
-        Type = type;
-        Reference = reference;
-    }
 
     /// <summary>
     /// Adds subentries (subfolders) to this entry
