@@ -1,4 +1,5 @@
-﻿using System;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
@@ -10,6 +11,20 @@ namespace EDSDK.NET
     /// </summary>
     public static class STAThread
     {
+        static ILogger logger;
+
+        public static event EventHandler<EventArgs> FatalError;
+
+        static void OnFatalError()
+        {
+            FatalError?.Invoke(null, EventArgs.Empty);
+        }
+
+        public static void SetLogAction(ILogger logger)
+        {
+            STAThread.logger = logger;
+        }
+
         /// <summary>
         /// The object that is used to lock the live view thread
         /// </summary>
@@ -67,9 +82,31 @@ namespace EDSDK.NET
         {
             if (isRunning)
             {
+                logger.LogInformation("Shutdown");
+
                 isRunning = false;
-                lock (threadLock) { Monitor.Pulse(threadLock); }
-                main.Join();
+                bool locked = false;
+
+                try
+                {
+                    Monitor.TryEnter(threadLock, TimeSpan.FromSeconds(30), ref locked);
+                    if (locked)
+                    {
+                        Monitor.Pulse(threadLock);
+                    }
+                    else
+                    {
+                        logger?.LogError("Lock request timeout expired. LockObject: {LockObject}", nameof(threadLock));
+                    }
+                }
+                finally
+                {
+                    if (locked)
+                    {
+                        Monitor.Exit(threadLock);
+                    }
+                }
+                main.Join(TimeSpan.FromSeconds(30));
             }
         }
 
@@ -80,9 +117,47 @@ namespace EDSDK.NET
         /// <returns>An STA thread</returns>
         public static Thread Create(Action a)
         {
+            return Create(a, "STA thread: " + Guid.NewGuid().ToString());
+        }
+
+        /// <summary>
+        /// Creates an STA thread that can safely execute SDK commands
+        /// </summary>
+        /// <param name="a">The command to run on this thread</param>
+        /// <param name="threadName">The name of this thread</param>
+        /// <returns>An STA thread</returns>
+        public static Thread Create(Action a, string threadName)
+        {
             var thread = new Thread(new ThreadStart(a));
             thread.SetApartmentState(ApartmentState.STA);
+            thread.Name = threadName;
+            logger.LogInformation("Created STA Thread. ThreadName: {ThreadName}, ApartmentState: {ApartmentState}", thread.Name, thread.GetApartmentState());
             return thread;
+        }
+
+        public static void TryLockAndExecute(object lockObject, string lockObjectName, TimeSpan timeout, Action action)
+        {
+            bool locked = false;
+
+            try
+            {
+                Monitor.TryEnter(lockObject, timeout, ref locked);
+                if (locked)
+                {
+                    action();
+                }
+                else
+                {
+                    logger?.LogError("Lock request timeout expired. LockObject: {LockObject}", lockObjectName);
+                }
+            }
+            finally
+            {
+                if (locked)
+                {
+                    Monitor.Exit(lockObject);
+                }
+            }
         }
 
 
@@ -92,22 +167,32 @@ namespace EDSDK.NET
         /// <param name="a">The SDK command</param>
         public static void ExecuteSafely(Action a)
         {
-            lock (runLock)
+            TryLockAndExecute(runLock, nameof(runLock), TimeSpan.FromSeconds(30), () =>
             {
-                if (!isRunning) return;
+
+                if (!isRunning)
+                {
+                    return;
+                }
 
                 if (IsSTAThread)
                 {
                     runAction = a;
-                    lock (threadLock)
+                    TryLockAndExecute(threadLock, nameof(threadLock), TimeSpan.FromSeconds(30), () =>
                     {
                         Monitor.Pulse(threadLock);
                         Monitor.Wait(threadLock);
-                    }
+                    });
                     if (runException != null) throw runException;
                 }
-                else lock (ExecLock) { a(); }
-            }
+                else
+                {
+                    TryLockAndExecute(ExecLock, nameof(ExecLock), TimeSpan.FromSeconds(30), () =>
+                    {
+                        a();
+                    });
+                }
+            });
         }
 
         /// <summary>
@@ -124,18 +209,34 @@ namespace EDSDK.NET
 
         private static void SafeExecutionLoop()
         {
-            lock (threadLock)
+            TryLockAndExecute(threadLock, nameof(threadLock), TimeSpan.FromSeconds(30), () => 
             {
+                Thread cThread = Thread.CurrentThread;
                 while (true)
                 {
                     Monitor.Wait(threadLock);
-                    if (!isRunning) return;
+                    if (!isRunning)
+                    {
+                        return;
+                    }
                     runException = null;
-                    try { lock (ExecLock) { runAction(); } }
-                    catch (Exception ex) { runException = ex; }
+                    try
+                    {
+                        TryLockAndExecute(ExecLock, nameof(ExecLock), TimeSpan.FromSeconds(30), () =>
+                        {
+
+                            logger.LogInformation("Executing action on ThreadName: {ThreadName}, ApartmentState: {ApartmentState}", cThread.Name, cThread.GetApartmentState());
+                            runAction();
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogInformation("Exception on ThreadName: {ThreadName}, ApartmentState: {ApartmentState}", cThread.Name, cThread.GetApartmentState());
+                        runException = ex;
+                    }
                     Monitor.Pulse(threadLock);
                 }
-            }
+            });
         }
     }
 }
