@@ -30,7 +30,7 @@ public class SDKHandler : IDisposable
     #endregion Events
     #region Variables
 
-    readonly ILogger logger;
+    private readonly ILogger logger;
 
     /// <summary>
     /// The used camera
@@ -91,7 +91,7 @@ public class SDKHandler : IDisposable
     /// </summary>
     public uint Error
     {
-        get { return EDS_ERR_OK; }
+        get => EDS_ERR_OK;
         set
         {
             if (value != EDS_ERR_OK)
@@ -123,7 +123,7 @@ public class SDKHandler : IDisposable
     /// For video recording, SaveTo has to be set to Camera. This is to store the previous setting until after the filming.
     /// </summary>
     private uint PrevSaveTo;
-    EdsCapacity PrevCapacity;
+    private EdsCapacity PrevCapacity;
     private uint PrevEVFSetting;
 
     public void SetUintSetting(string propertyName, string propertyValue)
@@ -228,27 +228,21 @@ public class SDKHandler : IDisposable
     #endregion
     #region Basic SDK and Session handling
 
-    public SDKProperty SDKObjectEventToProperty(uint objectEvent) => FindProperty(SDKObjectEvents, objectEvent);
-
-    SDKProperty[] _sDKObjectEvents;
-    public SDKProperty[] SDKObjectEvents
+    public SDKProperty SDKObjectEventToProperty(uint objectEvent)
     {
-        get
-        {
-            return _sDKObjectEvents;
-        }
+        return FindProperty(SDKObjectEvents, objectEvent);
     }
 
-    public SDKProperty SDKErrorToProperty(uint error) => FindProperty(SDKErrors, error);
+    private SDKProperty[] _sDKObjectEvents;
+    public SDKProperty[] SDKObjectEvents => _sDKObjectEvents;
 
-    SDKProperty[] _sDKErrors;
-    public SDKProperty[] SDKErrors
+    public SDKProperty SDKErrorToProperty(uint error)
     {
-        get
-        {
-            return _sDKErrors;
-        }
+        return FindProperty(SDKErrors, error);
     }
+
+    private SDKProperty[] _sDKErrors;
+    public SDKProperty[] SDKErrors => _sDKErrors;
 
     private SDKProperty FindProperty(SDKProperty[] properties, string property)
     {
@@ -271,32 +265,31 @@ public class SDKHandler : IDisposable
         return search;
     }
 
-    public void SetSaveToHost() => SetSetting(EDSDKLib.EDSDK.PropID_SaveTo, (uint)EDSDKLib.EDSDK.EdsSaveTo.Host);
-
-    public SDKProperty GetStateEvent(uint stateEvent) => FindProperty(SDKStateEvents, stateEvent);
-
-    public SDKProperty GetSDKProperty(string property) => FindProperty(SDKProperties, property);
-
-
-    public SDKProperty GetSDKProperty(uint property) => FindProperty(SDKProperties, property);
-
-    SDKProperty[] _sDKProperties;
-    public SDKProperty[] SDKProperties
+    public void SetSaveToHost()
     {
-        get
-        {
-            return _sDKProperties;
-        }
+        SetSetting(EDSDKLib.EDSDK.PropID_SaveTo, (uint)EDSDKLib.EDSDK.EdsSaveTo.Host);
     }
 
-    SDKProperty[] _sDKStateEvents;
-    public SDKProperty[] SDKStateEvents
+    public SDKProperty GetStateEvent(uint stateEvent)
     {
-        get
-        {
-            return _sDKStateEvents;
-        }
+        return FindProperty(SDKStateEvents, stateEvent);
     }
+
+    public SDKProperty GetSDKProperty(string property)
+    {
+        return FindProperty(SDKProperties, property);
+    }
+
+    public SDKProperty GetSDKProperty(uint property)
+    {
+        return FindProperty(SDKProperties, property);
+    }
+
+    private SDKProperty[] _sDKProperties;
+    public SDKProperty[] SDKProperties => _sDKProperties;
+
+    private SDKProperty[] _sDKStateEvents;
+    public SDKProperty[] SDKStateEvents => _sDKStateEvents;
 
     public object Value { get; private set; }
     public bool KeepAlive { get; set; }
@@ -336,7 +329,7 @@ public class SDKHandler : IDisposable
 
         //subscribe to camera added event (the C# event and the SDK event)
         SDKCameraAddedEvent += new EdsCameraAddedHandler(SDKHandler_CameraAddedEvent);
-        AddCameraHandler(() => { return EdsSetCameraAddedHandler(SDKCameraAddedEvent, 0); }, nameof(EdsSetCameraAddedHandler));
+        AddCameraHandler(() => EdsSetCameraAddedHandler(SDKCameraAddedEvent, 0), nameof(EdsSetCameraAddedHandler));
 
         //subscribe to the camera events (for the C# events)
         SDKStateEvent += new EdsStateEventHandler(Camera_SDKStateEvent);
@@ -366,8 +359,7 @@ public class SDKHandler : IDisposable
         _sDKProperties = FilterFields(fields, "kEdsPropID_", "PropID_");
     }
 
-
-    static SDKProperty[] FilterFields(FieldInfo[] fields, string prefix, string prefix2 = null)
+    private static SDKProperty[] FilterFields(FieldInfo[] fields, string prefix, string prefix2 = null)
     {
         var filteredFields = from f in fields
                              where (f.Name.StartsWith(prefix) || (prefix2 != null && f.Name.StartsWith(prefix2))) && f.IsLiteral
@@ -403,7 +395,10 @@ public class SDKHandler : IDisposable
         return camList;
     }
 
-    private async Task LogInfoAsync(string message, params object[] args) => await Log(LogLevel.Information, message, args);
+    private async Task LogInfoAsync(string message, params object[] args)
+    {
+        await Log(LogLevel.Information, message, args);
+    }
 
     /// <summary>
     /// Opens a session with given camera
@@ -424,9 +419,9 @@ public class SDKHandler : IDisposable
             //open a session
             SendSDKCommand(delegate { Error = EdsOpenSession(MainCamera.Ref); }, sdkAction: nameof(EdsOpenSession));
             //subscribe to the camera events (for the SDK)
-            AddCameraHandler(() => { return EdsSetCameraStateEventHandler(MainCamera.Ref, StateEvent_All, SDKStateEvent, MainCamera.Ref); }, nameof(EdsSetCameraStateEventHandler));
-            AddCameraHandler(() => { return EdsSetObjectEventHandler(MainCamera.Ref, ObjectEvent_All, SDKObjectEvent, MainCamera.Ref); }, nameof(EdsSetObjectEventHandler));
-            AddCameraHandler(() => { return EdsSetPropertyEventHandler(MainCamera.Ref, PropertyEvent_All, SDKPropertyEvent, MainCamera.Ref); }, nameof(EdsSetPropertyEventHandler));
+            AddCameraHandler(() => EdsSetCameraStateEventHandler(MainCamera.Ref, StateEvent_All, SDKStateEvent, MainCamera.Ref), nameof(EdsSetCameraStateEventHandler));
+            AddCameraHandler(() => EdsSetObjectEventHandler(MainCamera.Ref, ObjectEvent_All, SDKObjectEvent, MainCamera.Ref), nameof(EdsSetObjectEventHandler));
+            AddCameraHandler(() => EdsSetPropertyEventHandler(MainCamera.Ref, PropertyEvent_All, SDKPropertyEvent, MainCamera.Ref), nameof(EdsSetPropertyEventHandler));
             CameraSessionOpen = true;
 
             var t = LogInfoAsync("Connected to Camera: {CameraName}", newCamera.Info.szDeviceDescription);
@@ -434,7 +429,7 @@ public class SDKHandler : IDisposable
         }
     }
 
-    void AddCameraHandler(Func<uint> action, string handlerName)
+    private void AddCameraHandler(Func<uint> action, string handlerName)
     {
         var t = LogInfoAsync("Adding handler: {SDKHandlerName}", handlerName);
 
@@ -497,7 +492,10 @@ public class SDKHandler : IDisposable
         return EDS_ERR_OK;
     }
 
-    protected void OnCameraAdded() => CameraAdded?.Invoke();
+    protected void OnCameraAdded()
+    {
+        CameraAdded?.Invoke();
+    }
 
 
     /// <summary>
@@ -566,7 +564,10 @@ public class SDKHandler : IDisposable
         return EDS_ERR_OK;
     }
 
-    protected void OnProgressChanged(int percent) => ProgressChanged?.Invoke(percent);
+    protected void OnProgressChanged(int percent)
+    {
+        ProgressChanged?.Invoke(percent);
+    }
 
     /// <summary>
     /// A property changed
@@ -755,9 +756,15 @@ public class SDKHandler : IDisposable
         return EDS_ERR_OK;
     }
 
-    protected void OnCameraHasShutdown() => CameraHasShutdown?.Invoke(this, new EventArgs());
+    protected void OnCameraHasShutdown()
+    {
+        CameraHasShutdown?.Invoke(this, new EventArgs());
+    }
 
-    protected void OnSdkError(SdkErrorEventArgs e) => SdkError?.Invoke(this, e);
+    protected void OnSdkError(SdkErrorEventArgs e)
+    {
+        SdkError?.Invoke(this, e);
+    }
 
     #endregion Eventhandling
     #region Camera commands
@@ -816,10 +823,7 @@ public class SDKHandler : IDisposable
                 //create filestream to data
                 Error = EdsCreateFileStream(targetImage, EdsFileCreateDisposition.CreateAlways, EdsAccess.ReadWrite, out streamRef);
                 //download file
-                STAThread.TryLockAndExecute(STAThread.ExecLock, nameof(STAThread.ExecLock), TimeSpan.FromSeconds(30), () =>
-                    {
-                        DownloadData(ObjectPointer, streamRef);
-                    });
+                STAThread.TryLockAndExecute(STAThread.ExecLock, nameof(STAThread.ExecLock), TimeSpan.FromSeconds(30), () => DownloadData(ObjectPointer, streamRef));
                 //release stream
                 Error = EdsRelease(streamRef);
 
@@ -906,7 +910,10 @@ public class SDKHandler : IDisposable
         }
     }
 
-    protected void OnImageDownloaded(Bitmap bitmap) => ImageDownloaded?.Invoke(bitmap);
+    protected void OnImageDownloaded(Bitmap bitmap)
+    {
+        ImageDownloaded?.Invoke(bitmap);
+    }
 
     /// <summary>
     /// Gets the thumbnail of an image (can be raw or jpg)
@@ -1199,7 +1206,7 @@ public class SDKHandler : IDisposable
         SetStructSetting(propertyId, dateTime);
     }
 
-    void LogSetProperty(uint propertyId, string value)
+    private void LogSetProperty(uint propertyId, string value)
     {
         var prop = GetSDKProperty(propertyId);
         var t = LogInfoAsync("Setting property. Name: {SDKPropertyName}, Id: {SDKPropertyHex}, Value: {SDKPropertyValue}", prop.Name, prop.Value, value);
@@ -1305,7 +1312,7 @@ public class SDKHandler : IDisposable
 
     }
 
-    readonly AutoResetEvent cancelLiveViewWait = new(false);
+    private readonly AutoResetEvent cancelLiveViewWait = new(false);
 
     /// <summary>
     /// Downloads the live view image
@@ -1394,7 +1401,10 @@ public class SDKHandler : IDisposable
     /// Fires the LiveViewUpdated event
     /// </summary>
     /// <param name="stream"></param>
-    protected void OnLiveViewUpdated(UnmanagedMemoryStream stream) => LiveViewUpdated?.Invoke(stream);
+    protected void OnLiveViewUpdated(UnmanagedMemoryStream stream)
+    {
+        LiveViewUpdated?.Invoke(stream);
+    }
 
 
     /// <summary>
@@ -1461,7 +1471,10 @@ public class SDKHandler : IDisposable
         }
     }
 
-    public void SetTFTEvf() => SetSetting(PropID_Evf_OutputDevice, EvfOutputDevice_TFT);
+    public void SetTFTEvf()
+    {
+        SetSetting(PropID_Evf_OutputDevice, EvfOutputDevice_TFT);
+    }
 
     /// <summary>
     /// Starts recording a video
@@ -1517,7 +1530,7 @@ public class SDKHandler : IDisposable
         }
     }
 
-    TaskCompletionSource<string> videoDownloadDone;
+    private TaskCompletionSource<string> videoDownloadDone;
 
     /// <summary>
     /// Stops recording a video
@@ -1562,13 +1575,15 @@ public class SDKHandler : IDisposable
     /// Press the shutter button
     /// </summary>
     /// <param name="state">State of the shutter button</param>
-    public void PressShutterButton(EdsShutterButton state) =>
+    public void PressShutterButton(EdsShutterButton state)
+    {
         //start thread to not block everything
         SendSDKCommand(delegate
         {
             //send command to camera
             lock (STAThread.ExecLock) { Error = EdsSendCommand(MainCamera.Ref, CameraCommand_PressShutterButton, (int)state); };
         }, true);
+    }
 
     private TaskCompletionSource<FileInfo> takePhotoCompletionSource;
     private string _imageSaveFilename;
@@ -1577,7 +1592,9 @@ public class SDKHandler : IDisposable
     /// Takes a photo and returns the file info
     /// </summary>
     /// <returns></returns>
-    public async Task<FileInfo> TakePhotoAsync(FileInfo saveFile) => await Task.Run<FileInfo>(async () =>
+    public async Task<FileInfo> TakePhotoAsync(FileInfo saveFile)
+    {
+        return await Task.Run<FileInfo>(async () =>
                                                                           {
                                                                               if (IsFilming || IsLiveViewOn)
                                                                               {
@@ -1602,8 +1619,11 @@ public class SDKHandler : IDisposable
                                                                                   return null;
                                                                               }
                                                                           });
+    }
 
-    private async Task Log(LogLevel level, string message, params object[] args) => await Task.Run(() =>
+    private async Task Log(LogLevel level, string message, params object[] args)
+    {
+        await Task.Run(() =>
                                                                                          {
 
                                                                                              if (logger != null)
@@ -1649,6 +1669,7 @@ public class SDKHandler : IDisposable
                                                                                                  // throw new Exception(string.Format(message, args));
                                                                                              }
                                                                                          });
+    }
 
     private void HandleException(Exception ex, string message, params object[] args)
     {
@@ -1678,13 +1699,15 @@ public class SDKHandler : IDisposable
     /// <summary>
     /// Takes a photo with the current camera settings
     /// </summary>
-    public void TakePhoto() =>
+    public void TakePhoto()
+    {
         //start thread to not block everything
         SendSDKCommand(delegate
         {
             //send command to camera
             lock (STAThread.ExecLock) { Error = EdsSendCommand(MainCamera.Ref, CameraCommand_TakePicture, 0); };
         }, true);
+    }
 
     /// <summary>
     /// Takes a photo in bulb mode with the current camera settings
@@ -1708,14 +1731,14 @@ public class SDKHandler : IDisposable
     }
 
 
-    public void FormatAllVolumes() => RunForEachVolume((childReference, volumeInfo) =>
+    public void FormatAllVolumes()
+    {
+        RunForEachVolume((childReference, volumeInfo) =>
                                            {
                                                logger.LogInformation("Formatting volume. Volume: {Volume}", volumeInfo.szVolumeLabel);
-                                               SendSDKCommand(() =>
-                                               {
-                                                   Error = EdsFormatVolume(childReference);
-                                               });
+                                               SendSDKCommand(() => Error = EdsFormatVolume(childReference));
                                            });
+    }
 
     public float GetMinVolumeSpacePercent()
     {
@@ -1815,7 +1838,10 @@ public class SDKHandler : IDisposable
     /// Tells the camera that there is enough space on the HDD if SaveTo is set to Host
     /// This method does not use the actual free space!
     /// </summary>
-    public void SetCapacity() => SetCapacity(0x1000, 0x7FFFFFFF);
+    public void SetCapacity()
+    {
+        SetCapacity(0x1000, 0x7FFFFFFF);
+    }
 
     /// <summary>
     /// Tells the camera how much space is available on the host PC
@@ -1875,9 +1901,10 @@ public class SDKHandler : IDisposable
         }
     }
 
-    public List<CameraFileEntry> GetVolumes() => GetVolumes(GetCamera());
-
-
+    public List<CameraFileEntry> GetVolumes()
+    {
+        return GetVolumes(GetCamera());
+    }
 
     public List<CameraFileEntry> GetVolumes(CameraFileEntry camera)
     {
@@ -1906,7 +1933,10 @@ public class SDKHandler : IDisposable
         return volumes;
     }
 
-    public CameraFileEntry GetCamera() => new("Camera", CameraFileEntryTypes.Camera, MainCamera.Ref);
+    public CameraFileEntry GetCamera()
+    {
+        return new("Camera", CameraFileEntryTypes.Camera, MainCamera.Ref);
+    }
 
     public void DeleteFileItem(CameraFileEntry fileItem)
     {
@@ -1951,12 +1981,15 @@ public class SDKHandler : IDisposable
     /// Locks or unlocks the cameras UI
     /// </summary>
     /// <param name="lockState">True for locked, false to unlock</param>
-    public void UILock(bool lockState) => SendSDKCommand(delegate
+    public void UILock(bool lockState)
+    {
+        SendSDKCommand(delegate
                                                {
                                                    Error = lockState == true
                                                        ? EdsSendStatusCommand(MainCamera.Ref, CameraState_UILock, 0)
                                                        : EdsSendStatusCommand(MainCamera.Ref, CameraState_UIUnLock, 0);
                                                });
+    }
 
     /// <summary>
     /// Gets the children of a camera folder/volume. Recursive method.
@@ -2018,7 +2051,10 @@ public class SDKHandler : IDisposable
     /// </summary>
     /// <param name="val">Value</param>
     /// <returns>A bool created from the value</returns>
-    private bool GetBool(int val) => val != 0;
+    private bool GetBool(int val)
+    {
+        return val != 0;
+    }
 
     #endregion
 
