@@ -336,7 +336,7 @@ public class SDKHandler : IDisposable
 
         //subscribe to camera added event (the C# event and the SDK event)
         SDKCameraAddedEvent += new EdsCameraAddedHandler(SDKHandler_CameraAddedEvent);
-        AddCameraHandler(() => { return EdsSetCameraAddedHandler(SDKCameraAddedEvent, IntPtr.Zero); }, nameof(EdsSetCameraAddedHandler));
+        AddCameraHandler(() => { return EdsSetCameraAddedHandler(SDKCameraAddedEvent, 0); }, nameof(EdsSetCameraAddedHandler));
 
         //subscribe to the camera events (for the C# events)
         SDKStateEvent += new EdsStateEventHandler(Camera_SDKStateEvent);
@@ -381,7 +381,7 @@ public class SDKHandler : IDisposable
     /// <returns>The camera list</returns>
     public List<Camera> GetCameraList()
     {
-        IntPtr camlist;
+        nint camlist;
         //get list of cameras
         Error = EdsGetCameraList(out camlist);
 
@@ -392,7 +392,7 @@ public class SDKHandler : IDisposable
         List<Camera> camList = [];
         for (int i = 0; i < c; i++)
         {
-            IntPtr cptr;
+            nint cptr;
             //get pointer to camera at index i
             Error = EdsGetChildAtIndex(camlist, i, out cptr);
             camList.Add(new Camera(cptr));
@@ -490,7 +490,7 @@ public class SDKHandler : IDisposable
     /// </summary>
     /// <param name="inContext">The pointer to the added camera</param>
     /// <returns>An EDSDK errorcode</returns>
-    private uint SDKHandler_CameraAddedEvent(IntPtr inContext)
+    private uint SDKHandler_CameraAddedEvent(nint inContext)
     {
         //Handle new camera here
         OnCameraAdded();
@@ -507,7 +507,7 @@ public class SDKHandler : IDisposable
     /// <param name="inRef">Pointer to the object</param>
     /// <param name="inContext"></param>
     /// <returns>An EDSDK errorcode</returns>
-    private uint Camera_SDKObjectEvent(uint inEvent, IntPtr inRef, IntPtr inContext)
+    private uint Camera_SDKObjectEvent(uint inEvent, nint inRef, nint inContext)
     {
         var eventProperty = SDKObjectEventToProperty(inEvent);
         //LogInfo("SDK Object Event. Name: {SDKEventName}, Value: {SDKEventHex}", eventProperty.Name, eventProperty.ValueToString());
@@ -559,7 +559,7 @@ public class SDKHandler : IDisposable
     /// <param name="inContext">...</param>
     /// <param name="outCancel">Set true to cancel event</param>
     /// <returns>An EDSDK errorcode</returns>
-    private uint Camera_SDKProgressCallbackEvent(uint inPercent, IntPtr inContext, ref bool outCancel)
+    private uint Camera_SDKProgressCallbackEvent(uint inPercent, nint inContext, ref bool outCancel)
     {
         //Handle progress here
         OnProgressChanged((int)inPercent);
@@ -576,7 +576,7 @@ public class SDKHandler : IDisposable
     /// <param name="inParameter">Event Parameter</param>
     /// <param name="inContext">...</param>
     /// <returns>An EDSDK errorcode</returns>
-    private uint Camera_SDKPropertyEvent(uint inEvent, uint inPropertyID, uint inParameter, IntPtr inContext)
+    private uint Camera_SDKPropertyEvent(uint inEvent, uint inPropertyID, uint inParameter, nint inContext)
     {
         //Handle property event here
         switch (inEvent)
@@ -713,7 +713,7 @@ public class SDKHandler : IDisposable
     /// <param name="inParameter">Parameter from this event</param>
     /// <param name="inContext">...</param>
     /// <returns>An EDSDK errorcode</returns>
-    private uint Camera_SDKStateEvent(uint inEvent, uint inParameter, IntPtr inContext)
+    private uint Camera_SDKStateEvent(uint inEvent, uint inParameter, nint inContext)
     {
 
         var stateProperty = GetStateEvent(inEvent);
@@ -769,12 +769,12 @@ public class SDKHandler : IDisposable
     /// </summary>
     /// <param name="ObjectPointer">Pointer to the object. Get it from the SDKObjectEvent.</param>
     /// <param name="directory">Path to where the image will be saved to</param>
-    public void DownloadImage(IntPtr ObjectPointer, string directory, string fileName, bool isVideo = false)
+    public void DownloadImage(nint ObjectPointer, string directory, string fileName, bool isVideo = false)
     {
         try
         {
             EdsDirectoryItemInfo dirInfo;
-            IntPtr streamRef;
+            nint streamRef;
             //get information about object
             Error = EdsGetDirectoryItemInfo(ObjectPointer, out dirInfo);
             if (string.IsNullOrEmpty(fileName))
@@ -855,7 +855,7 @@ public class SDKHandler : IDisposable
     /// Downloads a jpg image from the camera into a Bitmap. Fires the ImageDownloaded event when done.
     /// </summary>
     /// <param name="ObjectPointer">Pointer to the object. Get it from the SDKObjectEvent.</param>
-    public void DownloadImage(IntPtr ObjectPointer)
+    public void DownloadImage(nint ObjectPointer)
     {
         //get information about image
         EdsDirectoryItemInfo dirInfo = new();
@@ -872,7 +872,7 @@ public class SDKHandler : IDisposable
             SendSDKCommand(delegate
             {
                 Bitmap bmp = null;
-                IntPtr streamRef, jpgPointer = IntPtr.Zero;
+                nint streamRef, jpgPointer = 0;
                 ulong length = 0;
 
                 //create memory stream
@@ -915,7 +915,7 @@ public class SDKHandler : IDisposable
     /// <returns>The thumbnail of the image</returns>
     public Bitmap GetFileThumb(string filepath)
     {
-        IntPtr stream;
+        nint stream;
         //create a filestream to given file
         Error = EdsCreateFileStream(filepath, EdsFileCreateDisposition.OpenExisting, EdsAccess.Read, out stream);
         return GetImage(stream, EdsImageSource.Thumbnail);
@@ -926,7 +926,7 @@ public class SDKHandler : IDisposable
     /// </summary>
     /// <param name="ObjectPointer">Pointer to the object</param>
     /// <param name="stream">Pointer to the stream created in advance</param>
-    private void DownloadData(IntPtr ObjectPointer, IntPtr stream)
+    private void DownloadData(nint ObjectPointer, nint stream)
     {
         //get information about the object
         EdsDirectoryItemInfo dirInfo;
@@ -954,11 +954,11 @@ public class SDKHandler : IDisposable
     /// <param name="img_stream">Image stream</param>
     /// <param name="imageSource">Type of image</param>
     /// <returns>The bitmap from the stream</returns>
-    private Bitmap GetImage(IntPtr img_stream, EdsImageSource imageSource)
+    private Bitmap GetImage(nint img_stream, EdsImageSource imageSource)
     {
-        IntPtr stream = IntPtr.Zero;
-        IntPtr img_ref = IntPtr.Zero;
-        IntPtr streamPointer = IntPtr.Zero;
+        nint stream = 0;
+        nint img_ref = 0;
+        nint streamPointer = 0;
         EdsImageInfo imageInfo;
 
         try
@@ -978,7 +978,7 @@ public class SDKHandler : IDisposable
             byte[] buffer = new byte[datalength];
             //create a stream to the buffer
 
-            IntPtr ptr = new();
+            nint ptr = new();
             Marshal.StructureToPtr<byte[]>(buffer, ptr, false);
 
 
@@ -1012,17 +1012,17 @@ public class SDKHandler : IDisposable
         finally
         {
             //Release all data
-            if (img_stream != IntPtr.Zero)
+            if (img_stream != 0)
             {
                 EdsRelease(img_stream);
             }
 
-            if (img_ref != IntPtr.Zero)
+            if (img_ref != 0)
             {
                 EdsRelease(img_ref);
             }
 
-            if (stream != IntPtr.Zero)
+            if (stream != 0)
             {
                 EdsRelease(stream);
             }
@@ -1030,7 +1030,6 @@ public class SDKHandler : IDisposable
     }
 
     #endregion
-
     #region Get Settings
 
     /// <summary>
@@ -1041,7 +1040,7 @@ public class SDKHandler : IDisposable
     /// <returns>A list of available values for the given property ID</returns>
     public List<int> GetSettingsList(uint PropID)
     {
-        if (MainCamera.Ref != IntPtr.Zero)
+        if (MainCamera.Ref != 0)
         {
             //a list of settings can only be retrieved for following properties
             if (PropID == PropID_AEModeSelect || PropID == PropID_ISOSpeed || PropID == PropID_Av
@@ -1067,7 +1066,7 @@ public class SDKHandler : IDisposable
     /// <returns>The current setting of the camera</returns>
     public uint GetSetting(uint PropID)
     {
-        if (MainCamera.Ref != IntPtr.Zero)
+        if (MainCamera.Ref != 0)
         {
             uint property = 0;
             Error = EdsGetPropertyData(MainCamera.Ref, PropID, 0, out property);
@@ -1083,7 +1082,7 @@ public class SDKHandler : IDisposable
     /// <returns>The current setting of the camera</returns>
     public string GetStringSetting(uint PropID)
     {
-        if (MainCamera.Ref != IntPtr.Zero)
+        if (MainCamera.Ref != 0)
         {
             string data = String.Empty;
             EdsGetPropertyData(MainCamera.Ref, PropID, 0, out data);
@@ -1100,14 +1099,14 @@ public class SDKHandler : IDisposable
     /// <returns>The current setting of the camera</returns>
     public T GetStructSetting<T>(uint PropID) where T : struct
     {
-        if (MainCamera.Ref != IntPtr.Zero)
+        if (MainCamera.Ref != 0)
         {
             //get type and size of struct
             Type structureType = typeof(T);
             int bufferSize = Marshal.SizeOf(structureType);
 
             //allocate memory
-            IntPtr ptr = Marshal.AllocHGlobal(bufferSize);
+            nint ptr = Marshal.AllocHGlobal(bufferSize);
             //retrieve value
             Error = EdsGetPropertyData(MainCamera.Ref, PropID, 0, bufferSize, ptr);
 
@@ -1119,11 +1118,11 @@ public class SDKHandler : IDisposable
             }
             finally
             {
-                if (ptr != IntPtr.Zero)
+                if (ptr != 0)
                 {
                     //free the allocated memory
                     Marshal.FreeHGlobal(ptr);
-                    ptr = IntPtr.Zero;
+                    ptr = 0;
                 }
             }
         }
@@ -1131,7 +1130,6 @@ public class SDKHandler : IDisposable
     }
 
     #endregion
-
     #region Set Settings
 
 
@@ -1144,7 +1142,7 @@ public class SDKHandler : IDisposable
     public void SetSetting(uint propertyId, uint value)
     {
         LogSetProperty(propertyId, "0x" + value.ToString("X"));
-        if (MainCamera.Ref != IntPtr.Zero)
+        if (MainCamera.Ref != 0)
         {
             SendSDKCommand(delegate
             {
@@ -1169,7 +1167,7 @@ public class SDKHandler : IDisposable
     public void SendCommand(uint commandId, int value)
     {
         Log(LogLevel.Debug, "Sending command. CommandId: {CommandId}, Value: {Value}", $"0x{commandId:X}", $"0x{value:X}").RunSynchronously();
-        if (MainCamera.Ref != IntPtr.Zero)
+        if (MainCamera.Ref != 0)
         {
 
             SendSDKCommand(delegate
@@ -1216,7 +1214,7 @@ public class SDKHandler : IDisposable
     {
         LogSetProperty(propertyId, value);
         //TODO: Refactor to remove duplicate code in Set_XXX_Setting methods
-        if (MainCamera.Ref != IntPtr.Zero)
+        if (MainCamera.Ref != 0)
         {
             if (value == null)
             {
@@ -1247,7 +1245,7 @@ public class SDKHandler : IDisposable
     public void SetStructSetting<T>(uint propertyId, T value) where T : struct
     {
         LogSetProperty(propertyId, value.ToString());
-        if (MainCamera.Ref != IntPtr.Zero)
+        if (MainCamera.Ref != 0)
         {
             SendSDKCommand(delegate { Error = EdsSetPropertyData(MainCamera.Ref, propertyId, 0, Marshal.SizeOf(typeof(T)), value); }, sdkAction: nameof(EdsSetPropertyData));
         }
@@ -1255,7 +1253,6 @@ public class SDKHandler : IDisposable
     }
 
     #endregion
-
     #region Live view
 
     /// <summary>
@@ -1319,9 +1316,9 @@ public class SDKHandler : IDisposable
         {
             try
             {
-                IntPtr jpgPointer;
-                IntPtr stream = IntPtr.Zero;
-                IntPtr EvfImageRef = IntPtr.Zero;
+                nint jpgPointer;
+                nint stream = 0;
+                nint EvfImageRef = 0;
                 UnmanagedMemoryStream ums;
 
                 uint err;
@@ -1359,7 +1356,7 @@ public class SDKHandler : IDisposable
                     Evf_ImagePosition = GetEvfPoints(PropID_Evf_ImagePosition, EvfImageRef);
 
                     //release current evf image
-                    if (EvfImageRef != IntPtr.Zero) { Error = EdsRelease(EvfImageRef); }
+                    if (EvfImageRef != 0) { Error = EdsRelease(EvfImageRef); }
 
                     //create stream to image
                     unsafe { ums = new UnmanagedMemoryStream((byte*)jpgPointer.ToPointer(), (long)length, (long)length, FileAccess.Read); }
@@ -1370,7 +1367,7 @@ public class SDKHandler : IDisposable
                 }
 
                 //release and finish
-                if (stream != IntPtr.Zero)
+                if (stream != 0)
                 {
                     Error = EdsRelease(stream);
                 }
@@ -1405,10 +1402,10 @@ public class SDKHandler : IDisposable
     /// </summary>
     /// <param name="imgRef">The live view reference</param>
     /// <returns>ZoomRect value</returns>
-    private EdsRect GetEvfZoomRect(IntPtr imgRef)
+    private EdsRect GetEvfZoomRect(nint imgRef)
     {
         int size = Marshal.SizeOf(typeof(EdsRect));
-        IntPtr ptr = Marshal.AllocHGlobal(size);
+        nint ptr = Marshal.AllocHGlobal(size);
 
         uint err = EdsGetPropertyData(imgRef, PropID_Evf_ZoomPosition, 0, size, ptr);
         EdsRect rect = (EdsRect)Marshal.PtrToStructure(ptr, typeof(EdsRect));
@@ -1421,10 +1418,10 @@ public class SDKHandler : IDisposable
     /// </summary>
     /// <param name="imgRef">The live view reference</param>
     /// <returns>the live view coordinate system</returns>
-    private EdsSize GetEvfCoord(IntPtr imgRef)
+    private EdsSize GetEvfCoord(nint imgRef)
     {
         int size = Marshal.SizeOf(typeof(EdsSize));
-        IntPtr ptr = Marshal.AllocHGlobal(size);
+        nint ptr = Marshal.AllocHGlobal(size);
         uint err = EdsGetPropertyData(imgRef, PropID_Evf_CoordinateSystem, 0, size, ptr);
         EdsSize coord = (EdsSize)Marshal.PtrToStructure(ptr, typeof(EdsSize));
         Marshal.FreeHGlobal(ptr);
@@ -1436,10 +1433,10 @@ public class SDKHandler : IDisposable
     /// </summary>
     /// <param name="imgRef">The live view reference</param>
     /// <returns>a live view EdsPoint value</returns>
-    private EdsPoint GetEvfPoints(uint PropID, IntPtr imgRef)
+    private EdsPoint GetEvfPoints(uint PropID, nint imgRef)
     {
         int size = Marshal.SizeOf(typeof(EdsPoint));
-        IntPtr ptr = Marshal.AllocHGlobal(size);
+        nint ptr = Marshal.AllocHGlobal(size);
         uint err = EdsGetPropertyData(imgRef, PropID, 0, size, ptr);
         EdsPoint data = (EdsPoint)Marshal.PtrToStructure(ptr, typeof(EdsPoint));
         Marshal.FreeHGlobal(ptr);
@@ -1735,7 +1732,7 @@ public class SDKHandler : IDisposable
         return minPercent;
     }
 
-    private void RunForEachVolume(Action<IntPtr, EdsVolumeInfo> action)
+    private void RunForEachVolume(Action<nint, EdsVolumeInfo> action)
     {
         //get the number of volumes currently installed in the camera
         int VolumeCount;
@@ -1744,7 +1741,7 @@ public class SDKHandler : IDisposable
         for (int i = 0; i < VolumeCount; i++)
         {
             //get information about volume
-            IntPtr childReference;
+            nint childReference;
             Error = EdsGetChildAtIndex(MainCamera.Ref, i, out childReference);
             EdsVolumeInfo volumeInfo = new();
             SendSDKCommand(delegate { Error = EdsGetVolumeInfo(childReference, out volumeInfo); });
@@ -1893,7 +1890,7 @@ public class SDKHandler : IDisposable
         for (int i = 0; i < VolumeCount; i++)
         {
             //get information about volume
-            IntPtr childReference;
+            nint childReference;
             Error = EdsGetChildAtIndex(MainCamera.Ref, i, out childReference);
             EdsVolumeInfo volumeInfo = new();
             SendSDKCommand(delegate { Error = EdsGetVolumeInfo(childReference, out volumeInfo); });
@@ -1966,7 +1963,7 @@ public class SDKHandler : IDisposable
     /// </summary>
     /// <param name="ptr">Pointer to volume or folder</param>
     /// <returns></returns>
-    private CameraFileEntry[] GetChildren(IntPtr ptr)
+    private CameraFileEntry[] GetChildren(nint ptr)
     {
         int childCount;
         //get children of first pointer
@@ -1977,7 +1974,7 @@ public class SDKHandler : IDisposable
             CameraFileEntry[] children = new CameraFileEntry[childCount];
             for (int i = 0; i < childCount; i++)
             {
-                IntPtr childReference;
+                nint childReference;
                 //get children of children
                 Error = EdsGetChildAtIndex(ptr, i, out childReference);
                 //get the information about this children
@@ -1990,7 +1987,7 @@ public class SDKHandler : IDisposable
                     if (false)
                     {
                         //if it's not a folder, create thumbnail and save it to the entry                       
-                        IntPtr stream;
+                        nint stream;
                         Error = EdsCreateMemoryStream(0, out stream);
                         SendSDKCommand(delegate { Error = EdsDownloadThumbnail(childReference, stream); });
                         children[i].AddThumb(GetImage(stream, EdsImageSource.Thumbnail));

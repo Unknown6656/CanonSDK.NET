@@ -12,7 +12,7 @@ public class Camera
     /// <summary>
     /// Pointer to SDK camera object
     /// </summary>
-    public IntPtr Ref { get; private set; }
+    public nint Ref { get; private set; }
     /// <summary>
     /// Information about this camera
     /// </summary>
@@ -30,9 +30,9 @@ public class Camera
     /// Creates a new instance of the Camera class
     /// </summary>
     /// <param name="Reference">Pointer to the SDK camera object</param>
-    public Camera(IntPtr Reference)
+    public Camera(nint Reference)
     {
-        if (Reference == IntPtr.Zero) throw new ArgumentNullException("Camera pointer is zero");
+        if (Reference == 0) throw new ArgumentNullException("Camera pointer is zero");
         this.Ref = Reference;
         EdsDeviceInfo dinfo;
         Error = EdsGetDeviceInfo(Reference, out dinfo);

@@ -25,7 +25,7 @@ public class CameraFileEntry
 
     public CameraFileEntryTypes Type { get; private set; }
 
-    public IntPtr Reference { get; private set; }
+    public nint Reference { get; private set; }
 
     /// <summary>
     /// Thumbnail of this entry (might be null if not available)
@@ -41,7 +41,7 @@ public class CameraFileEntry
     /// </summary>
     /// <param name="Name">Name of this entry</param>
     /// <param name="IsFolder">True if this entry is a folder, false otherwise</param>
-    public CameraFileEntry(string Name, CameraFileEntryTypes type, IntPtr reference)
+    public CameraFileEntry(string Name, CameraFileEntryTypes type, nint reference)
     {
         this.Name = Name;
         this.Type = type;
