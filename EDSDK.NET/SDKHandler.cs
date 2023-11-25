@@ -18,6 +18,18 @@ using EDSDK.Native;
 namespace EDSDK.NET;
 
 
+public sealed record SDKProperty(string Name, uint Value, bool Matched = true)
+{
+    public string ValueToString() => $"0x{Value:X8}";
+}
+
+public sealed class SDKErrorEventArgs(string error, LogLevel level)
+    : EventArgs
+{
+    public string Error { get; } = error;
+    public LogLevel ErrorLevel { get; } = level;
+}
+
 /// <summary>
 /// Handles the Canon SDK
 /// </summary>
@@ -25,7 +37,7 @@ public class SDKHandler : IDisposable
 {
     #region Events
 
-    public event EventHandler<SdkErrorEventArgs> SdkError;
+    public event EventHandler<SDKErrorEventArgs> SdkError;
 
     #endregion Events
     #region Variables
@@ -106,7 +118,7 @@ public class SDKHandler : IDisposable
                     case EDS_ERR_DEVICE_INVALID:
                     case EDS_ERR_DEVICE_NOT_FOUND:
                         string name = FindProperty(SDKErrors, value).Name;
-                        OnSdkError(new SdkErrorEventArgs() { Error = name, ErrorLevel = LogLevel.Critical });
+                        OnSdkError(new SDKErrorEventArgs() { Error = name, ErrorLevel = LogLevel.Critical });
                         break;
                 }
 
@@ -341,7 +353,7 @@ public class SDKHandler : IDisposable
 
     private void STAThread_FatalError(object sender, EventArgs e)
     {
-        SdkErrorEventArgs args = new() { Error = "Execution thread error", ErrorLevel = LogLevel.Critical };
+        SDKErrorEventArgs args = new() { Error = "Execution thread error", ErrorLevel = LogLevel.Critical };
         OnSdkError(args);
     }
 
@@ -761,7 +773,7 @@ public class SDKHandler : IDisposable
         CameraHasShutdown?.Invoke(this, new EventArgs());
     }
 
-    protected void OnSdkError(SdkErrorEventArgs e)
+    protected void OnSdkError(SDKErrorEventArgs e)
     {
         SdkError?.Invoke(this, e);
     }
