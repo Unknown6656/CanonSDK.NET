@@ -1,5 +1,5 @@
-﻿using System.Drawing;
-using System;
+﻿using System.Collections.Generic;
+using System.Drawing;
 
 using EDSDK.Native;
 
@@ -41,7 +41,9 @@ public class CameraFileEntry(string name, CameraFileEntryTypes type, nint handle
     /// <summary>
     /// Subentries of this entry (i.e. subfolders)
     /// </summary>
-    public CameraFileEntry[] Entries { get; set; } = [];
+    public CameraFileEntry[] Entries { get; private set; } = [];
 
     public EdsVolumeInfo Volume { get; set; }
+
+    public void AddSubEntries(IEnumerable<CameraFileEntry> entries) => Entries = [.. Entries, .. entries];
 }
