@@ -23,7 +23,9 @@ public sealed class Camera
     /// <summary>
     /// Handles errors that happen with the SDK
     /// </summary>
+#pragma warning disable CA1822 // Mark members as static
     public SDKError Error
+#pragma warning restore CA1822
     {
      // get => EdsError.OK;
         set
