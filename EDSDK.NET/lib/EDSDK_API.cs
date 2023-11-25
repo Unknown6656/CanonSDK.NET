@@ -5,9 +5,9 @@ namespace EDSDK.Native;
 
 public delegate uint EdsProgressCallback(uint inPercent, nint inContext, ref bool outCancel);
 public delegate uint EdsCameraAddedHandler(nint inContext);
-public delegate uint EdsPropertyEventHandler(uint inEvent, uint inPropertyID, uint inParam, nint inContext);
-public delegate uint EdsObjectEventHandler(uint inEvent, nint inRef, nint inContext);
-public delegate uint EdsStateEventHandler(uint inEvent, uint inParameter, nint inContext);
+public delegate uint EdsPropertyEventHandler(EdsEvent inEvent, uint inPropertyID, uint inParam, nint inContext);
+public delegate uint EdsObjectEventHandler(EdsEvent inEvent, nint inRef, nint inContext);
+public delegate uint EdsStateEventHandler(EdsEvent inEvent, uint inParameter, nint inContext);
 
 public enum EdsDataType
     : uint
@@ -296,129 +296,254 @@ public enum DcRemoteShootingMode
     DcRemoteShootingModeStart = 1,
 }
 
-public enum ImageQuality
+public enum EdsImageQuality
     : uint
 {
     /* Jpeg Only */
-    EdsImageQuality_LJ = 0x0010ff0f,    /* Jpeg Large */
-    EdsImageQuality_M1J = 0x0510ff0f,   /* Jpeg Middle1 */
-    EdsImageQuality_M2J = 0x0610ff0f,   /* Jpeg Middle2 */
-    EdsImageQuality_SJ = 0x0210ff0f,    /* Jpeg Small */
-    EdsImageQuality_LJF = 0x0013ff0f,   /* Jpeg Large Fine */
-    EdsImageQuality_LJN = 0x0012ff0f,   /* Jpeg Large Normal */
-    EdsImageQuality_MJF = 0x0113ff0f,   /* Jpeg Middle Fine */
-    EdsImageQuality_MJN = 0x0112ff0f,   /* Jpeg Middle Normal */
-    EdsImageQuality_SJF = 0x0213ff0f,   /* Jpeg Small Fine */
-    EdsImageQuality_SJN = 0x0212ff0f,   /* Jpeg Small Normal */
-    EdsImageQuality_S1JF = 0x0E13ff0f,  /* Jpeg Small1 Fine */
-    EdsImageQuality_S1JN = 0x0E12ff0f,  /* Jpeg Small1 Normal */
-    EdsImageQuality_S2JF = 0x0F13ff0f,  /* Jpeg Small2 */
-    EdsImageQuality_S3JF = 0x1013ff0f,  /* Jpeg Small3 */
+    LJ = 0x0010ff0f,    /* Jpeg Large */
+    M1J = 0x0510ff0f,   /* Jpeg Middle1 */
+    M2J = 0x0610ff0f,   /* Jpeg Middle2 */
+    SJ = 0x0210ff0f,    /* Jpeg Small */
+    LJF = 0x0013ff0f,   /* Jpeg Large Fine */
+    LJN = 0x0012ff0f,   /* Jpeg Large Normal */
+    MJF = 0x0113ff0f,   /* Jpeg Middle Fine */
+    MJN = 0x0112ff0f,   /* Jpeg Middle Normal */
+    SJF = 0x0213ff0f,   /* Jpeg Small Fine */
+    SJN = 0x0212ff0f,   /* Jpeg Small Normal */
+    S1JF = 0x0E13ff0f,  /* Jpeg Small1 Fine */
+    S1JN = 0x0E12ff0f,  /* Jpeg Small1 Normal */
+    S2JF = 0x0F13ff0f,  /* Jpeg Small2 */
+    S3JF = 0x1013ff0f,  /* Jpeg Small3 */
 
     /* RAW + Jpeg */
-    EdsImageQuality_LR = 0x0064ff0f,    /* RAW */
-    EdsImageQuality_LRLJF = 0x00640013, /* RAW + Jpeg Large Fine */
-    EdsImageQuality_LRLJN = 0x00640012, /* RAW + Jpeg Large Normal */
-    EdsImageQuality_LRMJF = 0x00640113, /* RAW + Jpeg Middle Fine */
-    EdsImageQuality_LRMJN = 0x00640112, /* RAW + Jpeg Middle Normal */
-    EdsImageQuality_LRSJF = 0x00640213, /* RAW + Jpeg Small Fine */
-    EdsImageQuality_LRSJN = 0x00640212, /* RAW + Jpeg Small Normal */
-    EdsImageQuality_LRS1JF = 0x00640E13,    /* RAW + Jpeg Small1 Fine */
-    EdsImageQuality_LRS1JN = 0x00640E12,    /* RAW + Jpeg Small1 Normal */
-    EdsImageQuality_LRS2JF = 0x00640F13,    /* RAW + Jpeg Small2 */
-    EdsImageQuality_LRS3JF = 0x00641013,    /* RAW + Jpeg Small3 */
+    LR = 0x0064ff0f,    /* RAW */
+    LRLJF = 0x00640013, /* RAW + Jpeg Large Fine */
+    LRLJN = 0x00640012, /* RAW + Jpeg Large Normal */
+    LRMJF = 0x00640113, /* RAW + Jpeg Middle Fine */
+    LRMJN = 0x00640112, /* RAW + Jpeg Middle Normal */
+    LRSJF = 0x00640213, /* RAW + Jpeg Small Fine */
+    LRSJN = 0x00640212, /* RAW + Jpeg Small Normal */
+    LRS1JF = 0x00640E13,    /* RAW + Jpeg Small1 Fine */
+    LRS1JN = 0x00640E12,    /* RAW + Jpeg Small1 Normal */
+    LRS2JF = 0x00640F13,    /* RAW + Jpeg Small2 */
+    LRS3JF = 0x00641013,    /* RAW + Jpeg Small3 */
 
-    EdsImageQuality_LRLJ = 0x00640010,  /* RAW + Jpeg Large */
-    EdsImageQuality_LRM1J = 0x00640510, /* RAW + Jpeg Middle1 */
-    EdsImageQuality_LRM2J = 0x00640610, /* RAW + Jpeg Middle2 */
-    EdsImageQuality_LRSJ = 0x00640210,  /* RAW + Jpeg Small */
+    LRLJ = 0x00640010,  /* RAW + Jpeg Large */
+    LRM1J = 0x00640510, /* RAW + Jpeg Middle1 */
+    LRM2J = 0x00640610, /* RAW + Jpeg Middle2 */
+    LRSJ = 0x00640210,  /* RAW + Jpeg Small */
 
     /* MRAW(SRAW1) + Jpeg */
-    EdsImageQuality_MR = 0x0164ff0f,    /* MRAW(SRAW1) */
-    EdsImageQuality_MRLJF = 0x01640013, /* MRAW(SRAW1) + Jpeg Large Fine */
-    EdsImageQuality_MRLJN = 0x01640012, /* MRAW(SRAW1) + Jpeg Large Normal */
-    EdsImageQuality_MRMJF = 0x01640113, /* MRAW(SRAW1) + Jpeg Middle Fine */
-    EdsImageQuality_MRMJN = 0x01640112, /* MRAW(SRAW1) + Jpeg Middle Normal */
-    EdsImageQuality_MRSJF = 0x01640213, /* MRAW(SRAW1) + Jpeg Small Fine */
-    EdsImageQuality_MRSJN = 0x01640212, /* MRAW(SRAW1) + Jpeg Small Normal */
-    EdsImageQuality_MRS1JF = 0x01640E13,    /* MRAW(SRAW1) + Jpeg Small1 Fine */
-    EdsImageQuality_MRS1JN = 0x01640E12,    /* MRAW(SRAW1) + Jpeg Small1 Normal */
-    EdsImageQuality_MRS2JF = 0x01640F13,    /* MRAW(SRAW1) + Jpeg Small2 */
-    EdsImageQuality_MRS3JF = 0x01641013,    /* MRAW(SRAW1) + Jpeg Small3 */
+    MR = 0x0164ff0f,    /* MRAW(SRAW1) */
+    MRLJF = 0x01640013, /* MRAW(SRAW1) + Jpeg Large Fine */
+    MRLJN = 0x01640012, /* MRAW(SRAW1) + Jpeg Large Normal */
+    MRMJF = 0x01640113, /* MRAW(SRAW1) + Jpeg Middle Fine */
+    MRMJN = 0x01640112, /* MRAW(SRAW1) + Jpeg Middle Normal */
+    MRSJF = 0x01640213, /* MRAW(SRAW1) + Jpeg Small Fine */
+    MRSJN = 0x01640212, /* MRAW(SRAW1) + Jpeg Small Normal */
+    MRS1JF = 0x01640E13,    /* MRAW(SRAW1) + Jpeg Small1 Fine */
+    MRS1JN = 0x01640E12,    /* MRAW(SRAW1) + Jpeg Small1 Normal */
+    MRS2JF = 0x01640F13,    /* MRAW(SRAW1) + Jpeg Small2 */
+    MRS3JF = 0x01641013,    /* MRAW(SRAW1) + Jpeg Small3 */
 
-    EdsImageQuality_MRLJ = 0x01640010,  /* MRAW(SRAW1) + Jpeg Large */
-    EdsImageQuality_MRM1J = 0x01640510, /* MRAW(SRAW1) + Jpeg Middle1 */
-    EdsImageQuality_MRM2J = 0x01640610, /* MRAW(SRAW1) + Jpeg Middle2 */
-    EdsImageQuality_MRSJ = 0x01640210,  /* MRAW(SRAW1) + Jpeg Small */
+    MRLJ = 0x01640010,  /* MRAW(SRAW1) + Jpeg Large */
+    MRM1J = 0x01640510, /* MRAW(SRAW1) + Jpeg Middle1 */
+    MRM2J = 0x01640610, /* MRAW(SRAW1) + Jpeg Middle2 */
+    MRSJ = 0x01640210,  /* MRAW(SRAW1) + Jpeg Small */
 
     /* SRAW(SRAW2) + Jpeg */
-    EdsImageQuality_SR = 0x0264ff0f,    /* SRAW(SRAW2) */
-    EdsImageQuality_SRLJF = 0x02640013, /* SRAW(SRAW2) + Jpeg Large Fine */
-    EdsImageQuality_SRLJN = 0x02640012, /* SRAW(SRAW2) + Jpeg Large Normal */
-    EdsImageQuality_SRMJF = 0x02640113, /* SRAW(SRAW2) + Jpeg Middle Fine */
-    EdsImageQuality_SRMJN = 0x02640112, /* SRAW(SRAW2) + Jpeg Middle Normal */
-    EdsImageQuality_SRSJF = 0x02640213, /* SRAW(SRAW2) + Jpeg Small Fine */
-    EdsImageQuality_SRSJN = 0x02640212, /* SRAW(SRAW2) + Jpeg Small Normal */
-    EdsImageQuality_SRS1JF = 0x02640E13,    /* SRAW(SRAW2) + Jpeg Small1 Fine */
-    EdsImageQuality_SRS1JN = 0x02640E12,    /* SRAW(SRAW2) + Jpeg Small1 Normal */
-    EdsImageQuality_SRS2JF = 0x02640F13,    /* SRAW(SRAW2) + Jpeg Small2 */
-    EdsImageQuality_SRS3JF = 0x02641013,    /* SRAW(SRAW2) + Jpeg Small3 */
+    SR = 0x0264ff0f,    /* SRAW(SRAW2) */
+    SRLJF = 0x02640013, /* SRAW(SRAW2) + Jpeg Large Fine */
+    SRLJN = 0x02640012, /* SRAW(SRAW2) + Jpeg Large Normal */
+    SRMJF = 0x02640113, /* SRAW(SRAW2) + Jpeg Middle Fine */
+    SRMJN = 0x02640112, /* SRAW(SRAW2) + Jpeg Middle Normal */
+    SRSJF = 0x02640213, /* SRAW(SRAW2) + Jpeg Small Fine */
+    SRSJN = 0x02640212, /* SRAW(SRAW2) + Jpeg Small Normal */
+    SRS1JF = 0x02640E13,    /* SRAW(SRAW2) + Jpeg Small1 Fine */
+    SRS1JN = 0x02640E12,    /* SRAW(SRAW2) + Jpeg Small1 Normal */
+    SRS2JF = 0x02640F13,    /* SRAW(SRAW2) + Jpeg Small2 */
+    SRS3JF = 0x02641013,    /* SRAW(SRAW2) + Jpeg Small3 */
 
-    EdsImageQuality_SRLJ = 0x02640010,  /* SRAW(SRAW2) + Jpeg Large */
-    EdsImageQuality_SRM1J = 0x02640510, /* SRAW(SRAW2) + Jpeg Middle1 */
-    EdsImageQuality_SRM2J = 0x02640610, /* SRAW(SRAW2) + Jpeg Middle2 */
-    EdsImageQuality_SRSJ = 0x02640210,  /* SRAW(SRAW2) + Jpeg Small */
+    SRLJ = 0x02640010,  /* SRAW(SRAW2) + Jpeg Large */
+    SRM1J = 0x02640510, /* SRAW(SRAW2) + Jpeg Middle1 */
+    SRM2J = 0x02640610, /* SRAW(SRAW2) + Jpeg Middle2 */
+    SRSJ = 0x02640210,  /* SRAW(SRAW2) + Jpeg Small */
 
     /* CRAW + Jpeg */
-    EdsImageQuality_CR = 0x0063ff0f,    /* CRAW */
-    EdsImageQuality_CRLJF = 0x00630013, /* CRAW + Jpeg Large Fine */
-    EdsImageQuality_CRMJF = 0x00630113, /* CRAW + Jpeg Middle Fine  */
-    EdsImageQuality_CRM1JF = 0x00630513,    /* CRAW + Jpeg Middle1 Fine  */
-    EdsImageQuality_CRM2JF = 0x00630613,    /* CRAW + Jpeg Middle2 Fine  */
-    EdsImageQuality_CRSJF = 0x00630213, /* CRAW + Jpeg Small Fine  */
-    EdsImageQuality_CRS1JF = 0x00630E13,    /* CRAW + Jpeg Small1 Fine  */
-    EdsImageQuality_CRS2JF = 0x00630F13,    /* CRAW + Jpeg Small2 Fine  */
-    EdsImageQuality_CRS3JF = 0x00631013,    /* CRAW + Jpeg Small3 Fine  */
-    EdsImageQuality_CRLJN = 0x00630012, /* CRAW + Jpeg Large Normal */
-    EdsImageQuality_CRMJN = 0x00630112, /* CRAW + Jpeg Middle Normal */
-    EdsImageQuality_CRM1JN = 0x00630512,    /* CRAW + Jpeg Middle1 Normal */
-    EdsImageQuality_CRM2JN = 0x00630612,    /* CRAW + Jpeg Middle2 Normal */
-    EdsImageQuality_CRSJN = 0x00630212, /* CRAW + Jpeg Small Normal */
-    EdsImageQuality_CRS1JN = 0x00630E12,    /* CRAW + Jpeg Small1 Normal */
+    CR = 0x0063ff0f,    /* CRAW */
+    CRLJF = 0x00630013, /* CRAW + Jpeg Large Fine */
+    CRMJF = 0x00630113, /* CRAW + Jpeg Middle Fine  */
+    CRM1JF = 0x00630513,    /* CRAW + Jpeg Middle1 Fine  */
+    CRM2JF = 0x00630613,    /* CRAW + Jpeg Middle2 Fine  */
+    CRSJF = 0x00630213, /* CRAW + Jpeg Small Fine  */
+    CRS1JF = 0x00630E13,    /* CRAW + Jpeg Small1 Fine  */
+    CRS2JF = 0x00630F13,    /* CRAW + Jpeg Small2 Fine  */
+    CRS3JF = 0x00631013,    /* CRAW + Jpeg Small3 Fine  */
+    CRLJN = 0x00630012, /* CRAW + Jpeg Large Normal */
+    CRMJN = 0x00630112, /* CRAW + Jpeg Middle Normal */
+    CRM1JN = 0x00630512,    /* CRAW + Jpeg Middle1 Normal */
+    CRM2JN = 0x00630612,    /* CRAW + Jpeg Middle2 Normal */
+    CRSJN = 0x00630212, /* CRAW + Jpeg Small Normal */
+    CRS1JN = 0x00630E12,    /* CRAW + Jpeg Small1 Normal */
 
-    EdsImageQuality_CRLJ = 0x00630010,  /* CRAW + Jpeg Large */
-    EdsImageQuality_CRM1J = 0x00630510, /* CRAW + Jpeg Middle1 */
-    EdsImageQuality_CRM2J = 0x00630610, /* CRAW + Jpeg Middle2 */
-    EdsImageQuality_CRSJ = 0x00630210,  /* CRAW + Jpeg Small */
+    CRLJ = 0x00630010,  /* CRAW + Jpeg Large */
+    CRM1J = 0x00630510, /* CRAW + Jpeg Middle1 */
+    CRM2J = 0x00630610, /* CRAW + Jpeg Middle2 */
+    CRSJ = 0x00630210,  /* CRAW + Jpeg Small */
 
     /* HEIF */
-    EdsImageQuality_HEIFL = 0x0080ff0f, /* HEIF Large */
-    EdsImageQuality_RHEIFL = 0x00640080, /* RAW  + HEIF Large */
-    EdsImageQuality_CRHEIFL = 0x00630080, /* CRAW + HEIF Large */
+    HEIFL = 0x0080ff0f, /* HEIF Large */
+    RHEIFL = 0x00640080, /* RAW  + HEIF Large */
+    CRHEIFL = 0x00630080, /* CRAW + HEIF Large */
 
-    EdsImageQuality_HEIFLF = 0x0083ff0f, /* HEIF Large Fine */
-    EdsImageQuality_HEIFLN = 0x0082ff0f, /* HEIF Large Normal */
-    EdsImageQuality_HEIFMF = 0x0183ff0f, /* HEIF Middle Fine */
-    EdsImageQuality_HEIFMN = 0x0182ff0f, /* HEIF Middle Normal */
-    EdsImageQuality_HEIFS1F = 0x0e83ff0f, /* HEIF Small1 Fine */
-    EdsImageQuality_HEIFS1N = 0x0e82ff0f, /* HEIF Small1 Normal */
-    EdsImageQuality_HEIFS2F = 0x0f83ff0f, /* HEIF Small2 Fine */
-    EdsImageQuality_RHEIFLF = 0x00640083, /* RAW + HEIF Large Fine */
-    EdsImageQuality_RHEIFLN = 0x00640082, /* RAW + HEIF Large Normal */
-    EdsImageQuality_RHEIFMF = 0x00640183, /* RAW + HEIF Middle Fine */
-    EdsImageQuality_RHEIFMN = 0x00640182, /* RAW + HEIF Middle Normal */
-    EdsImageQuality_RHEIFS1F = 0x00640e83, /* RAW + HEIF Small1 Fine */
-    EdsImageQuality_RHEIFS1N = 0x00640e82, /* RAW + HEIF Small1 Normal */
-    EdsImageQuality_RHEIFS2F = 0x00640f83, /* RAW + HEIF Small2 Fine */
-    EdsImageQuality_CRHEIFLF = 0x00630083, /* CRAW + HEIF Large Fine */
-    EdsImageQuality_CRHEIFLN = 0x00630082, /* CRAW + HEIF Large Normal */
-    EdsImageQuality_CRHEIFMF = 0x00630183, /* CRAW + HEIF Middle Fine */
-    EdsImageQuality_CRHEIFMN = 0x00630182, /* CRAW + HEIF Middle Normal */
-    EdsImageQuality_CRHEIFS1F = 0x00630e83, /* CRAW + HEIF Small1 Fine */
-    EdsImageQuality_CRHEIFS1N = 0x00630e82, /* CRAW + HEIF Small1 Normal */
-    EdsImageQuality_CRHEIFS2F = 0x00630f83, /* CRAW + HEIF Small2 Fine */
+    HEIFLF = 0x0083ff0f, /* HEIF Large Fine */
+    HEIFLN = 0x0082ff0f, /* HEIF Large Normal */
+    HEIFMF = 0x0183ff0f, /* HEIF Middle Fine */
+    HEIFMN = 0x0182ff0f, /* HEIF Middle Normal */
+    HEIFS1F = 0x0e83ff0f, /* HEIF Small1 Fine */
+    HEIFS1N = 0x0e82ff0f, /* HEIF Small1 Normal */
+    HEIFS2F = 0x0f83ff0f, /* HEIF Small2 Fine */
+    RHEIFLF = 0x00640083, /* RAW + HEIF Large Fine */
+    RHEIFLN = 0x00640082, /* RAW + HEIF Large Normal */
+    RHEIFMF = 0x00640183, /* RAW + HEIF Middle Fine */
+    RHEIFMN = 0x00640182, /* RAW + HEIF Middle Normal */
+    RHEIFS1F = 0x00640e83, /* RAW + HEIF Small1 Fine */
+    RHEIFS1N = 0x00640e82, /* RAW + HEIF Small1 Normal */
+    RHEIFS2F = 0x00640f83, /* RAW + HEIF Small2 Fine */
+    CRHEIFLF = 0x00630083, /* CRAW + HEIF Large Fine */
+    CRHEIFLN = 0x00630082, /* CRAW + HEIF Large Normal */
+    CRHEIFMF = 0x00630183, /* CRAW + HEIF Middle Fine */
+    CRHEIFMN = 0x00630182, /* CRAW + HEIF Middle Normal */
+    CRHEIFS1F = 0x00630e83, /* CRAW + HEIF Small1 Fine */
+    CRHEIFS1N = 0x00630e82, /* CRAW + HEIF Small1 Normal */
+    CRHEIFS2F = 0x00630f83, /* CRAW + HEIF Small2 Fine */
 
-    EdsImageQuality_Unknown = 0xffffffff,
+    Unknown = 0xffffffff,
+}
+
+public enum EdsImageFormat
+    : uint
+{
+    Unknown = 0x00000000,
+    Jpeg = 0x00000001,
+    CRW = 0x00000002,
+    RAW = 0x00000004,
+    CR2 = 0x00000006,
+}
+
+public enum EdsImageSize
+    : uint
+{
+    Large = 0,
+    Middle = 1,
+    Small = 2,
+    Middle1 = 5,
+    Middle2 = 6,
+    Unknown = 0xFFFFFFFF,
+}
+
+public enum EdsCompressQuality
+    : uint
+{
+    Normal = 2,
+    Fine = 3,
+    Lossless = 4,
+    SuperFine = 5,
+    Unknown = 0xffffffff,
+}
+
+/// <summary>
+/// Camera commands
+/// </summary>
+public enum CameraCommand
+    : uint
+{
+    TakePicture = 0x00000000,
+    ExtendShutDownTimer = 0x00000001,
+    BulbStart = 0x00000002,
+    BulbEnd = 0x00000003,
+    DoEvfAf = 0x00000102,
+    DriveLensEvf = 0x00000103,
+    DoClickWBEvf = 0x00000104,
+    MovieSelectSwON = 0x00000107,
+    MovieSelectSwOFF = 0x00000108,
+    PressShutterButton = 0x00000004,
+    SetRemoteShootingMode = 0x0000010f,
+    RequestRollPitchLevel = 0x00000109,
+}
+
+/// <summary>
+/// Camera status command
+/// </summary>
+public enum CameraState
+{
+    UILock = 0x00000000,
+    UIUnLock = 0x00000001,
+    EnterDirectTransfer = 0x00000002,
+    ExitDirectTransfer = 0x00000003,
+}
+
+public enum AEMode
+    : uint
+{
+    Program = 0,
+    Tv = 1,
+    Av = 2,
+    Mamual = 3,
+    Bulb = 4,
+    A_DEP = 5,
+    DEP = 6,
+    Custom = 7,
+    Lock = 8,
+    Green = 9,
+    NigntPortrait = 10,
+    Sports = 11,
+    Portrait = 12,
+    Landscape = 13,
+    Closeup = 14,
+    FlashOff = 15,
+    CreativeAuto = 19,
+    Movie = 20,
+    PhotoInMovie = 21,
+    SceneIntelligentAuto = 22,
+    SCN = 25,
+    HandheldNightScenes = 23,
+    Hdr_BacklightControl = 24,
+    Children = 26,
+    Food = 27,
+    CandlelightPortraits = 28,
+    CreativeFilter = 29,
+    RoughMonoChrome = 30,
+    SoftFocus = 31,
+    ToyCamera = 32,
+    Fisheye = 33,
+    WaterColor = 34,
+    Miniature = 35,
+    Hdr_Standard = 36,
+    Hdr_Vivid = 37,
+    Hdr_Bold = 38,
+    Hdr_Embossed = 39,
+    Movie_Fantasy = 40,
+    Movie_Old = 41,
+    Movie_Memory = 42,
+    Movie_DirectMono = 43,
+    Movie_Mini = 44,
+    Panning = 45,
+    GroupPhoto = 46,
+    SelfPortrait = 50,
+    PlusMovieAuto = 51,
+    SmoothSkin = 52,
+    Panorama = 53,
+    Silent = 54,
+    Flexible = 55,
+    OilPainting = 56,
+    Fireworks = 57,
+    StarPortrait = 58,
+    StarNightscape = 59,
+    StarTrails = 60,
+    StarTimelapseMovie = 61,
+    BackgroundBlur = 62,
+    Unknown = 0xffffffff,
 }
 
 public enum EdsEvent
@@ -815,35 +940,6 @@ public static unsafe class EDSDK_API
     public const uint PropID_AutoPowerOffSetting = 0x0100045e;
 
     #endregion
-    #region Camera commands
-
-    /*-----------------------------------------------------------------------------
-     Send Commands
-    -----------------------------------------------------------------------------*/
-    public const uint CameraCommand_TakePicture = 0x00000000;
-    public const uint CameraCommand_ExtendShutDownTimer = 0x00000001;
-    public const uint CameraCommand_BulbStart = 0x00000002;
-    public const uint CameraCommand_BulbEnd = 0x00000003;
-    public const uint CameraCommand_DoEvfAf = 0x00000102;
-    public const uint CameraCommand_DriveLensEvf = 0x00000103;
-    public const uint CameraCommand_DoClickWBEvf = 0x00000104;
-    public const uint CameraCommand_MovieSelectSwON = 0x00000107;
-    public const uint CameraCommand_MovieSelectSwOFF = 0x00000108;
-
-    public const uint CameraCommand_PressShutterButton = 0x00000004;
-    public const uint CameraCommand_SetRemoteShootingMode = 0x0000010f;
-    public const uint CameraCommand_RequestRollPitchLevel = 0x00000109;
-
-    #endregion
-    #region Camera status command
-
-    /*----------------------------------
-     Camera Status Commands
-    ----------------------------------*/
-    public const uint CameraState_UILock = 0x00000000;
-    public const uint CameraState_UIUnLock = 0x00000001;
-    public const uint CameraState_EnterDirectTransfer = 0x00000002;
-    public const uint CameraState_ExitDirectTransfer = 0x00000003;
 
     #endregion
     #region  Enumeration of property value  
@@ -868,29 +964,6 @@ public static unsafe class EDSDK_API
     /*-----------------------------------------------------------------------------
      Image Format 
     -----------------------------------------------------------------------------*/
-
-    public const int ImageFormat_Unknown = 0x00000000;
-    public const int ImageFormat_Jpeg = 0x00000001;
-    public const int ImageFormat_CRW = 0x00000002;
-    public const int ImageFormat_RAW = 0x00000004;
-
-    public const int ImageFormat_CR2 = 0x00000006;
-
-
-    public const int ImageSize_Large = 0;
-    public const int ImageSize_Middle = 1;
-    public const int ImageSize_Small = 2;
-    public const int ImageSize_Middle1 = 5;
-    public const int ImageSize_Middle2 = 6;
-    public const int ImageSize_Unknown = -1;
-
-
-
-    public const int CompressQuality_Normal = 2;
-    public const int CompressQuality_Fine = 3;
-    public const int CompressQuality_Lossless = 4;
-    public const int CompressQuality_SuperFine = 5;
-    public const int CompressQuality_Unknown = -1;
 
 
     /*-----------------------------------------------------------------------------
@@ -950,70 +1023,6 @@ public static unsafe class EDSDK_API
     public const uint PictureStyle_PC1 = 0x0041;
     public const uint PictureStyle_PC2 = 0x0042;
     public const uint PictureStyle_PC3 = 0x0043;
-
-
-    /*-----------------------------------------------------------------------------
-     AE Mode
-    -----------------------------------------------------------------------------*/
-    public const uint AEMode_Program = 0;
-    public const uint AEMode_Tv = 1;
-    public const uint AEMode_Av = 2;
-    public const uint AEMode_Mamual = 3;
-    public const uint AEMode_Bulb = 4;
-    public const uint AEMode_A_DEP = 5;
-    public const uint AEMode_DEP = 6;
-    public const uint AEMode_Custom = 7;
-    public const uint AEMode_Lock = 8;
-    public const uint AEMode_Green = 9;
-    public const uint AEMode_NigntPortrait = 10;
-    public const uint AEMode_Sports = 11;
-    public const uint AEMode_Portrait = 12;
-    public const uint AEMode_Landscape = 13;
-    public const uint AEMode_Closeup = 14;
-    public const uint AEMode_FlashOff = 15;
-    public const uint AEMode_CreativeAuto = 19;
-    public const uint AEMode_Movie = 20;
-    public const uint AEMode_PhotoInMovie = 21;
-    public const uint AEMode_SceneIntelligentAuto = 22;
-    public const uint AEMode_SCN = 25;
-    public const uint AEMode_HandheldNightScenes = 23;
-    public const uint AEMode_Hdr_BacklightControl = 24;
-    public const uint AEMode_Children = 26;
-    public const uint AEMode_Food = 27;
-    public const uint AEMode_CandlelightPortraits = 28;
-    public const uint AEMode_CreativeFilter = 29;
-    public const uint AEMode_RoughMonoChrome = 30;
-    public const uint AEMode_SoftFocus = 31;
-    public const uint AEMode_ToyCamera = 32;
-    public const uint AEMode_Fisheye = 33;
-    public const uint AEMode_WaterColor = 34;
-    public const uint AEMode_Miniature = 35;
-    public const uint AEMode_Hdr_Standard = 36;
-    public const uint AEMode_Hdr_Vivid = 37;
-    public const uint AEMode_Hdr_Bold = 38;
-    public const uint AEMode_Hdr_Embossed = 39;
-    public const uint AEMode_Movie_Fantasy = 40;
-    public const uint AEMode_Movie_Old = 41;
-    public const uint AEMode_Movie_Memory = 42;
-    public const uint AEMode_Movie_DirectMono = 43;
-    public const uint AEMode_Movie_Mini = 44;
-    public const uint AEMode_Panning = 45;
-    public const uint AEMode_GroupPhoto = 46;
-
-    public const uint AEMode_SelfPortrait = 50;
-    public const uint AEMode_PlusMovieAuto = 51;
-    public const uint AEMode_SmoothSkin = 52;
-    public const uint AEMode_Panorama = 53;
-    public const uint AEMode_Silent = 54;
-    public const uint AEMode_Flexible = 55;
-    public const uint AEMode_OilPainting = 56;
-    public const uint AEMode_Fireworks = 57;
-    public const uint AEMode_StarPortrait = 58;
-    public const uint AEMode_StarNightscape = 59;
-    public const uint AEMode_StarTrails = 60;
-    public const uint AEMode_StarTimelapseMovie = 61;
-    public const uint AEMode_BackgroundBlur = 62;
-    public const uint AEMode_Unknown = 0xffffffff;
 
     
     
@@ -1183,7 +1192,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsInitializeSDK();
+    public static extern EdsError EdsInitializeSDK();
 
     /*-----------------------------------------------------------------------------
     //
@@ -1220,7 +1229,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsRetain(nint inRef);
+    public static extern EdsError EdsRetain(nint inRef);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1236,7 +1245,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsRelease(nint inRef);
+    public static extern EdsError EdsRelease(nint inRef);
 
     /*----------------------------------
      Item-tree operating functions
@@ -1256,7 +1265,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsGetChildCount(nint inRef, out int outCount);
+    public static extern EdsError EdsGetChildCount(nint inRef, out int outCount);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1274,7 +1283,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsGetChildAtIndex(nint inRef, int inIndex, out nint outRef);
+    public static extern EdsError EdsGetChildAtIndex(nint inRef, int inIndex, out nint outRef);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1515,7 +1524,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsGetPropertyDesc(nint inRef, uint inPropertyID, out EdsPropertyDesc outPropertyDesc);
+    public static extern EdsError EdsGetPropertyDesc(nint inRef, uint inPropertyID, out EdsPropertyDesc outPropertyDesc);
 
     /*--------------------------------------------
       Device-list and device operating functions
@@ -1534,7 +1543,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsGetCameraList(out nint outCameraListRef);
+    public static extern EdsError EdsGetCameraList(out nint outCameraListRef);
 
     /*--------------------------------------------
       Camera operating functions
@@ -1557,7 +1566,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsGetDeviceInfo(nint inCameraRef, out EdsDeviceInfo outDeviceInfo);
+    public static extern EdsError EdsGetDeviceInfo(nint inCameraRef, out EdsDeviceInfo outDeviceInfo);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1574,7 +1583,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsOpenSession(nint inCameraRef);
+    public static extern EdsError EdsOpenSession(nint inCameraRef);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1590,7 +1599,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsCloseSession(nint inCameraRef);
+    public static extern EdsError EdsCloseSession(nint inCameraRef);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1712,7 +1721,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsGetDirectoryItemInfo(nint inDirItemRef, out EdsDirectoryItemInfo outDirItemInfo);
+    public static extern EdsError EdsGetDirectoryItemInfo(nint inDirItemRef, out EdsDirectoryItemInfo outDirItemInfo);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1732,7 +1741,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsDeleteDirectoryItem(nint inDirItemRef);
+    public static extern EdsError EdsDeleteDirectoryItem(nint inDirItemRef);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1755,7 +1764,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsDownload(nint inDirItemRef, ulong inReadSize, nint outStream);
+    public static extern EdsError EdsDownload(nint inDirItemRef, ulong inReadSize, nint outStream);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1773,7 +1782,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsDownloadCancel(nint inDirItemRef);
+    public static extern EdsError EdsDownloadCancel(nint inDirItemRef);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1793,7 +1802,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsDownloadComplete(nint inDirItemRef);
+    public static extern EdsError EdsDownloadComplete(nint inDirItemRef);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1813,7 +1822,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsDownloadThumbnail(nint inDirItemRef, nint outStream);
+    public static extern EdsError EdsDownloadThumbnail(nint inDirItemRef, nint outStream);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2059,7 +2068,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsGetLength(nint inStreamRef, out ulong outLength);
+    public static extern EdsError EdsGetLength(nint inStreamRef, out ulong outLength);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2114,7 +2123,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsSetProgressCallback(nint inRef, EdsProgressCallback inProgressFunc, EdsProgressOption inProgressOption, nint inContext);
+    public static extern EdsError EdsSetProgressCallback(nint inRef, EdsProgressCallback inProgressFunc, EdsProgressOption inProgressOption, nint inContext);
 
 
     /*--------------------------------------------
@@ -2260,7 +2269,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsSetPropertyEventHandler(nint inCameraRef, uint inEvnet, EdsPropertyEventHandler inPropertyEventHandler, nint inContext);
+    public static extern uint EdsSetPropertyEventHandler(nint inCameraRef, EdsEvent inEvnet, EdsPropertyEventHandler inPropertyEventHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2285,7 +2294,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsSetObjectEventHandler(nint inCameraRef, uint inEvnet, EdsObjectEventHandler inObjectEventHandler, nint inContext);
+    public static extern uint EdsSetObjectEventHandler(nint inCameraRef, EdsEvent inEvnet, EdsObjectEventHandler inObjectEventHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2347,7 +2356,7 @@ public static unsafe class EDSDK_API
 		//  Returns:    Any of the sdk errors.
 		-----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsDownloadEvfImage(nint inCameraRef, nint outEvfImageRef);
+    public static extern EdsError EdsDownloadEvfImage(nint inCameraRef, nint outEvfImageRef);
 
     #endregion
     #region Definition of base Structures
