@@ -1,15 +1,15 @@
-using System;
+using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Threading;
+using System.Drawing.Imaging;
+using System.Drawing;
+using System.Linq;
+using System.IO;
+using System;
 
 using EDSDK.Native;
 
@@ -33,33 +33,94 @@ public sealed class SDKErrorEventArgs(string error, LogLevel level)
 /// <summary>
 /// Handles the Canon SDK
 /// </summary>
-public class SDKHandler : IDisposable
+public class SDKHandler
+    : IDisposable
 {
-    #region Events
+    private TaskCompletionSource<FileInfo> takePhotoCompletionSource;
+    private string _imageSaveFilename;
+
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// States if a finished video should be downloaded from the camera
+    /// </summary>
+    private bool DownloadVideo;
+
+    /// <summary>
+    /// For video recording, SaveTo has to be set to Camera. This is to store the previous setting until after the filming.
+    /// </summary>
+    private uint PrevSaveTo;
+
+    private EdsCapacity PrevCapacity;
+
+    private uint PrevEVFSetting;
+
+    /// <summary>
+    /// The thread on which the live view images will get downloaded continuously
+    /// </summary>
+    private Thread LVThread;
+
+    /// <summary>
+    /// If true, the live view will be shut off completely. If false, live view will go back to the camera.
+    /// </summary>
+    private bool LVoff;
+
+
 
     public event EventHandler<SDKErrorEventArgs> SdkError;
+    public event EdsCameraAddedHandler SDKCameraAddedEvent;
+    public event EdsObjectEventHandler SDKObjectEvent;
+    public event EdsProgressCallback SDKProgressCallbackEvent;
+    public event EdsPropertyEventHandler SDKPropertyEvent;
+    public event EdsStateEventHandler SDKStateEvent;
 
-    #endregion Events
-    #region Variables
+    /// <summary>
+    /// Fires if a camera is added
+    /// </summary>
+    public event Action CameraAdded;
 
-    private readonly ILogger logger;
+    /// <summary>
+    /// Fires if any process reports progress
+    /// </summary>
+    public event Action<int> ProgressChanged;
+
+    /// <summary>
+    /// Fires if the live view image has been updated
+    /// </summary>
+    public event Action<Stream> LiveViewUpdated;
+
+    /// <summary>
+    /// If the camera is disconnected or shuts down, this event is fired
+    /// </summary>
+    public event EventHandler CameraHasShutdown;
+
+    /// <summary>
+    /// If an image is downloaded, this event fires with the downloaded image.
+    /// </summary>
+    public event Action<Bitmap> ImageDownloaded;
+
+
 
     /// <summary>
     /// The used camera
     /// </summary>
     public Camera MainCamera { get; private set; }
+
     /// <summary>
     /// States if a session with the MainCamera is opened
     /// </summary>
     public bool CameraSessionOpen { get; private set; }
+
     /// <summary>
     /// States if the live view is on or not
     /// </summary>
     public bool IsLiveViewOn { get; private set; }
+
     /// <summary>
     /// States if camera is recording or not
     /// </summary>
     public bool IsFilming { get; private set; }
+
     /// <summary>
     /// Directory to where photos will be saved
     /// </summary>
@@ -82,31 +143,36 @@ public class SDKHandler : IDisposable
     /// The focus and zoom border rectangle for live view (set after first use of live view)
     /// </summary>
     public EdsRect Evf_ZoomRect { get; private set; }
+
     /// <summary>
     /// The focus and zoom border position of the live view (set after first use of live view)
     /// </summary>
     public EdsPoint Evf_ZoomPosition { get; private set; }
+
     /// <summary>
     /// The cropping position of the enlarged live view image (set after first use of live view)
     /// </summary>
     public EdsPoint Evf_ImagePosition { get; private set; }
+
     /// <summary>
     /// The live view coordinate system (set after first use of live view)
     /// </summary>
     public EdsSize Evf_CoordinateSystem { get; private set; }
+
     /// <summary>
     /// States if the Evf_CoordinateSystem is already set
     /// </summary>
     public bool IsCoordSystemSet = false;
+
     /// <summary>
     /// Handles errors that happen with the SDK
     /// </summary>
-    public uint Error
+    public EdsError Error
     {
-        get => EDS_ERR_OK;
+        get => EdsError.OK;
         set
         {
-            if (value != EDS_ERR_OK)
+            if (value != EdsError.OK)
             {
                 SDKProperty errorProperty = SDKErrorToProperty(value);
                 LogError("SDK Error. Name: {0}, Value: {1}", errorProperty.Name, errorProperty.ValueToString());
@@ -114,9 +180,9 @@ public class SDKHandler : IDisposable
 
                 switch (value)
                 {
-                    case EDS_ERR_COMM_DISCONNECTED:
-                    case EDS_ERR_DEVICE_INVALID:
-                    case EDS_ERR_DEVICE_NOT_FOUND:
+                    case EdsError.COMM_DISCONNECTED:
+                    case EdsError.DEVICE_INVALID:
+                    case EdsError.DEVICE_NOT_FOUND:
                         string name = FindProperty(SDKErrors, value).Name;
                         OnSdkError(new SDKErrorEventArgs() { Error = name, ErrorLevel = LogLevel.Critical });
                         break;
@@ -127,16 +193,10 @@ public class SDKHandler : IDisposable
     }
 
 
-    /// <summary>
-    /// States if a finished video should be downloaded from the camera
-    /// </summary>
-    private bool DownloadVideo;
-    /// <summary>
-    /// For video recording, SaveTo has to be set to Camera. This is to store the previous setting until after the filming.
-    /// </summary>
-    private uint PrevSaveTo;
-    private EdsCapacity PrevCapacity;
-    private uint PrevEVFSetting;
+
+
+
+
 
     public void SetUintSetting(string propertyName, string propertyValue)
     {
@@ -172,15 +232,6 @@ public class SDKHandler : IDisposable
 
     }
 
-    /// <summary>
-    /// The thread on which the live view images will get downloaded continuously
-    /// </summary>
-    private Thread LVThread;
-    /// <summary>
-    /// If true, the live view will be shut off completely. If false, live view will go back to the camera.
-    /// </summary>
-    private bool LVoff;
-
     public void DumpAllProperties()
     {
         Task t = LogInfoAsync("=========Dumping properties=========");
@@ -194,60 +245,15 @@ public class SDKHandler : IDisposable
     }
 
     #endregion
-    #region Events
-
-    #region SDK Events
-
-    public event EdsCameraAddedHandler SDKCameraAddedEvent;
-    public event EdsObjectEventHandler SDKObjectEvent;
-    public event EdsProgressCallback SDKProgressCallbackEvent;
-    public event EdsPropertyEventHandler SDKPropertyEvent;
-    public event EdsStateEventHandler SDKStateEvent;
-
-    #endregion
-
-    #region Custom Events
-
-    public delegate void CameraAddedHandler();
-    public delegate void ProgressHandler(int Progress);
-    public delegate void StreamUpdate(Stream img);
-    public delegate void BitmapUpdate(Bitmap bmp);
-
-    /// <summary>
-    /// Fires if a camera is added
-    /// </summary>
-    public event CameraAddedHandler CameraAdded;
-    /// <summary>
-    /// Fires if any process reports progress
-    /// </summary>
-    public event ProgressHandler ProgressChanged;
-    /// <summary>
-    /// Fires if the live view image has been updated
-    /// </summary>
-    public event StreamUpdate LiveViewUpdated;
-    /// <summary>
-    /// If the camera is disconnected or shuts down, this event is fired
-    /// </summary>
-    public event EventHandler CameraHasShutdown;
-    /// <summary>
-    /// If an image is downloaded, this event fires with the downloaded image.
-    /// </summary>
-    public event BitmapUpdate ImageDownloaded;
-
-    #endregion
-
-    #endregion
     #region Basic SDK and Session handling
 
     public SDKProperty SDKObjectEventToProperty(uint objectEvent) => FindProperty(SDKObjectEvents, objectEvent);
 
-    private SDKProperty[] _sDKObjectEvents;
-    public SDKProperty[] SDKObjectEvents => _sDKObjectEvents;
+    public SDKProperty[] SDKObjectEvents { get; private set; }
 
-    public SDKProperty SDKErrorToProperty(uint error) => FindProperty(SDKErrors, error);
+    public SDKProperty SDKErrorToProperty(EdsError error) => FindProperty(SDKErrors, error);
 
-    private SDKProperty[] _sDKErrors;
-    public SDKProperty[] SDKErrors => _sDKErrors;
+    public SDKProperty[] SDKErrors { get; private set; }
 
     private SDKProperty FindProperty(SDKProperty[] properties, string property)
     {
@@ -270,7 +276,7 @@ public class SDKHandler : IDisposable
         return search;
     }
 
-    public void SetSaveToHost() => SetSetting(EDSDKLib.EDSDK.PropID_SaveTo, (uint)EDSDKLib.EDSDK.EdsSaveTo.Host);
+    public void SetSaveToHost() => SetSetting(EDSDK_API.PropID_SaveTo, (uint)EDSDK_API.EdsSaveTo.Host);
 
     public SDKProperty GetStateEvent(uint stateEvent) => FindProperty(SDKStateEvents, stateEvent);
 
@@ -278,11 +284,9 @@ public class SDKHandler : IDisposable
 
     public SDKProperty GetSDKProperty(uint property) => FindProperty(SDKProperties, property);
 
-    private SDKProperty[] _sDKProperties;
-    public SDKProperty[] SDKProperties => _sDKProperties;
+    public SDKProperty[] SDKProperties { get; private set; }
 
-    private SDKProperty[] _sDKStateEvents;
-    public SDKProperty[] SDKStateEvents => _sDKStateEvents;
+    public SDKProperty[] SDKStateEvents { get; private set; }
 
     public object Value { get; private set; }
     public bool KeepAlive { get; set; }
@@ -293,7 +297,7 @@ public class SDKHandler : IDisposable
     /// </summary>
     public SDKHandler(ILoggerFactory loggerFactory)
     {
-        logger = loggerFactory.CreateLogger<SDKHandler>();
+        _logger = loggerFactory.CreateLogger<SDKHandler>();
 
         STAThread.SetLogAction(loggerFactory.CreateLogger(nameof(STAThread)));
         STAThread.FatalError += STAThread_FatalError;
@@ -314,7 +318,7 @@ public class SDKHandler : IDisposable
         }
         catch (Exception x)
         {
-            logger.LogError(x, "Error initialising SDK");
+            _logger.LogError(x, "Error initialising SDK");
             throw new Exception("Error initialising SDK", x);
             //TODO: Move to Initialise pattern instead of constructor
         }
@@ -346,10 +350,10 @@ public class SDKHandler : IDisposable
     {
         FieldInfo[] fields = typeof(EDSDKLib.EDSDK).GetFields(BindingFlags.Public | BindingFlags.Static);
 
-        _sDKStateEvents = FilterFields(fields, "StateEvent_");
-        _sDKObjectEvents = FilterFields(fields, "ObjectEvent_");
-        _sDKErrors = FilterFields(fields, "EDS_ERR_");
-        _sDKProperties = FilterFields(fields, "kEdsPropID_", "PropID_");
+        SDKStateEvents = FilterFields(fields, "StateEvent_");
+        SDKObjectEvents = FilterFields(fields, "ObjectEvent_");
+        SDKErrors = FilterFields(fields, "EdsError.");
+        SDKProperties = FilterFields(fields, "kEdsPropID_", "PropID_");
     }
 
     private static SDKProperty[] FilterFields(FieldInfo[] fields, string prefix, string prefix2 = null)
@@ -393,7 +397,7 @@ public class SDKHandler : IDisposable
     /// <param name="newCamera">The camera which will be used</param>
     public void OpenSession(Camera newCamera)
     {
-        logger?.LogDebug("Opening session");
+        _logger?.LogDebug("Opening session");
 
         if (CameraSessionOpen)
         {
@@ -429,7 +433,7 @@ public class SDKHandler : IDisposable
     /// </summary>
     public void CloseSession()
     {
-        logger?.LogDebug("Closing session");
+        _logger?.LogDebug("Closing session");
         if (CameraSessionOpen)
         {
             //if live view is still on, stop it and wait till the thread has stopped
@@ -476,7 +480,7 @@ public class SDKHandler : IDisposable
     {
         //Handle new camera here
         OnCameraAdded();
-        return EDS_ERR_OK;
+        return EdsError.OK;
     }
 
     protected void OnCameraAdded() => CameraAdded?.Invoke();
@@ -531,7 +535,7 @@ public class SDKHandler : IDisposable
                 break;
         }
 
-        return EDS_ERR_OK;
+        return EdsError.OK;
     }
 
     /// <summary>
@@ -545,7 +549,7 @@ public class SDKHandler : IDisposable
     {
         //Handle progress here
         OnProgressChanged((int)inPercent);
-        return EDS_ERR_OK;
+        return EdsError.OK;
     }
 
     protected void OnProgressChanged(int percent) => ProgressChanged?.Invoke(percent);
@@ -672,7 +676,7 @@ public class SDKHandler : IDisposable
 
                 break;
         }
-        return EDS_ERR_OK;
+        return EdsError.OK;
     }
 
     public void LogPropertyValue(string propertyName, uint propertyValue)
@@ -728,13 +732,13 @@ public class SDKHandler : IDisposable
                 {
                     SendSDKCommand(() =>
                     {
-                        logger.LogDebug("Extending camera shutdown timer");
+                        _logger.LogDebug("Extending camera shutdown timer");
                         EdsSendCommand(MainCamera.Handle, CameraCommand_ExtendShutDownTimer, 0);
                     }, sdkAction: nameof(CameraCommand_ExtendShutDownTimer));
                 }
                 break;
         }
-        return EDS_ERR_OK;
+        return EdsError.OK;
     }
 
     protected void OnCameraHasShutdown() => CameraHasShutdown?.Invoke(this, new EventArgs());
@@ -820,7 +824,7 @@ public class SDKHandler : IDisposable
         }
         catch (Exception x)
         {
-            logger.LogError(x, "Error downloading data");
+            _logger.LogError(x, "Error downloading data");
             takePhotoCompletionSource.TrySetException(x);
             videoDownloadDone?.TrySetException(x);
         }
@@ -1295,7 +1299,7 @@ public class SDKHandler : IDisposable
             }
             else
             {
-                logger.LogDebug("LiveView stopped cleanly");
+                _logger.LogDebug("LiveView stopped cleanly");
             }
         }
 
@@ -1326,12 +1330,12 @@ public class SDKHandler : IDisposable
                     {
                         //download current live view image
                         err = EdsCreateEvfImageRef(stream, out EvfImageRef);
-                        if (err == EDS_ERR_OK)
+                        if (err == EdsError.OK)
                         {
                             err = EdsDownloadEvfImage(MainCamera.Handle, EvfImageRef);
                         }
 
-                        if (err == EDS_ERR_OBJECT_NOTREADY)
+                        if (err == EdsError.OBJECT_NOTREADY)
                         {
                             Thread.Sleep(4);
                             continue;
@@ -1417,7 +1421,7 @@ public class SDKHandler : IDisposable
         uint err = EdsGetPropertyData(imgRef, PropID_Evf_ZoomPosition, 0, size, ptr);
         EdsRect rect = (EdsRect)Marshal.PtrToStructure(ptr, typeof(EdsRect));
         Marshal.FreeHGlobal(ptr);
-        return err == EDS_ERR_OK ? rect : new EdsRect();
+        return err == EdsError.OK ? rect : new EdsRect();
     }
 
     /// <summary>
@@ -1432,7 +1436,7 @@ public class SDKHandler : IDisposable
         uint err = EdsGetPropertyData(imgRef, PropID_Evf_CoordinateSystem, 0, size, ptr);
         EdsSize coord = (EdsSize)Marshal.PtrToStructure(ptr, typeof(EdsSize));
         Marshal.FreeHGlobal(ptr);
-        return err == EDS_ERR_OK ? coord : new EdsSize();
+        return err == EdsError.OK ? coord : new EdsSize();
     }
 
     /// <summary>
@@ -1447,7 +1451,7 @@ public class SDKHandler : IDisposable
         uint err = EdsGetPropertyData(imgRef, PropID, 0, size, ptr);
         EdsPoint data = (EdsPoint)Marshal.PtrToStructure(ptr, typeof(EdsPoint));
         Marshal.FreeHGlobal(ptr);
-        return err == EDS_ERR_OK ? data : new EdsPoint();
+        return err == EdsError.OK ? data : new EdsPoint();
     }
 
     #endregion
@@ -1580,9 +1584,6 @@ public class SDKHandler : IDisposable
             };
         }, true);
 
-    private TaskCompletionSource<FileInfo> takePhotoCompletionSource;
-    private string _imageSaveFilename;
-
     /// <summary>
     /// Takes a photo and returns the file info
     /// </summary>
@@ -1591,7 +1592,7 @@ public class SDKHandler : IDisposable
                                                                                                                                             {
                                                                                                                                                 if (IsFilming || IsLiveViewOn)
                                                                                                                                                 {
-                                                                                                                                                    logger.LogWarning("Ignoring attempt to take photo whilst filming or in live-view mode. Filming: {Filming}, LiveView: {LiveView}", IsFilming, IsLiveViewOn);
+                                                                                                                                                    _logger.LogWarning("Ignoring attempt to take photo whilst filming or in live-view mode. Filming: {Filming}, LiveView: {LiveView}", IsFilming, IsLiveViewOn);
                                                                                                                                                     return null;
                                                                                                                                                 }
 
@@ -1613,70 +1614,6 @@ public class SDKHandler : IDisposable
                                                                                                                                                 }
                                                                                                                                             });
 
-    private async Task Log(LogLevel level, string message, params object[] args) => await Task.Run(() =>
-                                                                                                                                                                          {
-
-                                                                                                                                                                              if (logger != null)
-                                                                                                                                                                              {
-                                                                                                                                                                                  switch (level)
-                                                                                                                                                                                  {
-                                                                                                                                                                                      case LogLevel.Trace:
-                                                                                                                                                                                          logger.LogTrace(message, args);
-                                                                                                                                                                                          break;
-
-                                                                                                                                                                                      case LogLevel.Debug:
-                                                                                                                                                                                          logger.LogDebug(message, args);
-                                                                                                                                                                                          break;
-
-                                                                                                                                                                                      case LogLevel.Information:
-                                                                                                                                                                                          logger.LogInformation(message, args);
-                                                                                                                                                                                          break;
-
-                                                                                                                                                                                      case LogLevel.Warning:
-                                                                                                                                                                                          logger.LogWarning(message, args);
-                                                                                                                                                                                          break;
-
-                                                                                                                                                                                      case LogLevel.Critical:
-                                                                                                                                                                                          logger.LogCritical(message, args);
-                                                                                                                                                                                          break;
-
-                                                                                                                                                                                      case LogLevel.None:
-                                                                                                                                                                                          // breakpoint only
-                                                                                                                                                                                          break;
-
-                                                                                                                                                                                      case LogLevel.Error:
-                                                                                                                                                                                          logger.LogError(message, args);
-                                                                                                                                                                                          break;
-
-                                                                                                                                                                                      default:
-                                                                                                                                                                                          logger.LogError("Unknown level: {0}{1}Message: {2}", level, Environment.NewLine, string.Format(message, args));
-                                                                                                                                                                                          break;
-                                                                                                                                                                                  }
-                                                                                                                                                                              }
-
-                                                                                                                                                                              if (level >= LogLevel.Error)
-                                                                                                                                                                              {
-                                                                                                                                                                                  // throw new Exception(string.Format(message, args));
-                                                                                                                                                                              }
-                                                                                                                                                                          });
-
-    private void HandleException(Exception ex, string message, params object[] args)
-    {
-        if (logger != null)
-        {
-            logger.LogError(ex, message, args);
-        }
-    }
-
-    private void LogWarning(string message, params object[] args)
-    {
-        Task t = Log(LogLevel.Warning, message, args);
-    }
-
-    private void LogError(string message, params object[] args)
-    {
-        Task t = Log(LogLevel.Error, message, args);
-    }
 
 
     public void SetSaveToLocation(DirectoryInfo directory)
@@ -1732,7 +1669,7 @@ public class SDKHandler : IDisposable
 
     public void FormatAllVolumes() => RunForEachVolume((childReference, volumeInfo) =>
                                                                               {
-                                                                                  logger.LogInformation("Formatting volume. Volume: {Volume}", volumeInfo.szVolumeLabel);
+                                                                                  _logger.LogInformation("Formatting volume. Volume: {Volume}", volumeInfo.szVolumeLabel);
                                                                                   SendSDKCommand(() => Error = EdsFormatVolume(childReference));
                                                                               });
 
@@ -1742,7 +1679,7 @@ public class SDKHandler : IDisposable
         RunForEachVolume((childReference, volumeInfo) =>
         {
             var freePc = volumeInfo.FreeSpaceInBytes / (float)volumeInfo.MaxCapacity;
-            logger.LogDebug("Camera volume free space. volume: {volume}, freeSpaceBytes: {freeSpaceBytes}, maxCapacity: {maxCapacity}, freePercent: {freePercent}", volumeInfo.szVolumeLabel, volumeInfo.FreeSpaceInBytes, volumeInfo.MaxCapacity, freePc);
+            _logger.LogDebug("Camera volume free space. volume: {volume}, freeSpaceBytes: {freeSpaceBytes}, maxCapacity: {maxCapacity}, freePercent: {freePercent}", volumeInfo.szVolumeLabel, volumeInfo.FreeSpaceInBytes, volumeInfo.MaxCapacity, freePc);
             if (freePc < minPercent)
             {
                 minPercent = freePc;
@@ -1776,7 +1713,7 @@ public class SDKHandler : IDisposable
     {
         throw new NotImplementedException();
         // NOTE: Need to marry up obj ref to camera entry then delete based on camera entry / ref
-        logger.LogDebug("Formatting volume. Volume: {Volume}", volume.Name);
+        _logger.LogDebug("Formatting volume. Volume: {Volume}", volume.Name);
         SendSDKCommand(() =>
         {
             nint ptr = Marshal.AllocHGlobal(Marshal.SizeOf(volume.Volume));
@@ -2032,5 +1969,35 @@ public class SDKHandler : IDisposable
 
     #endregion
 
-    #endregion
+
+    private async Task Log(LogLevel level, string message) => await Task.Run(() =>
+    {
+        if (_logger != null)
+        {
+            Action<string, object?[]> handler = level switch
+            {
+                LogLevel.None => delegate { },
+                LogLevel.Trace => _logger.LogTrace,
+                LogLevel.Debug => _logger.LogDebug,
+                LogLevel.Information => _logger.LogInformation,
+                LogLevel.Warning => _logger.LogWarning,
+                LogLevel.Critical => _logger.LogCritical,
+                LogLevel.Error => _logger.LogError,
+                _ => new((m, _) => _logger.LogError($"Unknown level: {level}\nMessage: {m}"))
+            };
+
+            handler(message, []);
+        }
+
+#if DEBUG
+        if (level >= LogLevel.Error)
+            throw new(message);
+#endif
+    });
+
+    private void HandleException(Exception ex, string message) => _logger?.LogError(ex, message);
+
+    private Task LogWarning(string message) => Log(LogLevel.Warning, message);
+
+    private Task LogError(string message) => Log(LogLevel.Error, message);
 }
