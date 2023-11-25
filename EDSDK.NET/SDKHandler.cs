@@ -33,7 +33,7 @@ public sealed class SDKErrorEventArgs(string error, LogLevel level)
 /// <summary>
 /// Handles the Canon SDK
 /// </summary>
-public sealed unsafe class SDKHandler
+public sealed class SDKHandler
     : IDisposable
 {
     private TaskCompletionSource<FileInfo> takePhotoCompletionSource;
@@ -134,7 +134,7 @@ public sealed unsafe class SDKHandler
         get => _imageSaveFilename;
         set
         {
-            Task t = LogInfo("Setting ImageSaveFilename. ImageSaveFilename: {ImageSaveFilename}", value);
+            await LogInfo("Setting ImageSaveFilename. ImageSaveFilename: {value}");
             _imageSaveFilename = value;
         }
     }
@@ -172,22 +172,22 @@ public sealed unsafe class SDKHandler
     /// <summary>
     /// Handles errors that happen with the SDK
     /// </summary>
-    public EdsError Error
+    public SDKError Error
     {
-        get => EdsError.OK;
+        get => SDKError.OK;
         set
         {
-            if (value != EdsError.OK)
+            if (value != SDKError.OK)
             {
                 SDKProperty errorProperty = SDKErrorToProperty(value);
-                LogError("SDK Error. Name: {0}, Value: {1}", errorProperty.Name, errorProperty.ValueToString());
+                await LogError($"SDK Error. Name: {errorProperty.Name}, Value: {errorProperty.ValueToString()}");
 
 
                 switch (value)
                 {
-                    case EdsError.COMM_DISCONNECTED:
-                    case EdsError.DEVICE_INVALID:
-                    case EdsError.DEVICE_NOT_FOUND:
+                    case SDKError.COMM_DISCONNECTED:
+                    case SDKError.DEVICE_INVALID:
+                    case SDKError.DEVICE_NOT_FOUND:
                         string name = FindProperty(SDKErrors, value).Name;
                         OnSdkError(new SDKErrorEventArgs(name, LogLevel.Critical));
                         break;
@@ -254,7 +254,7 @@ public sealed unsafe class SDKHandler
 
     public SDKProperty SDKObjectEventToProperty(EdsEvent @event) => FindProperty(SDKObjectEvents, @event);
 
-    public SDKProperty SDKErrorToProperty(EdsError error) => FindProperty(SDKErrors, error);
+    public SDKProperty SDKErrorToProperty(SDKError error) => FindProperty(SDKErrors, error);
 
     private SDKProperty FindProperty(SDKProperty[] properties, string property)
     {
@@ -265,7 +265,6 @@ public sealed unsafe class SDKHandler
         }
         return search;
     }
-
 
     private SDKProperty FindProperty(SDKProperty[] properties, uint property)
     {
@@ -279,7 +278,7 @@ public sealed unsafe class SDKHandler
 
     public void SetSaveToHost() => SetSetting(EDSDK_API.PropID_SaveTo, (uint)EdsSaveTo.Host);
 
-    public SDKProperty GetStateEvent(uint stateEvent) => FindProperty(SDKStateEvents, stateEvent);
+    public SDKProperty GetStateEvent(StateEvent stateEvent) => FindProperty(SDKStateEvents, stateEvent);
 
     public SDKProperty GetSDKProperty(string property) => FindProperty(SDKProperties, property);
 
@@ -409,9 +408,9 @@ public sealed unsafe class SDKHandler
             //open a session
             SendSDKCommand(delegate { Error = EDSDK_API.EdsOpenSession(MainCamera.Handle); }, sdkAction: nameof(EDSDK_API.EdsOpenSession));
             //subscribe to the camera events (for the SDK)
-            AddCameraHandler(() => EDSDK_API.EdsSetCameraStateEventHandler(MainCamera.Handle, StateEvent_All, SDKStateEvent, MainCamera.Handle), nameof(EDSDK_API.EdsSetCameraStateEventHandler));
+            AddCameraHandler(() => EDSDK_API.EdsSetCameraStateEventHandler(MainCamera.Handle, StateEvent.All, SDKStateEvent, MainCamera.Handle), nameof(EDSDK_API.EdsSetCameraStateEventHandler));
             AddCameraHandler(() => EDSDK_API.EdsSetObjectEventHandler(MainCamera.Handle, EdsEvent.All, SDKObjectEvent, MainCamera.Handle), nameof(EDSDK_API.EdsSetObjectEventHandler));
-            AddCameraHandler(() => EDSDK_API.EdsSetPropertyEventHandler(MainCamera.Handle, PropertyEvent_All, SDKPropertyEvent, MainCamera.Handle), nameof(EDSDK_API.EdsSetPropertyEventHandler));
+            AddCameraHandler(() => EDSDK_API.EdsSetPropertyEventHandler(MainCamera.Handle, PropertyEvent.All, SDKPropertyEvent, MainCamera.Handle), nameof(EDSDK_API.EdsSetPropertyEventHandler));
             CameraSessionOpen = true;
 
             await LogInfo($"Connected to Camera: {newCamera.Info.szDeviceDescription}");
@@ -419,9 +418,9 @@ public sealed unsafe class SDKHandler
         }
     }
 
-    private void AddCameraHandler(Func<uint> action, string handlerName)
+    private void AddCameraHandler(Func<SDKError> action, string handlerName)
     {
-        Task t = LogInfoAsync("Adding handler: {SDKHandlerName}", handlerName);
+        await LogInfo("Adding handler: {SDKHandlerName}", handlerName);
 
         Error = action();
     }
@@ -449,7 +448,7 @@ public sealed unsafe class SDKHandler
 
             //close session and release camera
             SendSDKCommand(delegate { Error = EDSDK_API.EdsCloseSession(MainCamera.Handle); }, sdkAction: nameof(EDSDK_API.EdsCloseSession));
-            uint c = EDSDK_API.EdsRelease(MainCamera.Handle);
+            SDKError c = EDSDK_API.Release(MainCamera.Handle);
             CameraSessionOpen = false;
         }
     }
@@ -475,11 +474,12 @@ public sealed unsafe class SDKHandler
     /// </summary>
     /// <param name="inContext">The pointer to the added camera</param>
     /// <returns>An EDSDK errorcode</returns>
-    private uint SDKHandler_CameraAddedEvent(nint inContext)
+    private SDKError SDKHandler_CameraAddedEvent(nint inContext)
     {
         //Handle new camera here
         OnCameraAdded();
-        return EdsError.OK;
+
+        return SDKError.OK;
     }
 
     protected void OnCameraAdded() => CameraAdded?.Invoke();
@@ -492,7 +492,7 @@ public sealed unsafe class SDKHandler
     /// <param name="inRef">Pointer to the object</param>
     /// <param name="inContext"></param>
     /// <returns>An EDSDK errorcode</returns>
-    private uint Camera_SDKObjectEvent(EdsEvent inEvent, nint inRef, nint inContext)
+    private SDKError Camera_SDKObjectEvent(EdsEvent inEvent, nint inRef, nint inContext)
     {
         SDKProperty eventProperty = SDKObjectEventToProperty(inEvent);
         //LogInfo("SDK Object Event. Name: {SDKEventName}, Value: {SDKEventHex}", eventProperty.Name, eventProperty.ValueToString());
@@ -534,7 +534,7 @@ public sealed unsafe class SDKHandler
                 break;
         }
 
-        return EdsError.OK;
+        return SDKError.OK;
     }
 
     /// <summary>
@@ -544,11 +544,11 @@ public sealed unsafe class SDKHandler
     /// <param name="inContext">...</param>
     /// <param name="outCancel">Set true to cancel event</param>
     /// <returns>An EDSDK errorcode</returns>
-    private uint Camera_SDKProgressCallbackEvent(uint inPercent, nint inContext, ref bool outCancel)
+    private SDKError Camera_SDKProgressCallbackEvent(uint inPercent, nint inContext, ref bool outCancel)
     {
         //Handle progress here
         OnProgressChanged((int)inPercent);
-        return EdsError.OK;
+        return SDKError.OK;
     }
 
     protected void OnProgressChanged(int percent) => ProgressChanged?.Invoke(percent);
@@ -561,20 +561,10 @@ public sealed unsafe class SDKHandler
     /// <param name="inParameter">Event Parameter</param>
     /// <param name="inContext">...</param>
     /// <returns>An EDSDK errorcode</returns>
-    private uint Camera_SDKPropertyEvent(uint inEvent, uint inPropertyID, uint inParameter, nint inContext)
+    private SDKError Camera_SDKPropertyEvent(PropertyEvent inEvent, uint inPropertyID, uint inParameter, nint inContext)
     {
-        //Handle property event here
-        switch (inEvent)
-        {
-            case PropertyEvent_All:
-                break;
-            case PropertyEvent_PropertyChanged:
-                LogPropertyValue(inPropertyID, GetSetting(inPropertyID));
-                break;
-
-            case PropertyEvent_PropertyDescChanged:
-                break;
-        }
+        if (inEvent is PropertyEvent.PropertyChanged)
+            LogPropertyValue(inPropertyID, GetSetting(inPropertyID));
 
         switch (inPropertyID)
         {
@@ -675,7 +665,7 @@ public sealed unsafe class SDKHandler
 
                 break;
         }
-        return EdsError.OK;
+        return SDKError.OK;
     }
 
     public void LogPropertyValue(string propertyName, uint propertyValue)
@@ -698,26 +688,26 @@ public sealed unsafe class SDKHandler
     /// <param name="inParameter">Parameter from this event</param>
     /// <param name="inContext">...</param>
     /// <returns>An EDSDK errorcode</returns>
-    private uint Camera_SDKStateEvent(uint inEvent, uint inParameter, nint inContext)
+    private SDKError Camera_SDKStateEvent(StateEvent inEvent, uint inParameter, nint inContext)
     {
 
         SDKProperty stateProperty = GetStateEvent(inEvent);
 
-        Task t = LogInfoAsync("SDK State Event. Name: {SDKStateEventName}, Hex {SDKStateEventHex}", stateProperty.Name, stateProperty.ValueToString());
+        await LogInfo("SDK State Event. Name: {SDKStateEventName}, Hex {SDKStateEventHex}", stateProperty.Name, stateProperty.ValueToString());
 
         //Handle state event here
         switch (inEvent)
         {
-            case StateEvent_All:
-            case StateEvent_JobStatusChanged:
-            case StateEvent_ShutDownTimerUpdate:
-            case StateEvent_CaptureError:
+            case StateEvent.All:
+            case StateEvent.JobStatusChanged:
+            case StateEvent.ShutDownTimerUpdate:
+            case StateEvent.CaptureError:
                 LogError("Error event. error: {error}", nameof(StateEvent_CaptureError));
                 break;
-            case StateEvent_InternalError:
+            case StateEvent.InternalError:
                 LogError("Error event. error: {error}", nameof(StateEvent_InternalError));
                 break;
-            case StateEvent_Shutdown:
+            case StateEvent.Shutdown:
                 CameraSessionOpen = false;
                 if (IsLiveViewOn)
                 {
@@ -726,18 +716,18 @@ public sealed unsafe class SDKHandler
                 }
                 OnCameraHasShutdown();
                 break;
-            case StateEvent_WillSoonShutDown:
+            case StateEvent.WillSoonShutDown:
                 if (KeepAlive)
                 {
                     SendSDKCommand(() =>
                     {
                         _logger.LogDebug("Extending camera shutdown timer");
-                        EdsSendCommand(MainCamera.Handle, CameraCommand_ExtendShutDownTimer, 0);
-                    }, sdkAction: nameof(CameraCommand_ExtendShutDownTimer));
+                        EDSDK_API.EdsSendCommand(MainCamera.Handle, CameraCommand.ExtendShutDownTimer, 0);
+                    }, sdkAction: nameof(CameraCommand.ExtendShutDownTimer));
                 }
                 break;
         }
-        return EdsError.OK;
+        return SDKError.OK;
     }
 
     protected void OnCameraHasShutdown() => CameraHasShutdown?.Invoke(this, new EventArgs());
@@ -758,7 +748,7 @@ public sealed unsafe class SDKHandler
         try
         {
             //get information about object
-            Error = EdsGetDirectoryItemInfo(ObjectPointer, out EdsDirectoryItemInfo dirInfo);
+            Error = EDSDK_API.EdsGetDirectoryItemInfo(ObjectPointer, out EdsDirectoryItemInfo dirInfo);
             if (string.IsNullOrEmpty(fileName))
             {
                 fileName = dirInfo.szFileName;
@@ -796,11 +786,11 @@ public sealed unsafe class SDKHandler
                 Stopwatch stopWatch = Stopwatch.StartNew();
 
                 //create filestream to data
-                Error = EdsCreateFileStream(targetImage, EdsFileCreateDisposition.CreateAlways, EdsAccess.ReadWrite, out nint streamRef);
+                Error = EDSDK_API.EdsCreateFileStream(targetImage, EdsFileCreateDisposition.CreateAlways, EdsAccess.ReadWrite, out nint streamRef);
                 //download file
                 STAThread.TryLockAndExecute(STAThread.ExecLock, nameof(STAThread.ExecLock), TimeSpan.FromSeconds(30), () => DownloadData(ObjectPointer, streamRef));
                 //release stream
-                Error = EdsRelease(streamRef);
+                Error = EDSDK_API.Release(streamRef);
 
                 stopWatch.Stop();
 
@@ -838,12 +828,12 @@ public sealed unsafe class SDKHandler
     {
         //get information about image
         EdsDirectoryItemInfo dirInfo = new();
-        Error = EdsGetDirectoryItemInfo(ObjectPointer, out dirInfo);
+        Error = EDSDK_API.EdsGetDirectoryItemInfo(ObjectPointer, out dirInfo);
 
         //check the extension. Raw data cannot be read by the bitmap class
         string ext = Path.GetExtension(dirInfo.szFileName).ToLower();
 
-        Task t = LogInfoAsync("Downloading image {ImageFileName}", dirInfo.szFileName);
+        await LogInfo("Downloading image {ImageFileName}", dirInfo.szFileName);
 
 
         if (ext == ".jpg" || ext == ".jpeg")
@@ -871,8 +861,7 @@ public sealed unsafe class SDKHandler
                     bmp = new Bitmap(ums);
                 }
 
-                //release data
-                Error = EDSDK_API.EdsRelease(streamRef);
+                Error = EDSDK_API.Release(streamRef);
 
                 //Fire the event with the image
                 OnImageDownloaded(bmp);
@@ -881,8 +870,9 @@ public sealed unsafe class SDKHandler
         else
         {
             //if it's a RAW image, cancel the download and release the image
-            SendSDKCommand(delegate { Error = EdsDownloadCancel(ObjectPointer); });
-            Error = EdsRelease(ObjectPointer);
+            SendSDKCommand(delegate { Error = EDSDK_API.EdsDownloadCancel(ObjectPointer); });
+
+            Error = EDSDK_API.Release(ObjectPointer);
         }
     }
 
@@ -896,7 +886,7 @@ public sealed unsafe class SDKHandler
     public Bitmap GetFileThumb(string filepath)
     {
         //create a filestream to given file
-        Error = EdsCreateFileStream(filepath, EdsFileCreateDisposition.OpenExisting, EdsAccess.Read, out nint stream);
+        Error = EDSDK_API.EdsCreateFileStream(filepath, EdsFileCreateDisposition.OpenExisting, EdsAccess.Read, out nint stream);
         return GetImage(stream, EdsImageSource.Thumbnail);
     }
 
@@ -921,8 +911,7 @@ public sealed unsafe class SDKHandler
         {
             //set the download as complete
             Error = EDSDK_API.EdsDownloadComplete(ObjectPointer);
-            //release object
-            Error = EDSDK_API.EdsRelease(ObjectPointer);
+            Error = EDSDK_API.Release(ObjectPointer);
         }
     }
 
@@ -989,21 +978,9 @@ public sealed unsafe class SDKHandler
         }
         finally
         {
-            //Release all data
-            if (img_stream != 0)
-            {
-                EdsRelease(img_stream);
-            }
-
-            if (img_ref != 0)
-            {
-                EdsRelease(img_ref);
-            }
-
-            if (stream != 0)
-            {
-                EdsRelease(stream);
-            }
+            EDSDK_API.Release(img_stream);
+            EDSDK_API.Release(img_ref);
+            EDSDK_API.Release(stream);
         }
     }
 
@@ -1049,7 +1026,7 @@ public sealed unsafe class SDKHandler
     {
         if (MainCamera.Handle != 0)
         {
-            Error = EdsGetPropertyData(MainCamera.Handle, PropID, 0, out uint property);
+            Error = EDSDK_API.EdsGetPropertyData(MainCamera.Handle, PropID, 0, out uint property);
             return property;
         }
         else
@@ -1135,7 +1112,7 @@ public sealed unsafe class SDKHandler
             SendSDKCommand(delegate
             {
                 Thread cThread = Thread.CurrentThread;
-                Task t = LogInfoAsync("Executing SDK command. ThreadName: {ThreadName}, ApartmentState: {ApartmentState}", cThread.Name, cThread.GetApartmentState());
+                await LogInfo($"Executing SDK command. ThreadName: {cThread.Name}, ApartmentState: {cThread.GetApartmentState()}");
                 //get size of property
                 Error = EDSDK_API.EdsGetPropertySize(MainCamera.Handle, propertyId, 0, out EdsDataType proptype, out int propsize);
                 //set given property
@@ -1162,8 +1139,8 @@ public sealed unsafe class SDKHandler
             SendSDKCommand(delegate
             {
                 Thread cThread = Thread.CurrentThread;
-                Task t = LogInfoAsync("Executing SDK command. ThreadName: {ThreadName}, ApartmentState: {ApartmentState}", cThread.Name, cThread.GetApartmentState());
-                Error = EdsSendCommand(MainCamera.Handle, commandId, value);
+                await LogInfo("Executing SDK command. ThreadName: {ThreadName}, ApartmentState: {ApartmentState}", cThread.Name, cThread.GetApartmentState());
+                Error = EDSDK_API.EdsSendCommand(MainCamera.Handle, commandId, value);
             }, sdkAction: nameof(EDSDK_API.EdsSetPropertyData));
         }
         else
@@ -1218,7 +1195,7 @@ public sealed unsafe class SDKHandler
             }
 
             //set value
-            SendSDKCommand(delegate { Error = EdsSetPropertyData(MainCamera.Handle, propertyId, 0, 32, propertyValueBytes); }, sdkAction: nameof(EdsSetPropertyData));
+            SendSDKCommand(delegate { Error = EDSDK_API.EdsSetPropertyData(MainCamera.Handle, propertyId, 0, 32, propertyValueBytes); }, sdkAction: nameof(EDSDK_API.EdsSetPropertyData));
         }
         else
         {
@@ -1236,7 +1213,7 @@ public sealed unsafe class SDKHandler
         LogSetProperty(propertyId, value.ToString());
         if (MainCamera.Handle != 0)
         {
-            SendSDKCommand(delegate { Error = EdsSetPropertyData(MainCamera.Handle, propertyId, 0, Marshal.SizeOf(typeof(T)), value); }, sdkAction: nameof(EdsSetPropertyData));
+            SendSDKCommand(delegate { Error = EDSDK_API.EdsSetPropertyData(MainCamera.Handle, propertyId, 0, Marshal.SizeOf(typeof(T)), value); }, sdkAction: nameof(EDSDK_API.EdsSetPropertyData));
         }
         else
         {
@@ -1250,15 +1227,15 @@ public sealed unsafe class SDKHandler
     /// <summary>
     /// Starts the live view
     /// </summary>
-    public void StartLiveView()
+    public async Task StartLiveView()
     {
         if (!IsLiveViewOn)
         {
-            Task t = LogInfoAsync("Starting Liveview");
+            await LogInfo("Starting Liveview");
 
-            t = LiveViewUpdated != null
-                ? LogInfoAsync("{LiveViewUpdatedEventListeners} LiveViewUpdated listeners found", LiveViewUpdated.GetInvocationList().Length)
-                : LogInfoAsync("{LiveViewUpdatedEventListeners} LiveViewUpdated listeners found", 0);
+            int listener_count = LiveViewUpdated?.GetInvocationList()?.Length ?? 0;
+
+            await LogInfo($"{listener_count} LiveViewUpdated listeners found");
 
 
             LogPropertyValue(nameof(PropID_Evf_OutputDevice), GetSetting(PropID_Evf_OutputDevice));
@@ -1280,7 +1257,7 @@ public sealed unsafe class SDKHandler
     {
         if (IsLiveViewOn)
         {
-            Task t = LogInfoAsync("Stopping liveview");
+            await LogInfo("Stopping liveview");
             LVoff = true;
             IsLiveViewOn = false;
 
@@ -1311,7 +1288,7 @@ public sealed unsafe class SDKHandler
                 nint EvfImageRef = 0;
                 UnmanagedMemoryStream ums;
 
-                EdsError err;
+                SDKError err;
                 //create stream
                 Error = EDSDK_API.EdsCreateMemoryStream(0, out nint stream);
 
@@ -1322,12 +1299,12 @@ public sealed unsafe class SDKHandler
                     {
                         //download current live view image
                         err = EDSDK_API.EdsCreateEvfImageRef(stream, out EvfImageRef);
-                        if (err == EdsError.OK)
+                        if (err == SDKError.OK)
                         {
                             err = EDSDK_API.EdsDownloadEvfImage(MainCamera.Handle, EvfImageRef);
                         }
 
-                        if (err == EdsError.OBJECT_NOTREADY)
+                        if (err == SDKError.OBJECT_NOTREADY)
                         {
                             Thread.Sleep(4);
                             continue;
@@ -1353,10 +1330,7 @@ public sealed unsafe class SDKHandler
                     Evf_ImagePosition = GetEvfPoints(PropID_Evf_ImagePosition, EvfImageRef);
 
                     //release current evf image
-                    if (EvfImageRef != 0)
-                    {
-                        Error = EDSDK_API.EdsRelease(EvfImageRef);
-                    }
+                    Error = EDSDK_API.Release(EvfImageRef);
 
                     //create stream to image
                     unsafe
@@ -1369,12 +1343,10 @@ public sealed unsafe class SDKHandler
                     ums.Close();
                 }
 
-                //release and finish
-                if (stream != 0)
-                {
-                    Error = EDSDK_API.EdsRelease(stream);
-                }
+                Error = EDSDK_API.Release(stream);
+
                 KillLiveView();
+
                 cancelLiveViewWait.Set();
             }
             catch
@@ -1387,7 +1359,7 @@ public sealed unsafe class SDKHandler
 
     private void KillLiveView()
     {
-        Task t = LogInfoAsync("Killing LiveView");
+        await LogInfo("Killing LiveView");
         //stop the live view
         SetSetting(PropID_Evf_OutputDevice, LVoff ? 0 : EvfOutputDevice_TFT);
     }
@@ -1410,10 +1382,10 @@ public sealed unsafe class SDKHandler
         int size = Marshal.SizeOf(typeof(EdsRect));
         nint ptr = Marshal.AllocHGlobal(size);
 
-        EdsError err = EdsGetPropertyData(imgRef, PropID_Evf_ZoomPosition, 0, size, ptr);
+        SDKError err = EDSDK_API.EdsGetPropertyData(imgRef, PropID_Evf_ZoomPosition, 0, size, ptr);
         EdsRect rect = (EdsRect)Marshal.PtrToStructure(ptr, typeof(EdsRect));
         Marshal.FreeHGlobal(ptr);
-        return err == EdsError.OK ? rect : new EdsRect();
+        return err == SDKError.OK ? rect : new EdsRect();
     }
 
     /// <summary>
@@ -1425,10 +1397,10 @@ public sealed unsafe class SDKHandler
     {
         int size = Marshal.SizeOf(typeof(EdsSize));
         nint ptr = Marshal.AllocHGlobal(size);
-        EdsError err = EDSDK_API.EdsGetPropertyData(imgRef, EDSDK_API.PropID_Evf_CoordinateSystem, 0, size, ptr);
+        SDKError err = EDSDK_API.EdsGetPropertyData(imgRef, EDSDK_API.PropID_Evf_CoordinateSystem, 0, size, ptr);
         EdsSize coord = (EdsSize)Marshal.PtrToStructure(ptr, typeof(EdsSize));
         Marshal.FreeHGlobal(ptr);
-        return err == EdsError.OK ? coord : new EdsSize();
+        return err == SDKError.OK ? coord : new EdsSize();
     }
 
     /// <summary>
@@ -1440,10 +1412,10 @@ public sealed unsafe class SDKHandler
     {
         int size = Marshal.SizeOf(typeof(EdsPoint));
         nint ptr = Marshal.AllocHGlobal(size);
-        EdsError err = EDSDK_API.EdsGetPropertyData(imgRef, PropID, 0, size, ptr);
+        SDKError err = EDSDK_API.EdsGetPropertyData(imgRef, PropID, 0, size, ptr);
         EdsPoint data = (EdsPoint)Marshal.PtrToStructure(ptr, typeof(EdsPoint));
         Marshal.FreeHGlobal(ptr);
-        return err == EdsError.OK ? data : new EdsPoint();
+        return err == SDKError.OK ? data : new EdsPoint();
     }
 
     #endregion
@@ -1513,7 +1485,7 @@ public sealed unsafe class SDKHandler
             DownloadVideo = false;
             //start the video recording
 
-            Task t = LogInfoAsync("Start filming");
+            await LogInfo("Start filming");
 
             SendSDKCommand(delegate { Error = EDSDK_API.EdsSetPropertyData(MainCamera.Handle, PropID_Record, 0, sizeof(PropID_Record_Status), (uint)PropID_Record_Status.Begin_movie_shooting); });
         }
@@ -1570,7 +1542,7 @@ public sealed unsafe class SDKHandler
             //send command to camera
             lock (STAThread.ExecLock)
             {
-                Error = EdsSendCommand(MainCamera.Handle, CameraCommand_PressShutterButton, (int)state);
+                Error = EDSDK_API.EdsSendCommand(MainCamera.Handle, CameraCommand.PressShutterButton, (int)state);
             };
         }, true);
 
@@ -1622,7 +1594,7 @@ public sealed unsafe class SDKHandler
             //send command to camera
             lock (STAThread.ExecLock)
             {
-                Error = EdsSendCommand(MainCamera.Handle, CameraCommand_TakePicture, 0);
+                Error = EDSDK_API.EdsSendCommand(MainCamera.Handle, CameraCommand.TakePicture, 0);
             };
         }, true);
 
@@ -1643,16 +1615,14 @@ public sealed unsafe class SDKHandler
         {
             //open the shutter
             lock (STAThread.ExecLock)
-            {
-                Error = EdsSendCommand(MainCamera.Handle, CameraCommand_BulbStart, 0);
-            }
+                Error = EDSDK_API.EdsSendCommand(MainCamera.Handle, CameraCommand.BulbStart, 0);
+
             //wait for the specified time
             Thread.Sleep((int)bulbTime);
+
             //close shutter
             lock (STAThread.ExecLock)
-            {
-                Error = EDSDK_API.EdsSendCommand(MainCamera.Handle, EDSDK_API.CameraCommand_BulbEnd, 0);
-            }
+                Error = EDSDK_API.EdsSendCommand(MainCamera.Handle, CameraCommand.BulbEnd, 0);
         }, true);
     }
 
@@ -1694,7 +1664,7 @@ public sealed unsafe class SDKHandler
             {
                 action(childReference, volumeInfo);
             }
-            Error = EDSDK_API.EdsRelease(childReference);
+            Error = EDSDK_API.Release(childReference);
         }
     }
 
@@ -1710,14 +1680,14 @@ public sealed unsafe class SDKHandler
             try
             {
                 Marshal.StructureToPtr(volume.Volume, ptr, false);
-                Error = EdsFormatVolume(ptr);
+                Error = EDSDK_API.EdsFormatVolume(ptr);
 
             }
             finally
             {
                 Marshal.FreeHGlobal(ptr);
             }
-        }, sdkAction: nameof(EdsFormatVolume)
+        }, sdkAction: nameof(EDSDK_API.EdsFormatVolume)
         );
     }
 
@@ -1733,7 +1703,7 @@ public sealed unsafe class SDKHandler
     {
         if (sdkAction != null)
         {
-            Task t = LogInfoAsync("Sending SDK command: {SDKCommand}", sdkAction);
+            await LogInfo("Sending SDK command: {SDKCommand}", sdkAction);
         }
 
 
@@ -1783,7 +1753,7 @@ public sealed unsafe class SDKHandler
     private void SetCapacity(EdsCapacity capacity)
     {
         PrevCapacity = capacity;
-        SendSDKCommand(delegate { Error = EdsSetCapacity(MainCamera.Handle, capacity); });
+        SendSDKCommand(delegate { Error = EDSDK_API.EdsSetCapacity(MainCamera.Handle, capacity); });
     }
 
 
@@ -1797,7 +1767,7 @@ public sealed unsafe class SDKHandler
     {
         if (IsLiveViewOn)
         {
-            SendSDKCommand(delegate { Error = EDSDK_API.EdsSendCommand(MainCamera.Handle, CameraCommand_DriveLensEvf, (int)speed); });
+            SendSDKCommand(delegate { Error = EDSDK_API.EdsSendCommand(MainCamera.Handle, CameraCommand.DriveLensEvf, (int)speed); });
         }
     }
 
@@ -1815,7 +1785,7 @@ public sealed unsafe class SDKHandler
             byte[] ya = BitConverter.GetBytes(y);
             uint coord = BitConverter.ToUInt32(new byte[] { xa[0], xa[1], ya[0], ya[1] }, 0);
             //send command to camera
-            SendSDKCommand(delegate { Error = EdsSendCommand(MainCamera.Handle, CameraCommand_DoClickWBEvf, (int)coord); });
+            SendSDKCommand(delegate { Error = EDSDK_API.EdsSendCommand(MainCamera.Handle, CameraCommand.DoClickWBEvf, (int)coord); });
         }
     }
 
@@ -1824,16 +1794,16 @@ public sealed unsafe class SDKHandler
     public List<CameraFileEntry> GetVolumes(CameraFileEntry camera)
     {
         //get the number of volumes currently installed in the camera
-        Error = EdsGetChildCount(camera.Handle, out int VolumeCount);
+        Error = EDSDK_API.EdsGetChildCount(camera.Handle, out int VolumeCount);
         List<CameraFileEntry> volumes = [];
 
         //iterate through all of them
         for (int i = 0; i < VolumeCount; i++)
         {
             //get information about volume
-            Error = EdsGetChildAtIndex(MainCamera.Handle, i, out nint childReference);
+            Error = EDSDK_API.EdsGetChildAtIndex(MainCamera.Handle, i, out nint childReference);
             EdsVolumeInfo volumeInfo = new();
-            SendSDKCommand(delegate { Error = EdsGetVolumeInfo(childReference, out volumeInfo); });
+            SendSDKCommand(delegate { Error = EDSDK_API.EdsGetVolumeInfo(childReference, out volumeInfo); });
             //ignore the HDD
             if (volumeInfo.szVolumeLabel != "HDD")
             {
@@ -1841,7 +1811,7 @@ public sealed unsafe class SDKHandler
                 volumes.Add(new CameraFileEntry($"Volume{i}({volumeInfo.szVolumeLabel})", CameraFileEntryTypes.Volume, childReference) { Volume = volumeInfo });
             }
             //release the volume
-            Error = EdsRelease(childReference);
+            Error = EDSDK_API.Release(childReference);
         }
         return volumes;
     }
@@ -1858,7 +1828,7 @@ public sealed unsafe class SDKHandler
             try
             {
                 Marshal.StructureToPtr(fileItem, ptr, false);
-                Error = EdsDeleteDirectoryItem(ptr);
+                Error = EDSDK_API.EdsDeleteDirectoryItem(ptr);
 
             }
             finally
@@ -1892,11 +1862,11 @@ public sealed unsafe class SDKHandler
     /// </summary>
     /// <param name="lockState">True for locked, false to unlock</param>
     public void UILock(bool lockState) => SendSDKCommand(delegate
-                                                                                      {
-                                                                                          Error = lockState == true
-                                                                                              ? EdsSendStatusCommand(MainCamera.Handle, CameraState_UILock, 0)
-                                                                                              : EdsSendStatusCommand(MainCamera.Handle, CameraState_UIUnLock, 0);
-                                                                                      });
+    {
+        Error = lockState == true
+            ? EDSDK_API.EdsSendStatusCommand(MainCamera.Handle, CameraState_UILock, 0)
+            : EDSDK_API.EdsSendStatusCommand(MainCamera.Handle, CameraState_UIUnLock, 0);
+    });
 
     /// <summary>
     /// Gets the children of a camera folder/volume. Recursive method.
@@ -1906,7 +1876,7 @@ public sealed unsafe class SDKHandler
     private CameraFileEntry[] GetChildren(nint ptr)
     {
         //get children of first pointer
-        Error = EdsGetChildCount(ptr, out int childCount);
+        Error = EDSDK_API.EdsGetChildCount(ptr, out int childCount);
         if (childCount > 0)
         {
             //if it has children, create an array of entries
@@ -1939,8 +1909,8 @@ public sealed unsafe class SDKHandler
                         children[i].AddSubEntries(retval);
                     }
                 }
-                //release current children
-                EDSDK_API.EdsRelease(childReference);
+
+                EDSDK_API.Release(childReference);
             }
             return children;
         }

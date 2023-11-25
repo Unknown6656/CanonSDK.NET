@@ -23,12 +23,12 @@ public sealed class Camera
     /// <summary>
     /// Handles errors that happen with the SDK
     /// </summary>
-    public EdsError Error
+    public SDKError Error
     {
      // get => EdsError.OK;
         set
         {
-            if (value != EdsError.OK)
+            if (value != SDKError.OK)
                 throw new Exception("SDK Error: " + value);
         }
     }

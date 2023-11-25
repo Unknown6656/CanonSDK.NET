@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net8</TargetFramework>
-        <AssemblyVersion>18.5.18.1619</AssemblyVersion>
-        <FileVersion>18.5.18.1619</FileVersion>
+        <TargetFramework>net8-windows</TargetFramework>
+        <AssemblyVersion>19</AssemblyVersion>
+        <FileVersion>19</FileVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Nullable>enable</Nullable>
     </PropertyGroup>

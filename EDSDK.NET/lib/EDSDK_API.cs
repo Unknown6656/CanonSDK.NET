@@ -616,6 +616,66 @@ public enum EdsEvent
     VolumeRemoved = 0x0000020d,
 }
 
+public enum PropertyEvent
+{
+    /// <summary>
+    /// Notifies all property events.
+    /// </summary>
+    All = 0x00000100,
+    /// <summary>
+    /// Notifies that a camera property value has been changed. The changed property can be retrieved from event data.
+    /// The changed value can be retrieved by means of EdsGetPropertyData. In the case of type 1 protocol standard cameras, notification of changed properties can only be issued for custom functions (CFn).
+    /// If the property type is 0x0000FFFF, the changed property cannot be identified. Thus, retrieve all required properties repeatedly.
+    /// </summary>
+    PropertyChanged = 0x00000101,
+    /// <summary>
+    /// Notifies of changes in the list of camera properties with configurable values. The list of configurable values for property IDs indicated in event data can be retrieved by means of EdsGetPropertyDesc.
+    /// For type 1 protocol standard cameras, the property ID is identified as "Unknown" during notification.
+    /// Thus, you must retrieve a list of configurable values for all properties and retrieve the property values repeatedly.
+    /// (For details on properties for which you can retrieve a list of configurable properties, see the description of EdsGetPropertyDesc).
+    /// </summary>
+    PropertyDescChanged = 0x00000102,
+}
+
+public enum StateEvent
+    : uint
+{
+    /// <summary>
+    /// Notifies all state events.
+    /// </summary>
+    All = 0x00000300,
+    /// <summary>
+    /// Indicates that a camera is no longer connected to a computer, whether it was disconnected by unplugging a cord, opening the compact flash compartment, turning the camera off, auto shut-off, or by other means.
+    /// </summary>
+    Shutdown = 0x00000301,
+    /// <summary>
+    /// Notifies of whether or not there are objects waiting to be transferred to a host computer. This is useful when ensuring all shot images have been transferred when the application is closed.
+    /// Notification of this event is not issued for type 1 protocol standard cameras.
+    /// </summary>
+    JobStatusChanged = 0x00000302,
+    /// <summary>
+    /// Notifies that the camera will shut down after a specific period. Generated only if auto shut-off is set.
+    /// Exactly when notification is issued (that is, the number of seconds until shutdown) varies depending on the camera model.
+    /// To continue operation without having the camera shut down, use EdsSendCommand to extend the auto shut-off timer.
+    /// The time in seconds until the camera shuts down is returned as the initial value.
+    /// </summary>
+    WillSoonShutDown = 0x00000303,
+    /// <summary>
+    /// As the counterpart event to kEdsStateEvent_WillSoonShutDown, this event notifies of updates to the number of seconds until a camera shuts down.
+    /// After the update, the period until shutdown is model-dependent.
+    /// </summary>
+    ShutDownTimerUpdate = 0x00000304,
+    /// <summary>
+    /// Notifies that a requested release has failed, due to focus failure or similar factors.
+    /// </summary>
+    CaptureError = 0x00000305,
+    /// <summary>
+    /// Notifies of internal SDK errors. If this error event is received, the issuing device will probably not be able to continue working properly, so cancel the remote connection.
+    /// </summary>
+    InternalError = 0x00000306,
+    AfResult = 0x00000309,
+}
+
 [StructLayout(LayoutKind.Sequential)]
 public record struct EdsPoint(int x, int y);
 
@@ -1089,88 +1149,6 @@ public static unsafe class EDSDK_API
     public const int EvfZoom_x10 = 10;
 
     #endregion
-    #region Event IDs
-
-    /*-----------------------------------------------------------------------------
-     Camera Events
-    -----------------------------------------------------------------------------*/
-    /*----------------------------------
-     Property Event
-    ----------------------------------*/
-    /* Notifies all property events. */
-    public const uint PropertyEvent_All = 0x00000100;
-
-    /* Notifies that a camera property value has been changed. 
-     The changed property can be retrieved from event data. 
-     The changed value can be retrieved by means of EdsGetPropertyData. 
-     In the case of type 1 protocol standard cameras, 
-     notification of changed properties can only be issued for custom functions (CFn). 
-     If the property type is 0x0000FFFF, the changed property cannot be identified. 
-     Thus, retrieve all required properties repeatedly. */
-    public const uint PropertyEvent_PropertyChanged = 0x00000101;
-
-    /* Notifies of changes in the list of camera properties with configurable values. 
-     The list of configurable values for property IDs indicated in event data 
-      can be retrieved by means of EdsGetPropertyDesc. 
-     For type 1 protocol standard cameras, the property ID is identified as "Unknown"
-      during notification. 
-      Thus, you must retrieve a list of configurable values for all properties and
-      retrieve the property values repeatedly. 
-     (For details on properties for which you can retrieve a list of configurable
-      properties, 
-      see the description of EdsGetPropertyDesc). */
-    public const uint PropertyEvent_PropertyDescChanged = 0x00000102;
-
-
-    /*----------------------------------
-     State Event
-    ----------------------------------*/
-    /* Notifies all state events. */
-    public const uint StateEvent_All = 0x00000300;
-
-    /* Indicates that a camera is no longer connected to a computer, 
-     whether it was disconnected by unplugging a cord, opening
-      the compact flash compartment, 
-      turning the camera off, auto shut-off, or by other means. */
-    public const uint StateEvent_Shutdown = 0x00000301;
-
-    /* Notifies of whether or not there are objects waiting to
-      be transferred to a host computer. 
-     This is useful when ensuring all shot images have been transferred 
-     when the application is closed. 
-     Notification of this event is not issued for type 1 protocol 
-     standard cameras. */
-    public const uint StateEvent_JobStatusChanged = 0x00000302;
-
-    /* Notifies that the camera will shut down after a specific period. 
-     Generated only if auto shut-off is set. 
-     Exactly when notification is issued (that is, the number of
-      seconds until shutdown) varies depending on the camera model. 
-     To continue operation without having the camera shut down,
-     use EdsSendCommand to extend the auto shut-off timer.
-     The time in seconds until the camera shuts down is returned
-      as the initial value. */
-    public const uint StateEvent_WillSoonShutDown = 0x00000303;
-
-    /* As the counterpart event to kEdsStateEvent_WillSoonShutDown,
-     this event notifies of updates to the number of seconds until
-      a camera shuts down. 
-     After the update, the period until shutdown is model-dependent. */
-    public const uint StateEvent_ShutDownTimerUpdate = 0x00000304;
-
-    /* Notifies that a requested release has failed, due to focus
-      failure or similar factors. */
-    public const uint StateEvent_CaptureError = 0x00000305;
-
-    /* Notifies of internal SDK errors. 
-     If this error event is received, the issuing device will probably
-      not be able to continue working properly,
-      so cancel the remote connection. */
-    public const uint StateEvent_InternalError = 0x00000306;
-
-    public const uint StateEvent_AfResult = 0x00000309;
-
-    #endregion
     #region Proto type defenition of EDSDK API
 
     /*----------------------------------
@@ -1192,7 +1170,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsInitializeSDK();
+    public static extern SDKError EdsInitializeSDK();
 
     /*-----------------------------------------------------------------------------
     //
@@ -1229,24 +1207,23 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsRetain(nint inRef);
+    public static extern SDKError EdsRetain(nint inRef);
 
-    /*-----------------------------------------------------------------------------
-    //
-    //  Function:   EdsRelease
-    //
-    //  Description:
-    //      Decrements the reference counter to an object. 
-    //      When the reference counter reaches 0, the object is released.
-    //
-    //  Parameters:
-    //       In:    inRef - The reference of the item.
-    //      Out:    None
-    //  Returns:    Any of the sdk errors.
-    -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsRelease(nint inRef);
+    /// <summary>
+    /// Decrements the reference counter to an object. When the reference counter reaches 0, the object is released.
+    /// </summary>
+    /// <param name="reference">The reference of the item.</param>
+    /// <returns>Any of the SDK errors.</returns>
+    public static SDKError Release(nint reference)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsRelease(nint inRef);
 
+
+        return reference != 0 ? EdsRelease(reference) : SDKError.OK;
+    }
+
+    
     /*----------------------------------
      Item-tree operating functions
     ----------------------------------*/
@@ -1265,7 +1242,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsGetChildCount(nint inRef, out int outCount);
+    public static extern SDKError EdsGetChildCount(nint inRef, out int outCount);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1283,7 +1260,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsGetChildAtIndex(nint inRef, int inIndex, out nint outRef);
+    public static extern SDKError EdsGetChildAtIndex(nint inRef, int inIndex, out nint outRef);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1326,7 +1303,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsGetPropertySize(nint inRef, uint inPropertyID, int inParam, out EdsDataType outDataType, out int outSize);
+    public static extern SDKError EdsGetPropertySize(nint inRef, uint inPropertyID, int inParam, out EdsDataType outDataType, out int outSize);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1348,53 +1325,51 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, int inPropertySize, nint outPropertyData);
+    public static extern SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, int inPropertySize, nint outPropertyData);
 
     #region GetPorpertyData Wrapper
 
-    public static uint EdsGetPropertyData<T>(nint inRef, uint inPropertyID, int inParam, out T outPropertyData)
+    public static SDKError EdsGetPropertyData<T>(nint inRef, uint inPropertyID, int inParam, out T outPropertyData)
         where T : unmanaged
     {
         T value = default;
-
-        uint err = EdsGetPropertyData(inRef, inPropertyID, inParam, sizeof(T), (nint)(void*)&value);
+        SDKError error = EdsGetPropertyData(inRef, inPropertyID, inParam, sizeof(T), (nint)(void*)&value);
 
         outPropertyData = value;
 
-        return err;
+        return error;
     }
 
-
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out uint outPropertyData) =>
+    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out uint outPropertyData) =>
         EdsGetPropertyData<uint>(inRef, inPropertyID, inParam, out outPropertyData);
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsTime outPropertyData) =>
+    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsTime outPropertyData) =>
         EdsGetPropertyData<EdsTime>(inRef, inPropertyID, inParam, out outPropertyData);
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsFocusInfo outPropertyData)
+    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsFocusInfo outPropertyData)
     {
         int size = Marshal.SizeOf(typeof(EdsFocusInfo));
         nint ptr = Marshal.AllocHGlobal(size);
-        uint err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
+        SDKError err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
 
         outPropertyData = (EdsFocusInfo)Marshal.PtrToStructure(ptr, typeof(EdsFocusInfo));
         Marshal.FreeHGlobal(ptr);
         return err;
     }
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsPoint outPropertyData) =>
+    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsPoint outPropertyData) =>
         EdsGetPropertyData<EdsPoint>(inRef, inPropertyID, inParam, out outPropertyData);
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsRect outPropertyData) =>
+    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsRect outPropertyData) =>
         EdsGetPropertyData<EdsRect>(inRef, inPropertyID, inParam, out outPropertyData);
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsSize outPropertyData) =>
+    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsSize outPropertyData) =>
         EdsGetPropertyData<EdsSize>(inRef, inPropertyID, inParam, out outPropertyData);
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out string outPropertyData)
+    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out string outPropertyData)
     {
         nint ptr = Marshal.AllocHGlobal(256);
-        uint err = EdsGetPropertyData(inRef, inPropertyID, inParam, 256, ptr);
+        SDKError err = EdsGetPropertyData(inRef, inPropertyID, inParam, 256, ptr);
 
         outPropertyData = Marshal.PtrToStringAnsi(ptr);
         Marshal.FreeHGlobal(ptr);
@@ -1402,12 +1377,12 @@ public static unsafe class EDSDK_API
         return err;
     }
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out int[] outPropertyData)
+    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out int[] outPropertyData)
     {
         EdsGetPropertySize(inRef, inPropertyID, 0, out _, out int size);
 
         nint ptr = Marshal.AllocHGlobal(size);
-        uint err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
+        SDKError err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
         int len = size / 4;
 
         outPropertyData = new int[len];
@@ -1418,15 +1393,15 @@ public static unsafe class EDSDK_API
         return err;
     }
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsCameraPos outPropertyData) =>
+    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsCameraPos outPropertyData) =>
         EdsGetPropertyData<EdsCameraPos>(inRef, inPropertyID, inParam, out outPropertyData);
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out byte[] outPropertyData)
+    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out byte[] outPropertyData)
     {
         EdsGetPropertySize(inRef, inPropertyID, 0, out _, out int size);
 
         nint ptr = Marshal.AllocHGlobal(size);
-        uint err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
+        SDKError err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
 
         int len = size;
         outPropertyData = new byte[len];
@@ -1505,7 +1480,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsSetPropertyData(nint inRef, uint inPropertyID, int inParam, int inPropertySize, [MarshalAs(UnmanagedType.AsAny), In] object inPropertyData);
+    public static extern SDKError EdsSetPropertyData(nint inRef, uint inPropertyID, int inParam, int inPropertySize, [MarshalAs(UnmanagedType.AsAny), In] object inPropertyData);
 
     /*-----------------------------------------------------------------------------
     //  
@@ -1524,7 +1499,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsGetPropertyDesc(nint inRef, uint inPropertyID, out EdsPropertyDesc outPropertyDesc);
+    public static extern SDKError EdsGetPropertyDesc(nint inRef, uint inPropertyID, out EdsPropertyDesc outPropertyDesc);
 
     /*--------------------------------------------
       Device-list and device operating functions
@@ -1543,7 +1518,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsGetCameraList(out nint outCameraListRef);
+    public static extern SDKError EdsGetCameraList(out nint outCameraListRef);
 
     /*--------------------------------------------
       Camera operating functions
@@ -1566,7 +1541,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsGetDeviceInfo(nint inCameraRef, out EdsDeviceInfo outDeviceInfo);
+    public static extern SDKError EdsGetDeviceInfo(nint inCameraRef, out EdsDeviceInfo outDeviceInfo);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1583,7 +1558,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsOpenSession(nint inCameraRef);
+    public static extern SDKError EdsOpenSession(nint inCameraRef);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1599,7 +1574,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsCloseSession(nint inCameraRef);
+    public static extern SDKError EdsCloseSession(nint inCameraRef);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1618,7 +1593,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsSendCommand(nint inCameraRef, uint inCommand, int inParam);
+    public static extern SDKError EdsSendCommand(nint inCameraRef, CameraCommand inCommand, int inParam);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1637,7 +1612,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsSendStatusCommand(nint inCameraRef, uint inCameraState, int inParam);
+    public static extern SDKError EdsSendStatusCommand(nint inCameraRef, uint inCameraState, int inParam);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1665,7 +1640,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsSetCapacity(nint inCameraRef, EdsCapacity inCapacity);
+    public static extern SDKError EdsSetCapacity(nint inCameraRef, EdsCapacity inCapacity);
 
 
     /*--------------------------------------------
@@ -1685,7 +1660,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsGetVolumeInfo(nint inCameraRef, out EdsVolumeInfo outVolumeInfo);
+    public static extern SDKError EdsGetVolumeInfo(nint inCameraRef, out EdsVolumeInfo outVolumeInfo);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1700,7 +1675,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsFormatVolume(nint inVolumeRef);
+    public static extern SDKError EdsFormatVolume(nint inVolumeRef);
 
 
     /*--------------------------------------------
@@ -1721,7 +1696,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsGetDirectoryItemInfo(nint inDirItemRef, out EdsDirectoryItemInfo outDirItemInfo);
+    public static extern SDKError EdsGetDirectoryItemInfo(nint inDirItemRef, out EdsDirectoryItemInfo outDirItemInfo);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1741,7 +1716,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsDeleteDirectoryItem(nint inDirItemRef);
+    public static extern SDKError EdsDeleteDirectoryItem(nint inDirItemRef);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1764,7 +1739,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsDownload(nint inDirItemRef, ulong inReadSize, nint outStream);
+    public static extern SDKError EdsDownload(nint inDirItemRef, ulong inReadSize, nint outStream);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1782,7 +1757,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsDownloadCancel(nint inDirItemRef);
+    public static extern SDKError EdsDownloadCancel(nint inDirItemRef);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1802,7 +1777,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsDownloadComplete(nint inDirItemRef);
+    public static extern SDKError EdsDownloadComplete(nint inDirItemRef);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1822,7 +1797,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsDownloadThumbnail(nint inDirItemRef, nint outStream);
+    public static extern SDKError EdsDownloadThumbnail(nint inDirItemRef, nint outStream);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1888,7 +1863,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsCreateFileStream(string inFileName, EdsFileCreateDisposition inCreateDisposition, EdsAccess inDesiredAccess, out nint outStream);
+    public static extern SDKError EdsCreateFileStream(string inFileName, EdsFileCreateDisposition inCreateDisposition, EdsAccess inDesiredAccess, out nint outStream);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1906,7 +1881,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsCreateMemoryStream(ulong inBufferSize, out nint outStream);
+    public static extern SDKError EdsCreateMemoryStream(ulong inBufferSize, out nint outStream);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1927,7 +1902,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsCreateStreamEx(string inFileName, EdsFileCreateDisposition inCreateDisposition, EdsAccess inDesiredAccess, out nint outStream);
+    public static extern SDKError EdsCreateStreamEx(string inFileName, EdsFileCreateDisposition inCreateDisposition, EdsAccess inDesiredAccess, out nint outStream);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1945,7 +1920,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsCreateMemoryStreamFromPointer(nint inUserBuffer, ulong inBufferSize, out nint outStream);
+    public static extern SDKError EdsCreateMemoryStreamFromPointer(nint inUserBuffer, ulong inBufferSize, out nint outStream);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1969,7 +1944,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsGetPointer(nint inStreamRef, out nint outPointer);
+    public static extern SDKError EdsGetPointer(nint inStreamRef, out nint outPointer);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1990,7 +1965,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsRead(nint inStreamRef, ulong inReadSize, nint outBuffer, out ulong outReadSize);
+    public static extern SDKError EdsRead(nint inStreamRef, ulong inReadSize, nint outBuffer, out ulong outReadSize);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2068,7 +2043,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsGetLength(nint inStreamRef, out ulong outLength);
+    public static extern SDKError EdsGetLength(nint inStreamRef, out ulong outLength);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2123,7 +2098,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsSetProgressCallback(nint inRef, EdsProgressCallback inProgressFunc, EdsProgressOption inProgressOption, nint inContext);
+    public static extern SDKError EdsSetProgressCallback(nint inRef, EdsProgressCallback inProgressFunc, EdsProgressOption inProgressOption, nint inContext);
 
 
     /*--------------------------------------------
@@ -2150,7 +2125,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsCreateImageRef(nint inStreamRef, out nint outImageRef);
+    public static extern SDKError EdsCreateImageRef(nint inStreamRef, out nint outImageRef);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2180,8 +2155,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsGetImageInfo(nint inImageRef, EdsImageSource inImageSource,
-          out EdsImageInfo outImageInfo);
+    public static extern SDKError EdsGetImageInfo(nint inImageRef, EdsImageSource inImageSource, out EdsImageInfo outImageInfo);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2224,7 +2198,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsGetImage(nint inImageRef, EdsImageSource inImageSource, EdsTargetImageType inImageType, EdsRect inSrcRect, EdsSize inDstSize, nint outStreamRef);
+    public static extern SDKError EdsGetImage(nint inImageRef, EdsImageSource inImageSource, EdsTargetImageType inImageType, EdsRect inSrcRect, EdsSize inDstSize, nint outStreamRef);
 
     //----------------------------------------------
     //   Event handler registering functions
@@ -2246,7 +2220,7 @@ public static unsafe class EDSDK_API
    //  Returns:    Any of the sdk errors.
    -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsSetCameraAddedHandler(EdsCameraAddedHandler inCameraAddedHandler, nint inContext);
+    public static extern SDKError EdsSetCameraAddedHandler(EdsCameraAddedHandler inCameraAddedHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2269,7 +2243,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsSetPropertyEventHandler(nint inCameraRef, EdsEvent inEvnet, EdsPropertyEventHandler inPropertyEventHandler, nint inContext);
+    public static extern uint EdsSetPropertyEventHandler(nint inCameraRef, PropertyEvent inEvnet, EdsPropertyEventHandler inPropertyEventHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2318,7 +2292,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsSetCameraStateEventHandler(nint inCameraRef, uint inEvnet, EdsStateEventHandler inStateEventHandler, nint inContext);
+    public static extern SDKError EdsSetCameraStateEventHandler(nint inCameraRef, uint inEvnet, EdsStateEventHandler inStateEventHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
 		//
@@ -2333,7 +2307,7 @@ public static unsafe class EDSDK_API
 		//  Returns:    Any of the sdk errors.
 		-----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsCreateEvfImageRef(nint inStreamRef, out nint outEvfImageRef);
+    public static extern SDKError EdsCreateEvfImageRef(nint inStreamRef, out nint outEvfImageRef);
 
 
     /*-----------------------------------------------------------------------------
@@ -2356,16 +2330,16 @@ public static unsafe class EDSDK_API
 		//  Returns:    Any of the sdk errors.
 		-----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern EdsError EdsDownloadEvfImage(nint inCameraRef, nint outEvfImageRef);
+    public static extern SDKError EdsDownloadEvfImage(nint inCameraRef, nint outEvfImageRef);
 
-    #endregion
-    #region Definition of base Structures
+
+
+
+
 
     public const int EDS_MAX_NAME = 256;
     public const int EDS_TRANSFER_BLOCK_SIZE = 512;
 
-    #endregion
-    #region  Definition of error Codes
 
     /*-----------------------------------------------------------------------
        ED-SDK Error Code Masks
@@ -2382,10 +2356,8 @@ public static unsafe class EDSDK_API
     public const uint EDS_CMP_ID_LLSDK_COMPONENTID = 0x02000000;
     public const uint EDS_CMP_ID_HLSDK_COMPONENTID = 0x03000000;
 
-    #endregion
 
-    #endregion Canon EDSDK Import
-    #region Contrib
+
 
     /*-----------------------------------------------------------------------------
      Video record mode
@@ -2410,7 +2382,7 @@ public static unsafe class EDSDK_API
     #endregion Contrib
 }
 
-public enum EdsError
+public enum SDKError
     : uint
 {
     /// <summary>
