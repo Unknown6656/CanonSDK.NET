@@ -20,39 +20,28 @@ public enum CameraFileEntryTypes
 /// <remarks>
 /// Creates a new instance of the CameraFileEntry class
 /// </remarks>
-/// <param name="Name">Name of this entry</param>
+/// <param name="name">Name of this entry</param>
 /// <param name="IsFolder">True if this entry is a folder, false otherwise</param>
-public class CameraFileEntry(string Name, CameraFileEntryTypes type, nint reference)
+public class CameraFileEntry(string name, CameraFileEntryTypes type, nint handle)
 {
     /// <summary>
     /// Name of this entry
     /// </summary>
-    public string Name { get; private set; } = Name;
+    public string Name { get; } = name;
 
-    public CameraFileEntryTypes Type { get; private set; } = type;
+    public CameraFileEntryTypes Type { get; } = type;
 
-    public nint Reference { get; private set; } = reference;
+    public nint Handle { get; } = handle;
 
     /// <summary>
     /// Thumbnail of this entry (might be null if not available)
     /// </summary>
-    public Bitmap Thumbnail { get; private set; }
+    public Bitmap? Thumbnail { get; set; }
+
     /// <summary>
     /// Subentries of this entry (i.e. subfolders)
     /// </summary>
-    public CameraFileEntry[] Entries { get; private set; }
-
-    /// <summary>
-    /// Adds subentries (subfolders) to this entry
-    /// </summary>
-    /// <param name="Entries">the entries to add</param>
-    public void AddSubEntries(CameraFileEntry[] Entries) => this.Entries = Entries;
-
-    /// <summary>
-    /// Adds a thumbnail to this entry
-    /// </summary>
-    /// <param name="Thumbnail">The thumbnail to add</param>
-    public void AddThumb(Bitmap Thumbnail) => this.Thumbnail = Thumbnail;
+    public CameraFileEntry[] Entries { get; set; } = [];
 
     public EdsVolumeInfo Volume { get; set; }
 }
