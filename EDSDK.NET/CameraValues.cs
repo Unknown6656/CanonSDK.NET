@@ -14,353 +14,183 @@ public static class CameraValues
     /// </summary>
     /// <param name="v">The Av ID</param>
     /// <returns>the Av string</returns>
-    public static string AV(uint v)
+    public static string AV(uint v) => v switch
     {
-        switch (v)
-        {
-            case 0x00:
-                return "Auto";
-            case 0x08:
-                return "1";
-            case 0x40:
-                return "11";
-            case 0x0B:
-                return "1.1";
-            case 0x43:
-                return "13 (1/3)";
-            case 0x0C:
-                return "1.2";
-            case 0x44:
-                return "13";
-            case 0x0D:
-                return "1.2 (1/3)";
-            case 0x45:
-                return "14";
-            case 0x10:
-                return "1.4";
-            case 0x48:
-                return "16";
-            case 0x13:
-                return "1.6";
-            case 0x4B:
-                return "18";
-            case 0x14:
-                return "1.8";
-            case 0x4C:
-                return "19";
-            case 0x15:
-                return "1.8 (1/3)";
-            case 0x4D:
-                return "20";
-            case 0x18:
-                return "2";
-            case 0x50:
-                return "22";
-            case 0x1B:
-                return "2.2";
-            case 0x53:
-                return "25";
-            case 0x1C:
-                return "2.5";
-            case 0x54:
-                return "27";
-            case 0x1D:
-                return "2.5 (1/3)";
-            case 0x55:
-                return "29";
-            case 0x20:
-                return "2.8";
-            case 0x58:
-                return "32";
-            case 0x23:
-                return "3.2";
-            case 0x5B:
-                return "36";
-            case 0x24:
-                return "3.5";
-            case 0x5C:
-                return "38";
-            case 0x25:
-                return "3.5 (1/3)";
-            case 0x5D:
-                return "40";
-            case 0x28:
-                return "4";
-            case 0x60:
-                return "45";
-            case 0x2B:
-                return "4.5";
-            case 0x63:
-                return "51";
-            case 0x2C:
-                return "4.5 (1/3)";
-            case 0x64:
-                return "54";
-            case 0x2D:
-                return "5.0";
-            case 0x65:
-                return "57";
-            case 0x30:
-                return "5.6";
-            case 0x68:
-                return "64";
-            case 0x33:
-                return "6.3";
-            case 0x6B:
-                return "72";
-            case 0x34:
-                return "6.7";
-            case 0x6C:
-                return "76";
-            case 0x35:
-                return "7.1";
-            case 0x6D:
-                return "80";
-            case 0x38:
-                return " 8";
-            case 0x70:
-                return "91";
-            case 0x3B:
-                return "9";
-            case 0x3C:
-                return "9.5";
-            case 0x3D:
-                return "10";
-
-            case 0xffffffff:
-            default:
-                return "N/A";
-        }
-    }
+        0x00 => "Auto",
+        0x08 => "1",
+        0x40 => "11",
+        0x0B => "1.1",
+        0x43 => "13 (1/3)",
+        0x0C => "1.2",
+        0x44 => "13",
+        0x0D => "1.2 (1/3)",
+        0x45 => "14",
+        0x10 => "1.4",
+        0x48 => "16",
+        0x13 => "1.6",
+        0x4B => "18",
+        0x14 => "1.8",
+        0x4C => "19",
+        0x15 => "1.8 (1/3)",
+        0x4D => "20",
+        0x18 => "2",
+        0x50 => "22",
+        0x1B => "2.2",
+        0x53 => "25",
+        0x1C => "2.5",
+        0x54 => "27",
+        0x1D => "2.5 (1/3)",
+        0x55 => "29",
+        0x20 => "2.8",
+        0x58 => "32",
+        0x23 => "3.2",
+        0x5B => "36",
+        0x24 => "3.5",
+        0x5C => "38",
+        0x25 => "3.5 (1/3)",
+        0x5D => "40",
+        0x28 => "4",
+        0x60 => "45",
+        0x2B => "4.5",
+        0x63 => "51",
+        0x2C => "4.5 (1/3)",
+        0x64 => "54",
+        0x2D => "5.0",
+        0x65 => "57",
+        0x30 => "5.6",
+        0x68 => "64",
+        0x33 => "6.3",
+        0x6B => "72",
+        0x34 => "6.7",
+        0x6C => "76",
+        0x35 => "7.1",
+        0x6D => "80",
+        0x38 => " 8",
+        0x70 => "91",
+        0x3B => "9",
+        0x3C => "9.5",
+        0x3D => "10",
+        _ => "N/A",
+    };
 
     /// <summary>
     /// Gets the ISO string value from an ISO ID
     /// </summary>
     /// <param name="v">The ISO ID</param>
     /// <returns>the ISO string</returns>
-    public static string ISO(uint v)
+    public static string ISO(uint v) => v switch
     {
-        switch (v)
-        {
-            case 0x00000000:
-                return "Auto ISO";
-            case 0x00000028:
-                return "ISO 6";
-            case 0x00000030:
-                return "ISO 12";
-            case 0x00000038:
-                return "ISO 25";
-            case 0x00000040:
-                return "ISO 50";
-            case 0x00000048:
-                return "ISO 100";
-            case 0x0000004b:
-                return "ISO 125";
-            case 0x0000004d:
-                return "ISO 160";
-            case 0x00000050:
-                return "ISO 200";
-            case 0x00000053:
-                return "ISO 250";
-            case 0x00000055:
-                return "ISO 320";
-            case 0x00000058:
-                return "ISO 400";
-            case 0x0000005b:
-                return "ISO 500";
-            case 0x0000005d:
-                return "ISO 640";
-            case 0x00000060:
-                return "ISO 800";
-            case 0x00000063:
-                return "ISO 1000";
-            case 0x00000065:
-                return "ISO 1250";
-            case 0x00000068:
-                return "ISO 1600";
-            case 0x00000070:
-                return "ISO 3200";
-            case 0x00000078:
-                return "ISO 6400";
-            case 0x00000080:
-                return "ISO 12800";
-            case 0x00000088:
-                return "ISO 25600";
-            case 0x00000090:
-                return "ISO 51200";
-            case 0x00000098:
-                return "ISO 102400";
-            case 0xffffffff:
-            default:
-                return "N/A";
-        }
-    }
+        0x00000000 => "Auto ISO",
+        0x00000028 => "ISO 6",
+        0x00000030 => "ISO 12",
+        0x00000038 => "ISO 25",
+        0x00000040 => "ISO 50",
+        0x00000048 => "ISO 100",
+        0x0000004b => "ISO 125",
+        0x0000004d => "ISO 160",
+        0x00000050 => "ISO 200",
+        0x00000053 => "ISO 250",
+        0x00000055 => "ISO 320",
+        0x00000058 => "ISO 400",
+        0x0000005b => "ISO 500",
+        0x0000005d => "ISO 640",
+        0x00000060 => "ISO 800",
+        0x00000063 => "ISO 1000",
+        0x00000065 => "ISO 1250",
+        0x00000068 => "ISO 1600",
+        0x00000070 => "ISO 3200",
+        0x00000078 => "ISO 6400",
+        0x00000080 => "ISO 12800",
+        0x00000088 => "ISO 25600",
+        0x00000090 => "ISO 51200",
+        0x00000098 => "ISO 102400",
+        _ => "N/A",
+    };
 
     /// <summary>
     /// Gets the Tv string value from an Tv ID
     /// </summary>
     /// <param name="v">The Tv ID</param>
     /// <returns>the Tv string</returns>
-    public static string TV(uint v)
+    public static string TV(uint v) => v switch
     {
-        switch (v)
-        {
-            case 0x00:
-                return "Auto";
-            case 0x0C:
-                return "Bulb";
-            case 0x5D:
-                return "1/25";
-            case 0x10:
-                return "30\"";
-            case 0x60:
-                return "1/30";
-            case 0x13:
-                return "25\"";
-            case 0x63:
-                return "1/40";
-            case 0x14:
-                return "20\"";
-            case 0x64:
-                return "1/45";
-            case 0x15:
-                return "20\" (1/3)";
-            case 0x65:
-                return "1/50";
-            case 0x18:
-                return "15\"";
-            case 0x68:
-                return "1/60";
-            case 0x1B:
-                return "13\"";
-            case 0x6B:
-                return "1/80";
-            case 0x1C:
-                return "10\"";
-            case 0x6C:
-                return "1/90";
-            case 0x1D:
-                return "10\" (1/3)";
-            case 0x6D:
-                return "1/100";
-            case 0x20:
-                return "8\"";
-            case 0x70:
-                return "1/125";
-            case 0x23:
-                return "6\" (1/3)";
-            case 0x73:
-                return "1/160";
-            case 0x24:
-                return "6\"";
-            case 0x74:
-                return "1/180";
-            case 0x25:
-                return "5\"";
-            case 0x75:
-                return "1/200";
-            case 0x28:
-                return "4\"";
-            case 0x78:
-                return "1/250";
-            case 0x2B:
-                return "3\"2";
-            case 0x7B:
-                return "1/320";
-            case 0x2C:
-                return "3\"";
-            case 0x7C:
-                return "1/350";
-            case 0x2D:
-                return "2\"5";
-            case 0x7D:
-                return "1/400";
-            case 0x30:
-                return "2\"";
-            case 0x80:
-                return "1/500";
-            case 0x33:
-                return "1\"6";
-            case 0x83:
-                return "1/640";
-            case 0x34:
-                return "1\"5";
-            case 0x84:
-                return "1/750";
-            case 0x35:
-                return "1\"3";
-            case 0x85:
-                return "1/800";
-            case 0x38:
-                return "1\"";
-            case 0x88:
-                return "1/1000";
-            case 0x3B:
-                return "0\"8";
-            case 0x8B:
-                return "1/1250";
-            case 0x3C:
-                return "0\"7";
-            case 0x8C:
-                return "1/1500";
-            case 0x3D:
-                return "0\"6";
-            case 0x8D:
-                return "1/1600";
-            case 0x40:
-                return "0\"5";
-            case 0x90:
-                return "1/2000";
-            case 0x43:
-                return "0\"4";
-            case 0x93:
-                return "1/2500";
-            case 0x44:
-                return "0\"3";
-            case 0x94:
-                return "1/3000";
-            case 0x45:
-                return "0\"3 (1/3)";
-            case 0x95:
-                return "1/3200";
-            case 0x48:
-                return "1/4";
-            case 0x98:
-                return "1/4000";
-            case 0x4B:
-                return "1/5";
-            case 0x9B:
-                return "1/5000";
-            case 0x4C:
-                return "1/6";
-            case 0x9C:
-                return "1/6000";
-            case 0x4D:
-                return "1/6 (1/3)";
-            case 0x9D:
-                return "1/6400";
-            case 0x50:
-                return "1/8";
-            case 0xA0:
-                return "1/8000";
-            case 0x53:
-                return "1/10 (1/3)";
-            case 0x54:
-                return "1/10";
-            case 0x55:
-                return "1/13";
-            case 0x58:
-                return "1/15";
-            case 0x5B:
-                return "1/20 (1/3)";
-            case 0x5C:
-                return "1/20";
-
-            case 0xffffffff:
-            default:
-                return "N/A";
-        }
-    }
+        0x00 => "Auto",
+        0x0C => "Bulb",
+        0x5D => "1/25",
+        0x10 => "30\"",
+        0x60 => "1/30",
+        0x13 => "25\"",
+        0x63 => "1/40",
+        0x14 => "20\"",
+        0x64 => "1/45",
+        0x15 => "20\" (1/3)",
+        0x65 => "1/50",
+        0x18 => "15\"",
+        0x68 => "1/60",
+        0x1B => "13\"",
+        0x6B => "1/80",
+        0x1C => "10\"",
+        0x6C => "1/90",
+        0x1D => "10\" (1/3)",
+        0x6D => "1/100",
+        0x20 => "8\"",
+        0x70 => "1/125",
+        0x23 => "6\" (1/3)",
+        0x73 => "1/160",
+        0x24 => "6\"",
+        0x74 => "1/180",
+        0x25 => "5\"",
+        0x75 => "1/200",
+        0x28 => "4\"",
+        0x78 => "1/250",
+        0x2B => "3\"2",
+        0x7B => "1/320",
+        0x2C => "3\"",
+        0x7C => "1/350",
+        0x2D => "2\"5",
+        0x7D => "1/400",
+        0x30 => "2\"",
+        0x80 => "1/500",
+        0x33 => "1\"6",
+        0x83 => "1/640",
+        0x34 => "1\"5",
+        0x84 => "1/750",
+        0x35 => "1\"3",
+        0x85 => "1/800",
+        0x38 => "1\"",
+        0x88 => "1/1000",
+        0x3B => "0\"8",
+        0x8B => "1/1250",
+        0x3C => "0\"7",
+        0x8C => "1/1500",
+        0x3D => "0\"6",
+        0x8D => "1/1600",
+        0x40 => "0\"5",
+        0x90 => "1/2000",
+        0x43 => "0\"4",
+        0x93 => "1/2500",
+        0x44 => "0\"3",
+        0x94 => "1/3000",
+        0x45 => "0\"3 (1/3)",
+        0x95 => "1/3200",
+        0x48 => "1/4",
+        0x98 => "1/4000",
+        0x4B => "1/5",
+        0x9B => "1/5000",
+        0x4C => "1/6",
+        0x9C => "1/6000",
+        0x4D => "1/6 (1/3)",
+        0x9D => "1/6400",
+        0x50 => "1/8",
+        0xA0 => "1/8000",
+        0x53 => "1/10 (1/3)",
+        0x54 => "1/10",
+        0x55 => "1/13",
+        0x58 => "1/15",
+        0x5B => "1/20 (1/3)",
+        0x5C => "1/20",
+        _ => "N/A",
+    };
 
 
     /// <summary>
@@ -368,352 +198,181 @@ public static class CameraValues
     /// </summary>
     /// <param name="v">The Av string</param>
     /// <returns>the Av ID</returns>
-    public static uint AV(string v)
+    public static uint AV(string v) => v switch
     {
-        switch (v)
-        {
-            case "Auto":
-                return 0x00;
-            case "1":
-                return 0x08;
-            case "11":
-                return 0x40;
-            case "1.1":
-                return 0x0B;
-            case "13 (1/3)":
-                return 0x43;
-            case "1.2":
-                return 0x0C;
-            case "13":
-                return 0x44;
-            case "1.2 (1/3)":
-                return 0x0D;
-            case "14":
-                return 0x45;
-            case "1.4":
-                return 0x10;
-            case "16":
-                return 0x48;
-            case "1.6":
-                return 0x13;
-            case "18":
-                return 0x4B;
-            case "1.8":
-                return 0x14;
-            case "19":
-                return 0x4C;
-            case "1.8 (1/3)":
-                return 0x15;
-            case "20":
-                return 0x4D;
-            case "2":
-                return 0x18;
-            case "22":
-                return 0x50;
-            case "2.2":
-                return 0x1B;
-            case "25":
-                return 0x53;
-            case "2.5":
-                return 0x1C;
-            case "27":
-                return 0x54;
-            case "2.5 (1/3)":
-                return 0x1D;
-            case "29":
-                return 0x55;
-            case "2.8":
-                return 0x20;
-            case "32":
-                return 0x58;
-            case "3.2":
-                return 0x23;
-            case "36":
-                return 0x5B;
-            case "3.5":
-                return 0x24;
-            case "38":
-                return 0x5C;
-            case "3.5 (1/3)":
-                return 0x25;
-            case "40":
-                return 0x5D;
-            case "4":
-                return 0x28;
-            case "45":
-                return 0x60;
-            case "4.5":
-                return 0x2B;
-            case "51":
-                return 0x63;
-            case "4.5 (1/3)":
-                return 0x2C;
-            case "54":
-                return 0x64;
-            case "5.0":
-                return 0x2D;
-            case "57":
-                return 0x65;
-            case "5.6":
-                return 0x30;
-            case "64":
-                return 0x68;
-            case "6.3":
-                return 0x33;
-            case "72":
-                return 0x6B;
-            case "6.7":
-                return 0x34;
-            case "76":
-                return 0x6C;
-            case "7.1":
-                return 0x35;
-            case "80":
-                return 0x6D;
-            case " 8":
-                return 0x38;
-            case "91":
-                return 0x70;
-            case "9":
-                return 0x3B;
-            case "9.5":
-                return 0x3C;
-            case "10":
-                return 0x3D;
-
-            case "N/A":
-            default:
-                return 0xffffffff;
-        }
-    }
+        "Auto" => 0x00,
+        "1" => 0x08,
+        "11" => 0x40,
+        "1.1" => 0x0B,
+        "13 (1/3)" => 0x43,
+        "1.2" => 0x0C,
+        "13" => 0x44,
+        "1.2 (1/3)" => 0x0D,
+        "14" => 0x45,
+        "1.4" => 0x10,
+        "16" => 0x48,
+        "1.6" => 0x13,
+        "18" => 0x4B,
+        "1.8" => 0x14,
+        "19" => 0x4C,
+        "1.8 (1/3)" => 0x15,
+        "20" => 0x4D,
+        "2" => 0x18,
+        "22" => 0x50,
+        "2.2" => 0x1B,
+        "25" => 0x53,
+        "2.5" => 0x1C,
+        "27" => 0x54,
+        "2.5 (1/3)" => 0x1D,
+        "29" => 0x55,
+        "2.8" => 0x20,
+        "32" => 0x58,
+        "3.2" => 0x23,
+        "36" => 0x5B,
+        "3.5" => 0x24,
+        "38" => 0x5C,
+        "3.5 (1/3)" => 0x25,
+        "40" => 0x5D,
+        "4" => 0x28,
+        "45" => 0x60,
+        "4.5" => 0x2B,
+        "51" => 0x63,
+        "4.5 (1/3)" => 0x2C,
+        "54" => 0x64,
+        "5.0" => 0x2D,
+        "57" => 0x65,
+        "5.6" => 0x30,
+        "64" => 0x68,
+        "6.3" => 0x33,
+        "72" => 0x6B,
+        "6.7" => 0x34,
+        "76" => 0x6C,
+        "7.1" => 0x35,
+        "80" => 0x6D,
+        " 8" => 0x38,
+        "91" => 0x70,
+        "9" => 0x3B,
+        "9.5" => 0x3C,
+        "10" => 0x3D,
+        _ => 0xffffffff,
+    };
 
     /// <summary>
     /// Gets the ISO ID from an ISO string value
     /// </summary>
     /// <param name="v">The ISO string</param>
     /// <returns>the ISO ID</returns>
-    public static uint ISO(string v)
+    public static uint ISO(string v) => v switch
     {
-        switch (v)
-        {
-            case "Auto ISO":
-                return 0x00000000;
-            case "ISO 6":
-                return 0x00000028;
-            case "ISO 12":
-                return 0x00000030;
-            case "ISO 25":
-                return 0x00000038;
-            case "ISO 50":
-                return 0x00000040;
-            case "ISO 100":
-                return 0x00000048;
-            case "ISO 125":
-                return 0x0000004b;
-            case "ISO 160":
-                return 0x0000004d;
-            case "ISO 200":
-                return 0x00000050;
-            case "ISO 250":
-                return 0x00000053;
-            case "ISO 320":
-                return 0x00000055;
-            case "ISO 400":
-                return 0x00000058;
-            case "ISO 500":
-                return 0x0000005b;
-            case "ISO 640":
-                return 0x0000005d;
-            case "ISO 800":
-                return 0x00000060;
-            case "ISO 1000":
-                return 0x00000063;
-            case "ISO 1250":
-                return 0x00000065;
-            case "ISO 1600":
-                return 0x00000068;
-            case "ISO 3200":
-                return 0x00000070;
-            case "ISO 6400":
-                return 0x00000078;
-            case "ISO 12800":
-                return 0x00000080;
-            case "ISO 25600":
-                return 0x00000088;
-            case "ISO 51200":
-                return 0x00000090;
-            case "ISO 102400":
-                return 0x00000098;
-
-            case "N/A":
-            default:
-                return 0xffffffff;
-        }
-    }
+        "Auto ISO" => 0x00000000,
+        "ISO 6" => 0x00000028,
+        "ISO 12" => 0x00000030,
+        "ISO 25" => 0x00000038,
+        "ISO 50" => 0x00000040,
+        "ISO 100" => 0x00000048,
+        "ISO 125" => 0x0000004b,
+        "ISO 160" => 0x0000004d,
+        "ISO 200" => 0x00000050,
+        "ISO 250" => 0x00000053,
+        "ISO 320" => 0x00000055,
+        "ISO 400" => 0x00000058,
+        "ISO 500" => 0x0000005b,
+        "ISO 640" => 0x0000005d,
+        "ISO 800" => 0x00000060,
+        "ISO 1000" => 0x00000063,
+        "ISO 1250" => 0x00000065,
+        "ISO 1600" => 0x00000068,
+        "ISO 3200" => 0x00000070,
+        "ISO 6400" => 0x00000078,
+        "ISO 12800" => 0x00000080,
+        "ISO 25600" => 0x00000088,
+        "ISO 51200" => 0x00000090,
+        "ISO 102400" => 0x00000098,
+        _ => 0xffffffff,
+    };
 
     /// <summary>
     /// Gets the Tv ID from an Tv string value
     /// </summary>
     /// <param name="v">The Tv string</param>
     /// <returns>the Tv ID</returns>
-    public static uint TV(string v)
+    public static uint TV(string v) => v switch
     {
-        switch (v)
-        {
-            case "Auto":
-                return 0x00;
-            case "Bulb":
-                return 0x0C;
-            case "1/25":
-                return 0x5D;
-            case "30\"":
-                return 0x10;
-            case "1/30":
-                return 0x60;
-            case "25\"":
-                return 0x13;
-            case "1/40":
-                return 0x63;
-            case "20\"":
-                return 0x14;
-            case "1/45":
-                return 0x64;
-            case "20\" (1/3)":
-                return 0x15;
-            case "1/50":
-                return 0x65;
-            case "15\"":
-                return 0x18;
-            case "1/60":
-                return 0x68;
-            case "13\"":
-                return 0x1B;
-            case "1/80":
-                return 0x6B;
-            case "10\"":
-                return 0x1C;
-            case "1/90":
-                return 0x6C;
-            case "10\" (1/3)":
-                return 0x1D;
-            case "1/100":
-                return 0x6D;
-            case "8\"":
-                return 0x20;
-            case "1/125":
-                return 0x70;
-            case "6\" (1/3)":
-                return 0x23;
-            case "1/160":
-                return 0x73;
-            case "6\"":
-                return 0x24;
-            case "1/180":
-                return 0x74;
-            case "5\"":
-                return 0x25;
-            case "1/200":
-                return 0x75;
-            case "4\"":
-                return 0x28;
-            case "1/250":
-                return 0x78;
-            case "3\"2":
-                return 0x2B;
-            case "1/320":
-                return 0x7B;
-            case "3\"":
-                return 0x2C;
-            case "1/350":
-                return 0x7C;
-            case "2\"5":
-                return 0x2D;
-            case "1/400":
-                return 0x7D;
-            case "2\"":
-                return 0x30;
-            case "1/500":
-                return 0x80;
-            case "1\"6":
-                return 0x33;
-            case "1/640":
-                return 0x83;
-            case "1\"5":
-                return 0x34;
-            case "1/750":
-                return 0x84;
-            case "1\"3":
-                return 0x35;
-            case "1/800":
-                return 0x85;
-            case "1\"":
-                return 0x38;
-            case "1/1000":
-                return 0x88;
-            case "0\"8":
-                return 0x3B;
-            case "1/1250":
-                return 0x8B;
-            case "0\"7":
-                return 0x3C;
-            case "1/1500":
-                return 0x8C;
-            case "0\"6":
-                return 0x3D;
-            case "1/1600":
-                return 0x8D;
-            case "0\"5":
-                return 0x40;
-            case "1/2000":
-                return 0x90;
-            case "0\"4":
-                return 0x43;
-            case "1/2500":
-                return 0x93;
-            case "0\"3":
-                return 0x44;
-            case "1/3000":
-                return 0x94;
-            case "0\"3 (1/3)":
-                return 0x45;
-            case "1/3200":
-                return 0x95;
-            case "1/4":
-                return 0x48;
-            case "1/4000":
-                return 0x98;
-            case "1/5":
-                return 0x4B;
-            case "1/5000":
-                return 0x9B;
-            case "1/6":
-                return 0x4C;
-            case "1/6000":
-                return 0x9C;
-            case "1/6 (1/3)":
-                return 0x4D;
-            case "1/6400":
-                return 0x9D;
-            case "1/8":
-                return 0x50;
-            case "1/8000":
-                return 0xA0;
-            case "1/10 (1/3)":
-                return 0x53;
-            case "1/10":
-                return 0x54;
-            case "1/13":
-                return 0x55;
-            case "1/15":
-                return 0x58;
-            case "1/20 (1/3)":
-                return 0x5B;
-            case "1/20":
-                return 0x5C;
-
-            case "N/A":
-            default:
-                return 0xffffffff;
-        }
-    }
+        "Auto" => 0x00,
+        "Bulb" => 0x0C,
+        "1/25" => 0x5D,
+        "30\"" => 0x10,
+        "1/30" => 0x60,
+        "25\"" => 0x13,
+        "1/40" => 0x63,
+        "20\"" => 0x14,
+        "1/45" => 0x64,
+        "20\" (1/3)" => 0x15,
+        "1/50" => 0x65,
+        "15\"" => 0x18,
+        "1/60" => 0x68,
+        "13\"" => 0x1B,
+        "1/80" => 0x6B,
+        "10\"" => 0x1C,
+        "1/90" => 0x6C,
+        "10\" (1/3)" => 0x1D,
+        "1/100" => 0x6D,
+        "8\"" => 0x20,
+        "1/125" => 0x70,
+        "6\" (1/3)" => 0x23,
+        "1/160" => 0x73,
+        "6\"" => 0x24,
+        "1/180" => 0x74,
+        "5\"" => 0x25,
+        "1/200" => 0x75,
+        "4\"" => 0x28,
+        "1/250" => 0x78,
+        "3\"2" => 0x2B,
+        "1/320" => 0x7B,
+        "3\"" => 0x2C,
+        "1/350" => 0x7C,
+        "2\"5" => 0x2D,
+        "1/400" => 0x7D,
+        "2\"" => 0x30,
+        "1/500" => 0x80,
+        "1\"6" => 0x33,
+        "1/640" => 0x83,
+        "1\"5" => 0x34,
+        "1/750" => 0x84,
+        "1\"3" => 0x35,
+        "1/800" => 0x85,
+        "1\"" => 0x38,
+        "1/1000" => 0x88,
+        "0\"8" => 0x3B,
+        "1/1250" => 0x8B,
+        "0\"7" => 0x3C,
+        "1/1500" => 0x8C,
+        "0\"6" => 0x3D,
+        "1/1600" => 0x8D,
+        "0\"5" => 0x40,
+        "1/2000" => 0x90,
+        "0\"4" => 0x43,
+        "1/2500" => 0x93,
+        "0\"3" => 0x44,
+        "1/3000" => 0x94,
+        "0\"3 (1/3)" => 0x45,
+        "1/3200" => 0x95,
+        "1/4" => 0x48,
+        "1/4000" => 0x98,
+        "1/5" => 0x4B,
+        "1/5000" => 0x9B,
+        "1/6" => 0x4C,
+        "1/6000" => 0x9C,
+        "1/6 (1/3)" => 0x4D,
+        "1/6400" => 0x9D,
+        "1/8" => 0x50,
+        "1/8000" => 0xA0,
+        "1/10 (1/3)" => 0x53,
+        "1/10" => 0x54,
+        "1/13" => 0x55,
+        "1/15" => 0x58,
+        "1/20 (1/3)" => 0x5B,
+        "1/20" => 0x5C,
+        _ => 0xffffffff,
+    };
 }
