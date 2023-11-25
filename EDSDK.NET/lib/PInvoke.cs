@@ -223,6 +223,194 @@ public enum EdsDriveMode
     Silent_LS_continuous = 0x00000016,
 }
 
+public enum EdsEvfAFMode
+    : uint
+{
+    Evf_AFMode_Quick = 0,
+    Evf_AFMode_Live = 1,
+    Evf_AFMode_LiveFace = 2,
+    Evf_AFMode_LiveMulti = 3,
+    Evf_AFMode_LiveZone = 4,
+    Evf_AFMode_LiveCatchAF = 9,
+    Evf_AFMode_LiveSpotAF = 10
+}
+
+/// <summary>
+/// Strobo Mode
+/// </summary>
+public enum EdsStroboMode
+{
+    kEdsStroboModeInternal = 0,
+    kEdsStroboModeExternalETTL = 1,
+    kEdsStroboModeExternalATTL = 2,
+    kEdsStroboModeExternalTTL = 3,
+    kEdsStroboModeExternalAuto = 4,
+    kEdsStroboModeExternalManual = 5,
+    kEdsStroboModeManual = 6,
+}
+
+public enum EdsETTL2Mode
+{
+    kEdsETTL2ModeEvaluative = 0,
+    kEdsETTL2ModeAverage = 1,
+}
+
+/// <summary>
+/// DC Strobe
+/// </summary>
+public enum DcStrobe
+    : uint
+{
+    DcStrobeAuto = 0,
+    DcStrobeOn = 1,
+    DcStrobeSlowsynchro = 2,
+    DcStrobeOff = 3,
+}
+
+/// <summary>
+/// DC Lens Barrel State
+/// </summary>
+public enum DcLensBarrelState
+    : uint
+{
+    DcLensBarrelStateInner = 0,
+    DcLensBarrelStateOuter = 1,
+}
+
+/// <summary>
+/// DC Remote Shooting Mode
+/// </summary>
+public enum DcRemoteShootingMode
+    : uint
+{
+    DcRemoteShootingModeStop = 0,
+    DcRemoteShootingModeStart = 1,
+}
+
+public enum ImageQuality
+    : uint
+{
+    /* Jpeg Only */
+    EdsImageQuality_LJ = 0x0010ff0f,    /* Jpeg Large */
+    EdsImageQuality_M1J = 0x0510ff0f,   /* Jpeg Middle1 */
+    EdsImageQuality_M2J = 0x0610ff0f,   /* Jpeg Middle2 */
+    EdsImageQuality_SJ = 0x0210ff0f,    /* Jpeg Small */
+    EdsImageQuality_LJF = 0x0013ff0f,   /* Jpeg Large Fine */
+    EdsImageQuality_LJN = 0x0012ff0f,   /* Jpeg Large Normal */
+    EdsImageQuality_MJF = 0x0113ff0f,   /* Jpeg Middle Fine */
+    EdsImageQuality_MJN = 0x0112ff0f,   /* Jpeg Middle Normal */
+    EdsImageQuality_SJF = 0x0213ff0f,   /* Jpeg Small Fine */
+    EdsImageQuality_SJN = 0x0212ff0f,   /* Jpeg Small Normal */
+    EdsImageQuality_S1JF = 0x0E13ff0f,  /* Jpeg Small1 Fine */
+    EdsImageQuality_S1JN = 0x0E12ff0f,  /* Jpeg Small1 Normal */
+    EdsImageQuality_S2JF = 0x0F13ff0f,  /* Jpeg Small2 */
+    EdsImageQuality_S3JF = 0x1013ff0f,  /* Jpeg Small3 */
+
+    /* RAW + Jpeg */
+    EdsImageQuality_LR = 0x0064ff0f,    /* RAW */
+    EdsImageQuality_LRLJF = 0x00640013, /* RAW + Jpeg Large Fine */
+    EdsImageQuality_LRLJN = 0x00640012, /* RAW + Jpeg Large Normal */
+    EdsImageQuality_LRMJF = 0x00640113, /* RAW + Jpeg Middle Fine */
+    EdsImageQuality_LRMJN = 0x00640112, /* RAW + Jpeg Middle Normal */
+    EdsImageQuality_LRSJF = 0x00640213, /* RAW + Jpeg Small Fine */
+    EdsImageQuality_LRSJN = 0x00640212, /* RAW + Jpeg Small Normal */
+    EdsImageQuality_LRS1JF = 0x00640E13,    /* RAW + Jpeg Small1 Fine */
+    EdsImageQuality_LRS1JN = 0x00640E12,    /* RAW + Jpeg Small1 Normal */
+    EdsImageQuality_LRS2JF = 0x00640F13,    /* RAW + Jpeg Small2 */
+    EdsImageQuality_LRS3JF = 0x00641013,    /* RAW + Jpeg Small3 */
+
+    EdsImageQuality_LRLJ = 0x00640010,  /* RAW + Jpeg Large */
+    EdsImageQuality_LRM1J = 0x00640510, /* RAW + Jpeg Middle1 */
+    EdsImageQuality_LRM2J = 0x00640610, /* RAW + Jpeg Middle2 */
+    EdsImageQuality_LRSJ = 0x00640210,  /* RAW + Jpeg Small */
+
+    /* MRAW(SRAW1) + Jpeg */
+    EdsImageQuality_MR = 0x0164ff0f,    /* MRAW(SRAW1) */
+    EdsImageQuality_MRLJF = 0x01640013, /* MRAW(SRAW1) + Jpeg Large Fine */
+    EdsImageQuality_MRLJN = 0x01640012, /* MRAW(SRAW1) + Jpeg Large Normal */
+    EdsImageQuality_MRMJF = 0x01640113, /* MRAW(SRAW1) + Jpeg Middle Fine */
+    EdsImageQuality_MRMJN = 0x01640112, /* MRAW(SRAW1) + Jpeg Middle Normal */
+    EdsImageQuality_MRSJF = 0x01640213, /* MRAW(SRAW1) + Jpeg Small Fine */
+    EdsImageQuality_MRSJN = 0x01640212, /* MRAW(SRAW1) + Jpeg Small Normal */
+    EdsImageQuality_MRS1JF = 0x01640E13,    /* MRAW(SRAW1) + Jpeg Small1 Fine */
+    EdsImageQuality_MRS1JN = 0x01640E12,    /* MRAW(SRAW1) + Jpeg Small1 Normal */
+    EdsImageQuality_MRS2JF = 0x01640F13,    /* MRAW(SRAW1) + Jpeg Small2 */
+    EdsImageQuality_MRS3JF = 0x01641013,    /* MRAW(SRAW1) + Jpeg Small3 */
+
+    EdsImageQuality_MRLJ = 0x01640010,  /* MRAW(SRAW1) + Jpeg Large */
+    EdsImageQuality_MRM1J = 0x01640510, /* MRAW(SRAW1) + Jpeg Middle1 */
+    EdsImageQuality_MRM2J = 0x01640610, /* MRAW(SRAW1) + Jpeg Middle2 */
+    EdsImageQuality_MRSJ = 0x01640210,  /* MRAW(SRAW1) + Jpeg Small */
+
+    /* SRAW(SRAW2) + Jpeg */
+    EdsImageQuality_SR = 0x0264ff0f,    /* SRAW(SRAW2) */
+    EdsImageQuality_SRLJF = 0x02640013, /* SRAW(SRAW2) + Jpeg Large Fine */
+    EdsImageQuality_SRLJN = 0x02640012, /* SRAW(SRAW2) + Jpeg Large Normal */
+    EdsImageQuality_SRMJF = 0x02640113, /* SRAW(SRAW2) + Jpeg Middle Fine */
+    EdsImageQuality_SRMJN = 0x02640112, /* SRAW(SRAW2) + Jpeg Middle Normal */
+    EdsImageQuality_SRSJF = 0x02640213, /* SRAW(SRAW2) + Jpeg Small Fine */
+    EdsImageQuality_SRSJN = 0x02640212, /* SRAW(SRAW2) + Jpeg Small Normal */
+    EdsImageQuality_SRS1JF = 0x02640E13,    /* SRAW(SRAW2) + Jpeg Small1 Fine */
+    EdsImageQuality_SRS1JN = 0x02640E12,    /* SRAW(SRAW2) + Jpeg Small1 Normal */
+    EdsImageQuality_SRS2JF = 0x02640F13,    /* SRAW(SRAW2) + Jpeg Small2 */
+    EdsImageQuality_SRS3JF = 0x02641013,    /* SRAW(SRAW2) + Jpeg Small3 */
+
+    EdsImageQuality_SRLJ = 0x02640010,  /* SRAW(SRAW2) + Jpeg Large */
+    EdsImageQuality_SRM1J = 0x02640510, /* SRAW(SRAW2) + Jpeg Middle1 */
+    EdsImageQuality_SRM2J = 0x02640610, /* SRAW(SRAW2) + Jpeg Middle2 */
+    EdsImageQuality_SRSJ = 0x02640210,  /* SRAW(SRAW2) + Jpeg Small */
+
+    /* CRAW + Jpeg */
+    EdsImageQuality_CR = 0x0063ff0f,    /* CRAW */
+    EdsImageQuality_CRLJF = 0x00630013, /* CRAW + Jpeg Large Fine */
+    EdsImageQuality_CRMJF = 0x00630113, /* CRAW + Jpeg Middle Fine  */
+    EdsImageQuality_CRM1JF = 0x00630513,    /* CRAW + Jpeg Middle1 Fine  */
+    EdsImageQuality_CRM2JF = 0x00630613,    /* CRAW + Jpeg Middle2 Fine  */
+    EdsImageQuality_CRSJF = 0x00630213, /* CRAW + Jpeg Small Fine  */
+    EdsImageQuality_CRS1JF = 0x00630E13,    /* CRAW + Jpeg Small1 Fine  */
+    EdsImageQuality_CRS2JF = 0x00630F13,    /* CRAW + Jpeg Small2 Fine  */
+    EdsImageQuality_CRS3JF = 0x00631013,    /* CRAW + Jpeg Small3 Fine  */
+    EdsImageQuality_CRLJN = 0x00630012, /* CRAW + Jpeg Large Normal */
+    EdsImageQuality_CRMJN = 0x00630112, /* CRAW + Jpeg Middle Normal */
+    EdsImageQuality_CRM1JN = 0x00630512,    /* CRAW + Jpeg Middle1 Normal */
+    EdsImageQuality_CRM2JN = 0x00630612,    /* CRAW + Jpeg Middle2 Normal */
+    EdsImageQuality_CRSJN = 0x00630212, /* CRAW + Jpeg Small Normal */
+    EdsImageQuality_CRS1JN = 0x00630E12,    /* CRAW + Jpeg Small1 Normal */
+
+    EdsImageQuality_CRLJ = 0x00630010,  /* CRAW + Jpeg Large */
+    EdsImageQuality_CRM1J = 0x00630510, /* CRAW + Jpeg Middle1 */
+    EdsImageQuality_CRM2J = 0x00630610, /* CRAW + Jpeg Middle2 */
+    EdsImageQuality_CRSJ = 0x00630210,  /* CRAW + Jpeg Small */
+
+    /* HEIF */
+    EdsImageQuality_HEIFL = 0x0080ff0f, /* HEIF Large */
+    EdsImageQuality_RHEIFL = 0x00640080, /* RAW  + HEIF Large */
+    EdsImageQuality_CRHEIFL = 0x00630080, /* CRAW + HEIF Large */
+
+    EdsImageQuality_HEIFLF = 0x0083ff0f, /* HEIF Large Fine */
+    EdsImageQuality_HEIFLN = 0x0082ff0f, /* HEIF Large Normal */
+    EdsImageQuality_HEIFMF = 0x0183ff0f, /* HEIF Middle Fine */
+    EdsImageQuality_HEIFMN = 0x0182ff0f, /* HEIF Middle Normal */
+    EdsImageQuality_HEIFS1F = 0x0e83ff0f, /* HEIF Small1 Fine */
+    EdsImageQuality_HEIFS1N = 0x0e82ff0f, /* HEIF Small1 Normal */
+    EdsImageQuality_HEIFS2F = 0x0f83ff0f, /* HEIF Small2 Fine */
+    EdsImageQuality_RHEIFLF = 0x00640083, /* RAW + HEIF Large Fine */
+    EdsImageQuality_RHEIFLN = 0x00640082, /* RAW + HEIF Large Normal */
+    EdsImageQuality_RHEIFMF = 0x00640183, /* RAW + HEIF Middle Fine */
+    EdsImageQuality_RHEIFMN = 0x00640182, /* RAW + HEIF Middle Normal */
+    EdsImageQuality_RHEIFS1F = 0x00640e83, /* RAW + HEIF Small1 Fine */
+    EdsImageQuality_RHEIFS1N = 0x00640e82, /* RAW + HEIF Small1 Normal */
+    EdsImageQuality_RHEIFS2F = 0x00640f83, /* RAW + HEIF Small2 Fine */
+    EdsImageQuality_CRHEIFLF = 0x00630083, /* CRAW + HEIF Large Fine */
+    EdsImageQuality_CRHEIFLN = 0x00630082, /* CRAW + HEIF Large Normal */
+    EdsImageQuality_CRHEIFMF = 0x00630183, /* CRAW + HEIF Middle Fine */
+    EdsImageQuality_CRHEIFMN = 0x00630182, /* CRAW + HEIF Middle Normal */
+    EdsImageQuality_CRHEIFS1F = 0x00630e83, /* CRAW + HEIF Small1 Fine */
+    EdsImageQuality_CRHEIFS1N = 0x00630e82, /* CRAW + HEIF Small1 Normal */
+    EdsImageQuality_CRHEIFS2F = 0x00630f83, /* CRAW + HEIF Small2 Fine */
+
+    EdsImageQuality_Unknown = 0xffffffff,
+}
 
 [StructLayout(LayoutKind.Sequential)]
 public record struct EdsPoint(int x, int y);
@@ -255,10 +443,10 @@ public struct EdsTime
 [StructLayout(LayoutKind.Sequential)]
 public struct EdsDeviceInfo
 {
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = EDSDK.EDS_MAX_NAME)]
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = PInvoke.EDS_MAX_NAME)]
     public string szPortName;
 
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = EDSDK.EDS_MAX_NAME)]
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = PInvoke.EDS_MAX_NAME)]
     public string szDeviceDescription;
 
     public uint DeviceSubType;
@@ -274,7 +462,7 @@ public struct EdsVolumeInfo
     public ulong MaxCapacity;
     public ulong FreeSpaceInBytes;
 
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = EDSDK.EDS_MAX_NAME)]
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = PInvoke.EDS_MAX_NAME)]
     public string szVolumeLabel;
 }
 
@@ -286,7 +474,7 @@ public struct EdsDirectoryItemInfo
     public uint GroupID;
     public uint Option;
 
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = EDSDK.EDS_MAX_NAME)]
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = PInvoke.EDS_MAX_NAME)]
     public string szFileName;
 
     public uint format;
@@ -407,12 +595,12 @@ public struct EdsManualWBData
     public byte[] data;
 }
 
-public class EDSDK
+public static unsafe class PInvoke
 {
     /// <summary>
     /// Path to the EDSDK DLL
     /// </summary>
-    private const string DLLPath = "EDSDK.dll";
+    private const string _DLL_PATH = "EDSDK.dll";
 
     #region Canon EDSDK Import
     #region Property IDs
@@ -772,190 +960,6 @@ public class EDSDK
     public const int EvfZoom_x5 = 5;
     public const int EvfZoom_x10 = 10;
 
-    public enum EdsEvfAFMode : uint
-    {
-        Evf_AFMode_Quick = 0,
-        Evf_AFMode_Live = 1,
-        Evf_AFMode_LiveFace = 2,
-        Evf_AFMode_LiveMulti = 3,
-        Evf_AFMode_LiveZone = 4,
-        Evf_AFMode_LiveCatchAF = 9,
-        Evf_AFMode_LiveSpotAF = 10
-    }
-
-    /*-----------------------------------------------------------------------------
-     Strobo Mode
-    -----------------------------------------------------------------------------*/
-    public enum EdsStroboMode
-    {
-        kEdsStroboModeInternal = 0,
-        kEdsStroboModeExternalETTL = 1,
-        kEdsStroboModeExternalATTL = 2,
-        kEdsStroboModeExternalTTL = 3,
-        kEdsStroboModeExternalAuto = 4,
-        kEdsStroboModeExternalManual = 5,
-        kEdsStroboModeManual = 6,
-    }
-
-    public enum EdsETTL2Mode
-    {
-        kEdsETTL2ModeEvaluative = 0,
-        kEdsETTL2ModeAverage = 1,
-    }
-
-    /*-----------------------------------------------------------------------------
-		 DC Strobe
-		-----------------------------------------------------------------------------*/
-    public enum DcStrobe : uint
-    {
-        DcStrobeAuto = 0,
-        DcStrobeOn = 1,
-        DcStrobeSlowsynchro = 2,
-        DcStrobeOff = 3,
-    }
-
-    /*-----------------------------------------------------------------------------
-		 DC Lens Barrel State
-		-----------------------------------------------------------------------------*/
-    public enum DcLensBarrelState : uint
-    {
-        DcLensBarrelStateInner = 0,
-        DcLensBarrelStateOuter = 1,
-    }
-
-    /*-----------------------------------------------------------------------------
-		 DC Remote Shooting Mode
-		-----------------------------------------------------------------------------*/
-    public enum DcRemoteShootingMode : uint
-    {
-        DcRemoteShootingModeStop = 0,
-        DcRemoteShootingModeStart = 1,
-    }
-
-    public enum ImageQuality : uint
-    {
-        /* Jpeg Only */
-        EdsImageQuality_LJ = 0x0010ff0f,    /* Jpeg Large */
-        EdsImageQuality_M1J = 0x0510ff0f,   /* Jpeg Middle1 */
-        EdsImageQuality_M2J = 0x0610ff0f,   /* Jpeg Middle2 */
-        EdsImageQuality_SJ = 0x0210ff0f,    /* Jpeg Small */
-        EdsImageQuality_LJF = 0x0013ff0f,   /* Jpeg Large Fine */
-        EdsImageQuality_LJN = 0x0012ff0f,   /* Jpeg Large Normal */
-        EdsImageQuality_MJF = 0x0113ff0f,   /* Jpeg Middle Fine */
-        EdsImageQuality_MJN = 0x0112ff0f,   /* Jpeg Middle Normal */
-        EdsImageQuality_SJF = 0x0213ff0f,   /* Jpeg Small Fine */
-        EdsImageQuality_SJN = 0x0212ff0f,   /* Jpeg Small Normal */
-        EdsImageQuality_S1JF = 0x0E13ff0f,  /* Jpeg Small1 Fine */
-        EdsImageQuality_S1JN = 0x0E12ff0f,  /* Jpeg Small1 Normal */
-        EdsImageQuality_S2JF = 0x0F13ff0f,  /* Jpeg Small2 */
-        EdsImageQuality_S3JF = 0x1013ff0f,  /* Jpeg Small3 */
-
-        /* RAW + Jpeg */
-        EdsImageQuality_LR = 0x0064ff0f,    /* RAW */
-        EdsImageQuality_LRLJF = 0x00640013, /* RAW + Jpeg Large Fine */
-        EdsImageQuality_LRLJN = 0x00640012, /* RAW + Jpeg Large Normal */
-        EdsImageQuality_LRMJF = 0x00640113, /* RAW + Jpeg Middle Fine */
-        EdsImageQuality_LRMJN = 0x00640112, /* RAW + Jpeg Middle Normal */
-        EdsImageQuality_LRSJF = 0x00640213, /* RAW + Jpeg Small Fine */
-        EdsImageQuality_LRSJN = 0x00640212, /* RAW + Jpeg Small Normal */
-        EdsImageQuality_LRS1JF = 0x00640E13,    /* RAW + Jpeg Small1 Fine */
-        EdsImageQuality_LRS1JN = 0x00640E12,    /* RAW + Jpeg Small1 Normal */
-        EdsImageQuality_LRS2JF = 0x00640F13,    /* RAW + Jpeg Small2 */
-        EdsImageQuality_LRS3JF = 0x00641013,    /* RAW + Jpeg Small3 */
-
-        EdsImageQuality_LRLJ = 0x00640010,  /* RAW + Jpeg Large */
-        EdsImageQuality_LRM1J = 0x00640510, /* RAW + Jpeg Middle1 */
-        EdsImageQuality_LRM2J = 0x00640610, /* RAW + Jpeg Middle2 */
-        EdsImageQuality_LRSJ = 0x00640210,  /* RAW + Jpeg Small */
-
-        /* MRAW(SRAW1) + Jpeg */
-        EdsImageQuality_MR = 0x0164ff0f,    /* MRAW(SRAW1) */
-        EdsImageQuality_MRLJF = 0x01640013, /* MRAW(SRAW1) + Jpeg Large Fine */
-        EdsImageQuality_MRLJN = 0x01640012, /* MRAW(SRAW1) + Jpeg Large Normal */
-        EdsImageQuality_MRMJF = 0x01640113, /* MRAW(SRAW1) + Jpeg Middle Fine */
-        EdsImageQuality_MRMJN = 0x01640112, /* MRAW(SRAW1) + Jpeg Middle Normal */
-        EdsImageQuality_MRSJF = 0x01640213, /* MRAW(SRAW1) + Jpeg Small Fine */
-        EdsImageQuality_MRSJN = 0x01640212, /* MRAW(SRAW1) + Jpeg Small Normal */
-        EdsImageQuality_MRS1JF = 0x01640E13,    /* MRAW(SRAW1) + Jpeg Small1 Fine */
-        EdsImageQuality_MRS1JN = 0x01640E12,    /* MRAW(SRAW1) + Jpeg Small1 Normal */
-        EdsImageQuality_MRS2JF = 0x01640F13,    /* MRAW(SRAW1) + Jpeg Small2 */
-        EdsImageQuality_MRS3JF = 0x01641013,    /* MRAW(SRAW1) + Jpeg Small3 */
-
-        EdsImageQuality_MRLJ = 0x01640010,  /* MRAW(SRAW1) + Jpeg Large */
-        EdsImageQuality_MRM1J = 0x01640510, /* MRAW(SRAW1) + Jpeg Middle1 */
-        EdsImageQuality_MRM2J = 0x01640610, /* MRAW(SRAW1) + Jpeg Middle2 */
-        EdsImageQuality_MRSJ = 0x01640210,  /* MRAW(SRAW1) + Jpeg Small */
-
-        /* SRAW(SRAW2) + Jpeg */
-        EdsImageQuality_SR = 0x0264ff0f,    /* SRAW(SRAW2) */
-        EdsImageQuality_SRLJF = 0x02640013, /* SRAW(SRAW2) + Jpeg Large Fine */
-        EdsImageQuality_SRLJN = 0x02640012, /* SRAW(SRAW2) + Jpeg Large Normal */
-        EdsImageQuality_SRMJF = 0x02640113, /* SRAW(SRAW2) + Jpeg Middle Fine */
-        EdsImageQuality_SRMJN = 0x02640112, /* SRAW(SRAW2) + Jpeg Middle Normal */
-        EdsImageQuality_SRSJF = 0x02640213, /* SRAW(SRAW2) + Jpeg Small Fine */
-        EdsImageQuality_SRSJN = 0x02640212, /* SRAW(SRAW2) + Jpeg Small Normal */
-        EdsImageQuality_SRS1JF = 0x02640E13,    /* SRAW(SRAW2) + Jpeg Small1 Fine */
-        EdsImageQuality_SRS1JN = 0x02640E12,    /* SRAW(SRAW2) + Jpeg Small1 Normal */
-        EdsImageQuality_SRS2JF = 0x02640F13,    /* SRAW(SRAW2) + Jpeg Small2 */
-        EdsImageQuality_SRS3JF = 0x02641013,    /* SRAW(SRAW2) + Jpeg Small3 */
-
-        EdsImageQuality_SRLJ = 0x02640010,  /* SRAW(SRAW2) + Jpeg Large */
-        EdsImageQuality_SRM1J = 0x02640510, /* SRAW(SRAW2) + Jpeg Middle1 */
-        EdsImageQuality_SRM2J = 0x02640610, /* SRAW(SRAW2) + Jpeg Middle2 */
-        EdsImageQuality_SRSJ = 0x02640210,  /* SRAW(SRAW2) + Jpeg Small */
-
-        /* CRAW + Jpeg */
-        EdsImageQuality_CR = 0x0063ff0f,    /* CRAW */
-        EdsImageQuality_CRLJF = 0x00630013, /* CRAW + Jpeg Large Fine */
-        EdsImageQuality_CRMJF = 0x00630113, /* CRAW + Jpeg Middle Fine  */
-        EdsImageQuality_CRM1JF = 0x00630513,    /* CRAW + Jpeg Middle1 Fine  */
-        EdsImageQuality_CRM2JF = 0x00630613,    /* CRAW + Jpeg Middle2 Fine  */
-        EdsImageQuality_CRSJF = 0x00630213, /* CRAW + Jpeg Small Fine  */
-        EdsImageQuality_CRS1JF = 0x00630E13,    /* CRAW + Jpeg Small1 Fine  */
-        EdsImageQuality_CRS2JF = 0x00630F13,    /* CRAW + Jpeg Small2 Fine  */
-        EdsImageQuality_CRS3JF = 0x00631013,    /* CRAW + Jpeg Small3 Fine  */
-        EdsImageQuality_CRLJN = 0x00630012, /* CRAW + Jpeg Large Normal */
-        EdsImageQuality_CRMJN = 0x00630112, /* CRAW + Jpeg Middle Normal */
-        EdsImageQuality_CRM1JN = 0x00630512,    /* CRAW + Jpeg Middle1 Normal */
-        EdsImageQuality_CRM2JN = 0x00630612,    /* CRAW + Jpeg Middle2 Normal */
-        EdsImageQuality_CRSJN = 0x00630212, /* CRAW + Jpeg Small Normal */
-        EdsImageQuality_CRS1JN = 0x00630E12,    /* CRAW + Jpeg Small1 Normal */
-
-        EdsImageQuality_CRLJ = 0x00630010,  /* CRAW + Jpeg Large */
-        EdsImageQuality_CRM1J = 0x00630510, /* CRAW + Jpeg Middle1 */
-        EdsImageQuality_CRM2J = 0x00630610, /* CRAW + Jpeg Middle2 */
-        EdsImageQuality_CRSJ = 0x00630210,  /* CRAW + Jpeg Small */
-
-        /* HEIF */
-        EdsImageQuality_HEIFL = 0x0080ff0f, /* HEIF Large */
-        EdsImageQuality_RHEIFL = 0x00640080, /* RAW  + HEIF Large */
-        EdsImageQuality_CRHEIFL = 0x00630080, /* CRAW + HEIF Large */
-
-        EdsImageQuality_HEIFLF = 0x0083ff0f, /* HEIF Large Fine */
-        EdsImageQuality_HEIFLN = 0x0082ff0f, /* HEIF Large Normal */
-        EdsImageQuality_HEIFMF = 0x0183ff0f, /* HEIF Middle Fine */
-        EdsImageQuality_HEIFMN = 0x0182ff0f, /* HEIF Middle Normal */
-        EdsImageQuality_HEIFS1F = 0x0e83ff0f, /* HEIF Small1 Fine */
-        EdsImageQuality_HEIFS1N = 0x0e82ff0f, /* HEIF Small1 Normal */
-        EdsImageQuality_HEIFS2F = 0x0f83ff0f, /* HEIF Small2 Fine */
-        EdsImageQuality_RHEIFLF = 0x00640083, /* RAW + HEIF Large Fine */
-        EdsImageQuality_RHEIFLN = 0x00640082, /* RAW + HEIF Large Normal */
-        EdsImageQuality_RHEIFMF = 0x00640183, /* RAW + HEIF Middle Fine */
-        EdsImageQuality_RHEIFMN = 0x00640182, /* RAW + HEIF Middle Normal */
-        EdsImageQuality_RHEIFS1F = 0x00640e83, /* RAW + HEIF Small1 Fine */
-        EdsImageQuality_RHEIFS1N = 0x00640e82, /* RAW + HEIF Small1 Normal */
-        EdsImageQuality_RHEIFS2F = 0x00640f83, /* RAW + HEIF Small2 Fine */
-        EdsImageQuality_CRHEIFLF = 0x00630083, /* CRAW + HEIF Large Fine */
-        EdsImageQuality_CRHEIFLN = 0x00630082, /* CRAW + HEIF Large Normal */
-        EdsImageQuality_CRHEIFMF = 0x00630183, /* CRAW + HEIF Middle Fine */
-        EdsImageQuality_CRHEIFMN = 0x00630182, /* CRAW + HEIF Middle Normal */
-        EdsImageQuality_CRHEIFS1F = 0x00630e83, /* CRAW + HEIF Small1 Fine */
-        EdsImageQuality_CRHEIFS1N = 0x00630e82, /* CRAW + HEIF Small1 Normal */
-        EdsImageQuality_CRHEIFS2F = 0x00630f83, /* CRAW + HEIF Small2 Fine */
-
-        EdsImageQuality_Unknown = 0xffffffff,
-    }
-
     #endregion
     #region Event IDs
 
@@ -1150,7 +1154,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsInitializeSDK();
 
     /*-----------------------------------------------------------------------------
@@ -1168,7 +1172,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsTerminateSDK();
 
     /*-------------------------------------------
@@ -1187,7 +1191,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsRetain(nint inRef);
 
     /*-----------------------------------------------------------------------------
@@ -1203,7 +1207,7 @@ public class EDSDK
     //      Out:    None
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsRelease(nint inRef);
 
     /*----------------------------------
@@ -1223,7 +1227,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsGetChildCount(nint inRef, out int outCount);
 
     /*-----------------------------------------------------------------------------
@@ -1241,7 +1245,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsGetChildAtIndex(nint inRef, int inIndex, out nint outRef);
 
     /*-----------------------------------------------------------------------------
@@ -1257,7 +1261,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsGetParent(nint inRef, out nint outParentRef);
 
     /*----------------------------------
@@ -1284,7 +1288,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsGetPropertySize(nint inRef, uint inPropertyID, int inParam, out EdsDataType outDataType, out int outSize);
 
     /*-----------------------------------------------------------------------------
@@ -1306,76 +1310,49 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, int inPropertySize, nint outPropertyData);
 
     #region GetPorpertyData Wrapper
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out uint outPropertyData)
+    public static uint EdsGetPropertyData<T>(nint inRef, uint inPropertyID, int inParam, out T outPropertyData)
+        where T : unmanaged
     {
-        int size = Marshal.SizeOf(typeof(uint));
-        nint ptr = Marshal.AllocHGlobal(size);
-        uint err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
+        T value = default;
 
-        outPropertyData = (uint)Marshal.PtrToStructure(ptr, typeof(uint));
-        Marshal.FreeHGlobal(ptr);
+        uint err = EdsGetPropertyData(inRef, inPropertyID, inParam, sizeof(T), (nint)(void*)&value);
+
+        outPropertyData = value;
+
         return err;
     }
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsTime outPropertyData)
-    {
-        int size = Marshal.SizeOf(typeof(EDSDK.EdsTime));
-        nint ptr = Marshal.AllocHGlobal(size);
-        uint err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
 
-        outPropertyData = (EDSDK.EdsTime)Marshal.PtrToStructure(ptr, typeof(EDSDK.EdsTime));
-        Marshal.FreeHGlobal(ptr);
-        return err;
-    }
+    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out uint outPropertyData) =>
+        EdsGetPropertyData<uint>(inRef, inPropertyID, inParam, out outPropertyData);
+
+    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsTime outPropertyData) =>
+        EdsGetPropertyData<EdsTime>(inRef, inPropertyID, inParam, out outPropertyData);
 
     public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsFocusInfo outPropertyData)
     {
-        int size = Marshal.SizeOf(typeof(EDSDK.EdsFocusInfo));
+        int size = Marshal.SizeOf(typeof(EdsFocusInfo));
         nint ptr = Marshal.AllocHGlobal(size);
         uint err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
 
-        outPropertyData = (EDSDK.EdsFocusInfo)Marshal.PtrToStructure(ptr, typeof(EDSDK.EdsFocusInfo));
+        outPropertyData = (EdsFocusInfo)Marshal.PtrToStructure(ptr, typeof(EdsFocusInfo));
         Marshal.FreeHGlobal(ptr);
         return err;
     }
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsPoint outPropertyData)
-    {
-        int size = Marshal.SizeOf(typeof(EDSDK.EdsPoint));
-        nint ptr = Marshal.AllocHGlobal(size);
-        uint err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
+    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsPoint outPropertyData) =>
+        EdsGetPropertyData<EdsPoint>(inRef, inPropertyID, inParam, out outPropertyData);
 
-        outPropertyData = (EDSDK.EdsPoint)Marshal.PtrToStructure(ptr, typeof(EDSDK.EdsPoint));
-        Marshal.FreeHGlobal(ptr);
-        return err;
-    }
+    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsRect outPropertyData) =>
+        EdsGetPropertyData<EdsRect>(inRef, inPropertyID, inParam, out outPropertyData);
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsRect outPropertyData)
-    {
-        int size = Marshal.SizeOf(typeof(EDSDK.EdsRect));
-        nint ptr = Marshal.AllocHGlobal(size);
-        uint err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
-
-        outPropertyData = (EDSDK.EdsRect)Marshal.PtrToStructure(ptr, typeof(EDSDK.EdsRect));
-        Marshal.FreeHGlobal(ptr);
-        return err;
-    }
-
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsSize outPropertyData)
-    {
-        int size = Marshal.SizeOf(typeof(EDSDK.EdsSize));
-        nint ptr = Marshal.AllocHGlobal(size);
-        uint err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
-
-        outPropertyData = (EDSDK.EdsSize)Marshal.PtrToStructure(ptr, typeof(EDSDK.EdsSize));
-        Marshal.FreeHGlobal(ptr);
-        return err;
-    }
+    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsSize outPropertyData) =>
+        EdsGetPropertyData<EdsSize>(inRef, inPropertyID, inParam, out outPropertyData);
 
     public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out string outPropertyData)
     {
@@ -1390,40 +1367,33 @@ public class EDSDK
 
     public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out int[] outPropertyData)
     {
-        int size;
-        EDSDKLib.EDSDK.EdsDataType type;
-        EDSDK.EdsGetPropertySize(inRef, inPropertyID, 0, out type, out size);
+        EdsGetPropertySize(inRef, inPropertyID, 0, out _, out int size);
+
         nint ptr = Marshal.AllocHGlobal(size);
         uint err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
         int len = size / 4;
+
         outPropertyData = new int[len];
+
         Marshal.Copy(ptr, outPropertyData, 0, len);
-
         Marshal.FreeHGlobal(ptr);
+
         return err;
     }
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsCameraPos outPropertyData)
-    {
-        int size = Marshal.SizeOf(typeof(EDSDK.EdsCameraPos));
-        nint ptr = Marshal.AllocHGlobal(size);
-        uint err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
-
-        outPropertyData = (EDSDK.EdsCameraPos)Marshal.PtrToStructure(ptr, typeof(EDSDK.EdsCameraPos));
-        Marshal.FreeHGlobal(ptr);
-        return err;
-    }
+    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsCameraPos outPropertyData) =>
+        EdsGetPropertyData<EdsCameraPos>(inRef, inPropertyID, inParam, out outPropertyData);
 
     public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out byte[] outPropertyData)
     {
-        int size;
-        EDSDKLib.EDSDK.EdsDataType type;
-        EDSDK.EdsGetPropertySize(inRef, inPropertyID, 0, out type, out size);
+        EdsGetPropertySize(inRef, inPropertyID, 0, out _, out int size);
+
         nint ptr = Marshal.AllocHGlobal(size);
         uint err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
 
         int len = size;
         outPropertyData = new byte[len];
+
         Marshal.Copy(ptr, outPropertyData, 0, len);
         Marshal.FreeHGlobal(ptr);
         return err;
@@ -1497,7 +1467,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsSetPropertyData(nint inRef, uint inPropertyID, int inParam, int inPropertySize, [MarshalAs(UnmanagedType.AsAny), In] object inPropertyData);
 
     /*-----------------------------------------------------------------------------
@@ -1516,7 +1486,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsGetPropertyDesc(nint inRef, uint inPropertyID, out EdsPropertyDesc outPropertyDesc);
 
     /*--------------------------------------------
@@ -1535,7 +1505,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsGetCameraList(out nint outCameraListRef);
 
     /*--------------------------------------------
@@ -1558,7 +1528,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsGetDeviceInfo(nint inCameraRef, out EdsDeviceInfo outDeviceInfo);
 
     /*-----------------------------------------------------------------------------
@@ -1575,7 +1545,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsOpenSession(nint inCameraRef);
 
     /*-----------------------------------------------------------------------------
@@ -1591,7 +1561,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsCloseSession(nint inCameraRef);
 
     /*-----------------------------------------------------------------------------
@@ -1610,7 +1580,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsSendCommand(nint inCameraRef, uint inCommand, int inParam);
 
     /*-----------------------------------------------------------------------------
@@ -1629,7 +1599,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsSendStatusCommand(nint inCameraRef, uint inCameraState, int inParam);
 
     /*-----------------------------------------------------------------------------
@@ -1657,7 +1627,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsSetCapacity(nint inCameraRef, EdsCapacity inCapacity);
 
 
@@ -1677,7 +1647,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsGetVolumeInfo(nint inCameraRef, out EdsVolumeInfo outVolumeInfo);
 
     /*-----------------------------------------------------------------------------
@@ -1692,7 +1662,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsFormatVolume(nint inVolumeRef);
 
 
@@ -1713,7 +1683,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsGetDirectoryItemInfo(nint inDirItemRef, out EdsDirectoryItemInfo outDirItemInfo);
 
     /*-----------------------------------------------------------------------------
@@ -1733,7 +1703,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsDeleteDirectoryItem(nint inDirItemRef);
 
     /*-----------------------------------------------------------------------------
@@ -1756,7 +1726,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsDownload(nint inDirItemRef, ulong inReadSize, nint outStream);
 
     /*-----------------------------------------------------------------------------
@@ -1774,7 +1744,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsDownloadCancel(nint inDirItemRef);
 
     /*-----------------------------------------------------------------------------
@@ -1794,7 +1764,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsDownloadComplete(nint inDirItemRef);
 
     /*-----------------------------------------------------------------------------
@@ -1814,7 +1784,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsDownloadThumbnail(nint inDirItemRef, nint outStream);
 
     /*-----------------------------------------------------------------------------
@@ -1834,7 +1804,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsGetAttribute(nint inDirItemRef, out EdsFileAttribute outFileAttribute);
 
     /*-----------------------------------------------------------------------------
@@ -1853,7 +1823,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsSetAttribute(nint inDirItemRef, EdsFileAttribute inFileAttribute);
 
     /*--------------------------------------------
@@ -1880,7 +1850,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsCreateFileStream(string inFileName, EdsFileCreateDisposition inCreateDisposition, EdsAccess inDesiredAccess, out nint outStream);
 
     /*-----------------------------------------------------------------------------
@@ -1898,7 +1868,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsCreateMemoryStream(ulong inBufferSize, out nint outStream);
 
     /*-----------------------------------------------------------------------------
@@ -1919,7 +1889,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsCreateStreamEx(string inFileName, EdsFileCreateDisposition inCreateDisposition, EdsAccess inDesiredAccess, out nint outStream);
 
     /*-----------------------------------------------------------------------------
@@ -1937,7 +1907,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsCreateMemoryStreamFromPointer(nint inUserBuffer, ulong inBufferSize, out nint outStream);
 
     /*-----------------------------------------------------------------------------
@@ -1961,7 +1931,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsGetPointer(nint inStreamRef, out nint outPointer);
 
     /*-----------------------------------------------------------------------------
@@ -1982,7 +1952,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsRead(nint inStreamRef, ulong inReadSize, nint outBuffer, out ulong outReadSize);
 
     /*-----------------------------------------------------------------------------
@@ -2002,7 +1972,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsWrite(nint inStreamRef, ulong inWriteSize, nint inBuffer, out uint outWrittenSize);
 
     /*-----------------------------------------------------------------------------
@@ -2027,7 +1997,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsSeek(nint inStreamRef, long inSeekOffset, EdsSeekOrigin inSeekOrigin);
 
     /*-----------------------------------------------------------------------------
@@ -2044,7 +2014,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsGetPosition(nint inStreamRef, out ulong outPosition);
 
     /*-----------------------------------------------------------------------------
@@ -2060,7 +2030,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsGetLength(nint inStreamRef, out ulong outLength);
 
     /*-----------------------------------------------------------------------------
@@ -2082,7 +2052,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsCopyData(nint inStreamRef, ulong inWriteSize, nint outStreamRef);
 
     /*-----------------------------------------------------------------------------
@@ -2115,7 +2085,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsSetProgressCallback(nint inRef, EdsProgressCallback inProgressFunc, EdsProgressOption inProgressOption, nint inContext);
 
 
@@ -2142,7 +2112,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsCreateImageRef(nint inStreamRef, out nint outImageRef);
 
     /*-----------------------------------------------------------------------------
@@ -2172,7 +2142,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsGetImageInfo(nint inImageRef, EdsImageSource inImageSource,
           out EdsImageInfo outImageInfo);
 
@@ -2216,7 +2186,7 @@ public class EDSDK
     //                      the image.
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsGetImage(nint inImageRef, EdsImageSource inImageSource, EdsTargetImageType inImageType, EdsRect inSrcRect, EdsSize inDstSize, nint outStreamRef);
 
     //----------------------------------------------
@@ -2238,7 +2208,7 @@ public class EDSDK
    //
    //  Returns:    Any of the sdk errors.
    -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsSetCameraAddedHandler(EdsCameraAddedHandler inCameraAddedHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
@@ -2261,7 +2231,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsSetPropertyEventHandler(nint inCameraRef, uint inEvnet, EdsPropertyEventHandler inPropertyEventHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
@@ -2286,7 +2256,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsSetObjectEventHandler(nint inCameraRef, uint inEvnet, EdsObjectEventHandler inObjectEventHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
@@ -2310,7 +2280,7 @@ public class EDSDK
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsSetCameraStateEventHandler(nint inCameraRef, uint inEvnet, EdsStateEventHandler inStateEventHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
@@ -2325,7 +2295,7 @@ public class EDSDK
 		//
 		//  Returns:    Any of the sdk errors.
 		-----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsCreateEvfImageRef(nint inStreamRef, out nint outEvfImageRef);
 
 
@@ -2348,7 +2318,7 @@ public class EDSDK
 		//
 		//  Returns:    Any of the sdk errors.
 		-----------------------------------------------------------------------------*/
-    [DllImport(DLLPath)]
+    [DllImport(_DLL_PATH)]
     public static extern uint EdsDownloadEvfImage(nint inCameraRef, nint outEvfImageRef);
 
     #endregion
