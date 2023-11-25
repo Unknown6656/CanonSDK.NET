@@ -1,14 +1,11 @@
-﻿using System.Globalization;
+﻿namespace EDSDK.NET;
 
-namespace EDSDK.NET;
 
 /// <summary>
 /// Helper to convert between ID and string camera values
 /// </summary>
 public static class CameraValues
 {
-    private static CultureInfo cInfo = new("en-US");
-
     /// <summary>
     /// Gets the Av string value from an Av ID
     /// </summary>
@@ -191,7 +188,6 @@ public static class CameraValues
         0x5C => "1/20",
         _ => "N/A",
     };
-
 
     /// <summary>
     /// Gets the Av ID from an Av string value
