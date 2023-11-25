@@ -10,6 +10,403 @@ public delegate uint EdsPropertyEventHandler(uint inEvent, uint inPropertyID, ui
 public delegate uint EdsObjectEventHandler(uint inEvent, nint inRef, nint inContext);
 public delegate uint EdsStateEventHandler(uint inEvent, uint inParameter, nint inContext);
 
+public enum EdsDataType
+    : uint
+{
+    Unknown = 0,
+    Bool = 1,
+    String = 2,
+    Int8 = 3,
+    UInt8 = 6,
+    Int16 = 4,
+    UInt16 = 7,
+    Int32 = 8,
+    UInt32 = 9,
+    Int64 = 10,
+    UInt64 = 11,
+    Float = 12,
+    Double = 13,
+    ByteBlock = 14,
+    Rational = 20,
+    Point = 21,
+    Rect = 22,
+    Time = 23,
+
+    Bool_Array = 30,
+    Int8_Array = 31,
+    Int16_Array = 32,
+    Int32_Array = 33,
+    UInt8_Array = 34,
+    UInt16_Array = 35,
+    UInt32_Array = 36,
+    Rational_Array = 37,
+
+    FocusInfo = 101,
+    PictureStyleDesc,
+}
+
+public enum EdsEvfAf
+    : uint
+{
+    CameraCommand_EvfAf_OFF = 0,
+    CameraCommand_EvfAf_ON = 1,
+}
+
+public enum EdsShutterButton
+    : uint
+{
+    CameraCommand_ShutterButton_OFF = 0x00000000,
+    CameraCommand_ShutterButton_Halfway = 0x00000001,
+    CameraCommand_ShutterButton_Completely = 0x00000003,
+    CameraCommand_ShutterButton_Halfway_NonAF = 0x00010001,
+    CameraCommand_ShutterButton_Completely_NonAF = 0x00010003,
+}
+
+/// <summary>
+/// Stream Seek Origins
+/// </summary>
+public enum EdsSeekOrigin
+    : uint
+{
+    Cur = 0,
+    Begin,
+    End,
+}
+
+/// <summary>
+/// File and Propaties Access
+/// </summary>
+public enum EdsAccess
+    : uint
+{
+    Read = 0,
+    Write,
+    ReadWrite,
+    Error = 0xFFFFFFFF,
+}
+
+/// <summary>
+/// File Create Disposition
+/// </summary>
+public enum EdsFileCreateDisposition
+    : uint
+{
+    CreateNew = 0,
+    CreateAlways,
+    OpenExisting,
+    OpenAlways,
+    TruncateExsisting,
+}
+
+/// <summary>
+/// Target Image Types
+/// </summary>
+public enum EdsTargetImageType
+    : uint
+{
+    Unknown = 0x00000000,
+    Jpeg = 0x00000001,
+    TIFF = 0x00000007,
+    TIFF16 = 0x00000008,
+    RGB = 0x00000009,
+    RGB16 = 0x0000000A,
+}
+
+/// <summary>
+/// Image Source
+/// </summary>
+public enum EdsImageSource
+    : uint
+{
+    FullView = 0,
+    Thumbnail,
+    Preview,
+}
+
+/// <summary>
+/// Progress Option
+/// </summary>
+public enum EdsProgressOption
+    : uint
+{
+    NoReport = 0,
+    Done,
+    Periodically,
+}
+
+/// <summary>
+/// file attribute
+/// </summary>
+public enum EdsFileAttribute
+    : uint
+{
+    Normal = 0x00000000,
+    ReadOnly = 0x00000001,
+    Hidden = 0x00000002,
+    System = 0x00000004,
+    Archive = 0x00000020,
+}
+
+public enum EdsSaveTo
+    : uint
+{
+    Camera = 1,
+    Host = 2,
+    Both = 3,
+}
+
+/// <summary>
+/// Storage type
+/// </summary>
+public enum EdsStorageType
+    : uint
+{
+    Non = 0,
+    CF = 1,
+    SD = 2,
+}
+
+/// <summary>
+/// Transfer Option
+/// </summary>
+public enum EdsTransferOption
+    : uint
+{
+    ByDirectTransfer = 1,
+    ByRelease = 2,
+    ToDesktop = 0x00000100,
+}
+
+/// <summary>
+/// Mirror Lockup State
+/// </summary>
+public enum EdsMirrorLockupState
+    : uint
+{
+    Disable = 0,
+    Enable = 1,
+    DuringShooting = 2,
+}
+
+/// <summary>
+/// Mirror Up Setting
+/// </summary>
+public enum EdsMirrorUpSetting
+    : uint
+{
+    Off = 0,
+    On = 1,
+}
+
+/// <summary>
+/// Drive mode enum, see PropID_DriveMode for get / set
+/// <para/>
+/// <i>NOTE: Does not seem to correspond to the recording properties for video</i>
+/// </summary>
+public enum EdsDriveMode
+    : uint
+{
+    Single_Frame_Shooting = 0x00000000,
+    Continuous_Shooting = 0x00000001,
+    Video = 0x00000002,
+    Not_used = 0x00000003,
+    High_Speed_Continuous_Shooting = 0x00000004,
+    Low_Speed_Continuous_Shooting = 0x00000005,
+    Single_Silent_Shooting = 0x00000006,
+    _10_Sec_Self_Timer_plus_continuous_shots = 0x00000007,
+    _10_Sec_Self_Timer = 0x00000010,
+    _2_Sec_Self_Timer = 0x00000011,
+    _14fps_super_high_speed = 0x00000012,
+    Silent_single_shooting = 0x00000013,
+    Silent_contin_shooting = 0x00000014,
+    Silent_HS_continuous = 0x00000015,
+    Silent_LS_continuous = 0x00000016,
+}
+
+
+[StructLayout(LayoutKind.Sequential)]
+public record struct EdsPoint(int x, int y);
+
+[StructLayout(LayoutKind.Sequential)]
+public record struct EdsRect(int x, int y, int width, int height);
+
+[StructLayout(LayoutKind.Sequential)]
+public record struct EdsSize(int width, int height);
+
+[StructLayout(LayoutKind.Sequential)]
+public struct EdsRational
+{
+    public int Numerator;
+    public uint Denominator;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct EdsTime
+{
+    public int Year;
+    public int Month;
+    public int Day;
+    public int Hour;
+    public int Minute;
+    public int Second;
+    public int Milliseconds;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct EdsDeviceInfo
+{
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = EDSDK.EDS_MAX_NAME)]
+    public string szPortName;
+
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = EDSDK.EDS_MAX_NAME)]
+    public string szDeviceDescription;
+
+    public uint DeviceSubType;
+
+    public uint reserved;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct EdsVolumeInfo
+{
+    public uint StorageType;
+    public uint Access;
+    public ulong MaxCapacity;
+    public ulong FreeSpaceInBytes;
+
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = EDSDK.EDS_MAX_NAME)]
+    public string szVolumeLabel;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct EdsDirectoryItemInfo
+{
+    public ulong Size;
+    public int isFolder;
+    public uint GroupID;
+    public uint Option;
+
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = EDSDK.EDS_MAX_NAME)]
+    public string szFileName;
+
+    public uint format;
+    public uint dateTime;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct EdsImageInfo
+{
+    public uint Width;                  // image width 
+    public uint Height;                 // image height
+
+    public uint NumOfComponents;        // number of color components in image.
+    public uint ComponentDepth;         // bits per sample.  8 or 16.
+
+    public EdsRect EffectiveRect;          // Effective rectangles except 
+                                           // a black line of the image. 
+                                           // A black line might be in the top and bottom
+                                           // of the thumbnail image. 
+
+    public uint reserved1;
+    public uint reserved2;
+
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct EdsSaveImageSetting
+{
+    public uint JPEGQuality;
+    private readonly nint iccProfileStream;
+    public uint reserved;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct EdsPropertyDesc
+{
+    public int Form;
+    public uint Access;
+    public int NumElements;
+
+    [MarshalAs(UnmanagedType.ByValArray, SizeConst = 128)]
+    public int[] PropDesc;
+}
+
+/// <summary>
+/// Picture Style Desc
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct EdsPictureStyleDesc
+{
+    public int contrast;
+    public uint sharpness;
+    public int saturation;
+    public int colorTone;
+    public uint filterEffect;
+    public uint toningEffect;
+    public uint sharpFineness;
+    public uint sharpThreshold;
+}
+
+/// <summary>
+/// Focus Info
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct EdsFocusPoint
+{
+    public uint valid;
+    public uint selected;
+    public uint justFocus;
+    public EdsRect rect;
+    public uint reserved;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct EdsFocusInfo
+{
+    public EdsRect imageRect;
+    public uint pointNumber;
+
+    [MarshalAs(UnmanagedType.ByValArray, SizeConst = 1053)]
+    public EdsFocusPoint[] focusPoint;
+    public uint executeMode;
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 2)]
+public struct EdsCapacity
+{
+    public int NumberOfFreeClusters;
+    public int BytesPerSector;
+    public int Reset;
+}
+
+/// <summary>
+/// Angle Information
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct EdsCameraPos
+{
+    public int status;
+    public int position;
+    public int rolling;
+    public int pitching;
+}
+
+/// <summary>
+/// Manual WhiteBalance Data
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct EdsManualWBData
+{
+    public uint Valid;
+    public uint dataSize;
+
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+    public string szCaption;
+
+    [MarshalAs(UnmanagedType.ByValArray)]
+    public byte[] data;
+}
+
 public class EDSDK
 {
     /// <summary>
@@ -18,47 +415,6 @@ public class EDSDK
     private const string DLLPath = "EDSDK.dll";
 
     #region Canon EDSDK Import
-
-    #region Callback Functions
-
-    #endregion
-    #region Data Types
-
-    public enum EdsDataType : uint
-    {
-        Unknown = 0,
-        Bool = 1,
-        String = 2,
-        Int8 = 3,
-        UInt8 = 6,
-        Int16 = 4,
-        UInt16 = 7,
-        Int32 = 8,
-        UInt32 = 9,
-        Int64 = 10,
-        UInt64 = 11,
-        Float = 12,
-        Double = 13,
-        ByteBlock = 14,
-        Rational = 20,
-        Point = 21,
-        Rect = 22,
-        Time = 23,
-
-        Bool_Array = 30,
-        Int8_Array = 31,
-        Int16_Array = 32,
-        Int32_Array = 33,
-        UInt8_Array = 34,
-        UInt16_Array = 35,
-        UInt32_Array = 36,
-        Rational_Array = 37,
-
-        FocusInfo = 101,
-        PictureStyleDesc,
-    }
-
-    #endregion
     #region Property IDs
 
     /*----------------------------------
@@ -211,20 +567,6 @@ public class EDSDK
     public const uint CameraCommand_SetRemoteShootingMode = 0x0000010f;
     public const uint CameraCommand_RequestRollPitchLevel = 0x00000109;
 
-    public enum EdsEvfAf : uint
-    {
-        CameraCommand_EvfAf_OFF = 0,
-        CameraCommand_EvfAf_ON = 1,
-    }
-
-    public enum EdsShutterButton : uint
-    {
-        CameraCommand_ShutterButton_OFF = 0x00000000,
-        CameraCommand_ShutterButton_Halfway = 0x00000001,
-        CameraCommand_ShutterButton_Completely = 0x00000003,
-        CameraCommand_ShutterButton_Halfway_NonAF = 0x00010001,
-        CameraCommand_ShutterButton_Completely_NonAF = 0x00010003,
-    }
     #endregion
     #region Camera status command
 
@@ -238,136 +580,6 @@ public class EDSDK
 
     #endregion
     #region  Enumeration of property value  
-
-    /*-----------------------------------------------------------------------------
-     Stream Seek Origins
-    -----------------------------------------------------------------------------*/
-    public enum EdsSeekOrigin : uint
-    {
-        Cur = 0,
-        Begin,
-        End,
-    }
-
-    /*-----------------------------------------------------------------------------
-     File and Propaties Access
-    -----------------------------------------------------------------------------*/
-    public enum EdsAccess : uint
-    {
-        Read = 0,
-        Write,
-        ReadWrite,
-        Error = 0xFFFFFFFF,
-    }
-
-    /*-----------------------------------------------------------------------------
-     File Create Disposition
-    -----------------------------------------------------------------------------*/
-    public enum EdsFileCreateDisposition : uint
-    {
-        CreateNew = 0,
-        CreateAlways,
-        OpenExisting,
-        OpenAlways,
-        TruncateExsisting,
-    }
-
-
-    /*-----------------------------------------------------------------------------
-     Target Image Types
-    -----------------------------------------------------------------------------*/
-    public enum EdsTargetImageType : uint
-    {
-        Unknown = 0x00000000,
-        Jpeg = 0x00000001,
-        TIFF = 0x00000007,
-        TIFF16 = 0x00000008,
-        RGB = 0x00000009,
-        RGB16 = 0x0000000A,
-    }
-
-
-    /*-----------------------------------------------------------------------------
-     Image Source 
-    -----------------------------------------------------------------------------*/
-    public enum EdsImageSource : uint
-    {
-        FullView = 0,
-        Thumbnail,
-        Preview,
-    }
-
-    /*-----------------------------------------------------------------------------
-     Progress Option
-    -----------------------------------------------------------------------------*/
-    public enum EdsProgressOption : uint
-    {
-        NoReport = 0,
-        Done,
-        Periodically,
-    }
-
-
-    /*-----------------------------------------------------------------------------
-     file attribute
-    -----------------------------------------------------------------------------*/
-    public enum EdsFileAttribute : uint
-    {
-        Normal = 0x00000000,
-        ReadOnly = 0x00000001,
-        Hidden = 0x00000002,
-        System = 0x00000004,
-        Archive = 0x00000020,
-    }
-
-    /*-----------------------------------------------------------------------------
-     Save To
-    -----------------------------------------------------------------------------*/
-    public enum EdsSaveTo : uint
-    {
-        Camera = 1,
-        Host = 2,
-        Both = 3,
-    }
-
-    /*-----------------------------------------------------------------------------
-     StorageTypes
-    -----------------------------------------------------------------------------*/
-    public enum EdsStorageType : uint
-    {
-        Non = 0,
-        CF = 1,
-        SD = 2,
-    }
-
-    /*-----------------------------------------------------------------------------
-     Transfer Option
-    -----------------------------------------------------------------------------*/
-    public enum EdsTransferOption : uint
-    {
-        ByDirectTransfer = 1,
-        ByRelease = 2,
-        ToDesktop = 0x00000100,
-    }
-
-    /*-----------------------------------------------------------------------------
-     Mirror Lockup State
-    -----------------------------------------------------------------------------*/
-    public enum EdsMirrorLockupState : uint
-    {
-        Disable = 0,
-        Enable = 1,
-        DuringShooting = 2,
-    }
-
-    /*-----------------------------------------------------------------------------
-     Mirror Up Setting
-    -----------------------------------------------------------------------------*/
-    public enum EdsMirrorUpSetting : uint
-    {
-        Off = 0,
-        On = 1,
-    }
 
     /*-----------------------------------------------------------------------------
 		 Drive Lens
@@ -959,7 +1171,6 @@ public class EDSDK
     [DllImport(DLLPath)]
     public static extern uint EdsTerminateSDK();
 
-
     /*-------------------------------------------
      Reference-counter operating functions
     --------------------------------------------*/
@@ -994,7 +1205,6 @@ public class EDSDK
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
     public static extern uint EdsRelease(nint inRef);
-
 
     /*----------------------------------
      Item-tree operating functions
@@ -1050,7 +1260,6 @@ public class EDSDK
     [DllImport(DLLPath)]
     public static extern uint EdsGetParent(nint inRef, out nint outParentRef);
 
-
     /*----------------------------------
       Property operating functions
     ----------------------------------*/
@@ -1076,8 +1285,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsGetPropertySize(nint inRef, uint inPropertyID, int inParam,
-         out EdsDataType outDataType, out int outSize);
+    public static extern uint EdsGetPropertySize(nint inRef, uint inPropertyID, int inParam, out EdsDataType outDataType, out int outSize);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1099,8 +1307,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam,
-         int inPropertySize, nint outPropertyData);
+    public static extern uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, int inPropertySize, nint outPropertyData);
 
     #region GetPorpertyData Wrapper
 
@@ -1115,8 +1322,7 @@ public class EDSDK
         return err;
     }
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam,
-         out EDSDK.EdsTime outPropertyData)
+    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsTime outPropertyData)
     {
         int size = Marshal.SizeOf(typeof(EDSDK.EdsTime));
         nint ptr = Marshal.AllocHGlobal(size);
@@ -1127,8 +1333,7 @@ public class EDSDK
         return err;
     }
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam,
-         out EDSDK.EdsFocusInfo outPropertyData)
+    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsFocusInfo outPropertyData)
     {
         int size = Marshal.SizeOf(typeof(EDSDK.EdsFocusInfo));
         nint ptr = Marshal.AllocHGlobal(size);
@@ -1138,8 +1343,8 @@ public class EDSDK
         Marshal.FreeHGlobal(ptr);
         return err;
     }
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam,
-        out EDSDK.EdsPoint outPropertyData)
+
+    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsPoint outPropertyData)
     {
         int size = Marshal.SizeOf(typeof(EDSDK.EdsPoint));
         nint ptr = Marshal.AllocHGlobal(size);
@@ -1150,8 +1355,7 @@ public class EDSDK
         return err;
     }
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam,
-        out EDSDK.EdsRect outPropertyData)
+    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsRect outPropertyData)
     {
         int size = Marshal.SizeOf(typeof(EDSDK.EdsRect));
         nint ptr = Marshal.AllocHGlobal(size);
@@ -1162,8 +1366,7 @@ public class EDSDK
         return err;
     }
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam,
-        out EDSDK.EdsSize outPropertyData)
+    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsSize outPropertyData)
     {
         int size = Marshal.SizeOf(typeof(EDSDK.EdsSize));
         nint ptr = Marshal.AllocHGlobal(size);
@@ -1200,7 +1403,7 @@ public class EDSDK
         return err;
     }
 
-    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EDSDK.EdsCameraPos outPropertyData)
+    public static uint EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsCameraPos outPropertyData)
     {
         int size = Marshal.SizeOf(typeof(EDSDK.EdsCameraPos));
         nint ptr = Marshal.AllocHGlobal(size);
@@ -1225,6 +1428,7 @@ public class EDSDK
         Marshal.FreeHGlobal(ptr);
         return err;
     }
+
     #endregion
 
     public static byte[] ConvertMWB(EdsManualWBData pcwb)
@@ -1294,8 +1498,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsSetPropertyData(nint inRef, uint inPropertyID,
-         int inParam, int inPropertySize, [MarshalAs(UnmanagedType.AsAny), In] object inPropertyData);
+    public static extern uint EdsSetPropertyData(nint inRef, uint inPropertyID, int inParam, int inPropertySize, [MarshalAs(UnmanagedType.AsAny), In] object inPropertyData);
 
     /*-----------------------------------------------------------------------------
     //  
@@ -1314,8 +1517,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsGetPropertyDesc(nint inRef, uint inPropertyID,
-         out EdsPropertyDesc outPropertyDesc);
+    public static extern uint EdsGetPropertyDesc(nint inRef, uint inPropertyID, out EdsPropertyDesc outPropertyDesc);
 
     /*--------------------------------------------
       Device-list and device operating functions
@@ -1512,8 +1714,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsGetDirectoryItemInfo(nint inDirItemRef,
-         out EdsDirectoryItemInfo outDirItemInfo);
+    public static extern uint EdsGetDirectoryItemInfo(nint inDirItemRef, out EdsDirectoryItemInfo outDirItemInfo);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1556,7 +1757,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsDownload(nint inDirItemRef, UInt64 inReadSize, nint outStream);
+    public static extern uint EdsDownload(nint inDirItemRef, ulong inReadSize, nint outStream);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1680,8 +1881,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsCreateFileStream(string inFileName, EdsFileCreateDisposition inCreateDisposition,
-         EdsAccess inDesiredAccess, out nint outStream);
+    public static extern uint EdsCreateFileStream(string inFileName, EdsFileCreateDisposition inCreateDisposition, EdsAccess inDesiredAccess, out nint outStream);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1699,7 +1899,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsCreateMemoryStream(UInt64 inBufferSize, out nint outStream);
+    public static extern uint EdsCreateMemoryStream(ulong inBufferSize, out nint outStream);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1720,12 +1920,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsCreateStreamEx(
-       string inFileName,
-       EdsFileCreateDisposition inCreateDisposition,
-       EdsAccess inDesiredAccess,
-       out nint outStream
-       );
+    public static extern uint EdsCreateStreamEx(string inFileName, EdsFileCreateDisposition inCreateDisposition, EdsAccess inDesiredAccess, out nint outStream);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1743,8 +1938,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsCreateMemoryStreamFromPointer(nint inUserBuffer,
-         UInt64 inBufferSize, out nint outStream);
+    public static extern uint EdsCreateMemoryStreamFromPointer(nint inUserBuffer, ulong inBufferSize, out nint outStream);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1789,8 +1983,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsRead(nint inStreamRef, UInt64 inReadSize, nint outBuffer,
-         out UInt64 outReadSize);
+    public static extern uint EdsRead(nint inStreamRef, ulong inReadSize, nint outBuffer, out ulong outReadSize);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1810,8 +2003,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsWrite(nint inStreamRef, UInt64 inWriteSize, nint inBuffer,
-         out uint outWrittenSize);
+    public static extern uint EdsWrite(nint inStreamRef, ulong inWriteSize, nint inBuffer, out uint outWrittenSize);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1836,7 +2028,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsSeek(nint inStreamRef, Int64 inSeekOffset, EdsSeekOrigin inSeekOrigin);
+    public static extern uint EdsSeek(nint inStreamRef, long inSeekOffset, EdsSeekOrigin inSeekOrigin);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1853,7 +2045,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsGetPosition(nint inStreamRef, out UInt64 outPosition);
+    public static extern uint EdsGetPosition(nint inStreamRef, out ulong outPosition);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1869,7 +2061,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsGetLength(nint inStreamRef, out UInt64 outLength);
+    public static extern uint EdsGetLength(nint inStreamRef, out ulong outLength);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1891,7 +2083,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsCopyData(nint inStreamRef, UInt64 inWriteSize, nint outStreamRef);
+    public static extern uint EdsCopyData(nint inStreamRef, ulong inWriteSize, nint outStreamRef);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1924,8 +2116,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsSetProgressCallback(nint inRef, EdsProgressCallback inProgressFunc,
-         EdsProgressOption inProgressOption, nint inContext);
+    public static extern uint EdsSetProgressCallback(nint inRef, EdsProgressCallback inProgressFunc, EdsProgressOption inProgressOption, nint inContext);
 
 
     /*--------------------------------------------
@@ -2026,8 +2217,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsGetImage(nint inImageRef, EdsImageSource inImageSource,
-         EdsTargetImageType inImageType, EdsRect inSrcRect, EdsSize inDstSize, nint outStreamRef);
+    public static extern uint EdsGetImage(nint inImageRef, EdsImageSource inImageSource, EdsTargetImageType inImageType, EdsRect inSrcRect, EdsSize inDstSize, nint outStreamRef);
 
     //----------------------------------------------
     //   Event handler registering functions
@@ -2049,8 +2239,7 @@ public class EDSDK
    //  Returns:    Any of the sdk errors.
    -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsSetCameraAddedHandler(EdsCameraAddedHandler inCameraAddedHandler,
-          nint inContext);
+    public static extern uint EdsSetCameraAddedHandler(EdsCameraAddedHandler inCameraAddedHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2073,8 +2262,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsSetPropertyEventHandler(nint inCameraRef, uint inEvnet,
-         EdsPropertyEventHandler inPropertyEventHandler, nint inContext);
+    public static extern uint EdsSetPropertyEventHandler(nint inCameraRef, uint inEvnet, EdsPropertyEventHandler inPropertyEventHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2099,8 +2287,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsSetObjectEventHandler(nint inCameraRef, uint inEvnet,
-         EdsObjectEventHandler inObjectEventHandler, nint inContext);
+    public static extern uint EdsSetObjectEventHandler(nint inCameraRef, uint inEvnet, EdsObjectEventHandler inObjectEventHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2124,8 +2311,7 @@ public class EDSDK
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(DLLPath)]
-    public static extern uint EdsSetCameraStateEventHandler(nint inCameraRef, uint inEvnet,
-         EdsStateEventHandler inStateEventHandler, nint inContext);
+    public static extern uint EdsSetCameraStateEventHandler(nint inCameraRef, uint inEvnet, EdsStateEventHandler inStateEventHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
 		//
@@ -2171,242 +2357,6 @@ public class EDSDK
     public const int EDS_MAX_NAME = 256;
     public const int EDS_TRANSFER_BLOCK_SIZE = 512;
 
-    /*-----------------------------------------------------------------------------
-     Point
-    -----------------------------------------------------------------------------*/
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdsPoint
-    {
-        public int x;
-        public int y;
-    }
-
-    /*-----------------------------------------------------------------------------
-     Rectangle
-    -----------------------------------------------------------------------------*/
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdsRect
-    {
-        public int x;
-        public int y;
-        public int width;
-        public int height;
-    }
-
-    /*-----------------------------------------------------------------------------
-     Size
-    -----------------------------------------------------------------------------*/
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdsSize
-    {
-        public int width;
-        public int height;
-    }
-
-    /*-----------------------------------------------------------------------------
-     Rational
-    -----------------------------------------------------------------------------*/
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdsRational
-    {
-        public int Numerator;
-        public uint Denominator;
-    }
-
-    /*-----------------------------------------------------------------------------
-     Time
-    -----------------------------------------------------------------------------*/
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdsTime
-    {
-        public int Year;
-        public int Month;
-        public int Day;
-        public int Hour;
-        public int Minute;
-        public int Second;
-        public int Milliseconds;
-    }
-
-
-    /*-----------------------------------------------------------------------------
-     Device Info
-    -----------------------------------------------------------------------------*/
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdsDeviceInfo
-    {
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = EDS_MAX_NAME)]
-        public string szPortName;
-
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = EDS_MAX_NAME)]
-        public string szDeviceDescription;
-
-        public uint DeviceSubType;
-
-        public uint reserved;
-    }
-
-    /*-----------------------------------------------------------------------------
-     Volume Info
-    -----------------------------------------------------------------------------*/
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdsVolumeInfo
-    {
-        public uint StorageType;
-        public uint Access;
-        public ulong MaxCapacity;
-        public ulong FreeSpaceInBytes;
-
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = EDS_MAX_NAME)]
-        public string szVolumeLabel;
-    }
-
-
-    /*-----------------------------------------------------------------------------
-     DirectoryItem Info
-    -----------------------------------------------------------------------------*/
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdsDirectoryItemInfo
-    {
-        public UInt64 Size;
-        public int isFolder;
-        public uint GroupID;
-        public uint Option;
-
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = EDS_MAX_NAME)]
-        public string szFileName;
-
-        public uint format;
-        public uint dateTime;
-    }
-
-
-    /*-----------------------------------------------------------------------------
-     Image Info
-    -----------------------------------------------------------------------------*/
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdsImageInfo
-    {
-        public uint Width;                  // image width 
-        public uint Height;                 // image height
-
-        public uint NumOfComponents;        // number of color components in image.
-        public uint ComponentDepth;         // bits per sample.  8 or 16.
-
-        public EdsRect EffectiveRect;          // Effective rectangles except 
-                                               // a black line of the image. 
-                                               // A black line might be in the top and bottom
-                                               // of the thumbnail image. 
-
-        public uint reserved1;
-        public uint reserved2;
-
-    }
-
-    /*-----------------------------------------------------------------------------
-     SaveImage Setting
-    -----------------------------------------------------------------------------*/
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdsSaveImageSetting
-    {
-        public uint JPEGQuality;
-        private readonly nint iccProfileStream;
-        public uint reserved;
-    }
-
-    /*-----------------------------------------------------------------------------
-     Property Desc
-    -----------------------------------------------------------------------------*/
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdsPropertyDesc
-    {
-        public int Form;
-        public uint Access;
-        public int NumElements;
-
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 128)]
-        public int[] PropDesc;
-    }
-
-    /*-----------------------------------------------------------------------------
-     Picture Style Desc
-    -----------------------------------------------------------------------------*/
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdsPictureStyleDesc
-    {
-        public int contrast;
-        public uint sharpness;
-        public int saturation;
-        public int colorTone;
-        public uint filterEffect;
-        public uint toningEffect;
-        public uint sharpFineness;
-        public uint sharpThreshold;
-    }
-
-    /*-----------------------------------------------------------------------------
-     Focus Info
-    -----------------------------------------------------------------------------*/
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdsFocusPoint
-    {
-        public uint valid;
-        public uint selected;
-        public uint justFocus;
-        public EdsRect rect;
-        public uint reserved;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdsFocusInfo
-    {
-        public EdsRect imageRect;
-        public uint pointNumber;
-
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 1053)]
-        public EdsFocusPoint[] focusPoint;
-        public uint executeMode;
-    }
-
-
-    /*-----------------------------------------------------------------------------
-     Capacity
-    -----------------------------------------------------------------------------*/
-    [StructLayout(LayoutKind.Sequential, Pack = 2)]
-    public struct EdsCapacity
-    {
-        public int NumberOfFreeClusters;
-        public int BytesPerSector;
-        public int Reset;
-    }
-
-    /*-----------------------------------------------------------------------------
-     AngleInformation
-    -----------------------------------------------------------------------------*/
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdsCameraPos
-    {
-        public int status;
-        public int position;
-        public int rolling;
-        public int pitching;
-    }
-
-    /*-----------------------------------------------------------------------------
-     Manual WhiteBalance Data
-    -----------------------------------------------------------------------------*/
-    [StructLayout(LayoutKind.Sequential)]
-    public struct EdsManualWBData
-    {
-        public uint Valid;
-        public uint dataSize;
-
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-        public string szCaption;
-
-        [MarshalAs(UnmanagedType.ByValArray)]
-        public byte[] data;
-    }
     #endregion
     #region  Definition of error Codes
 
@@ -2582,34 +2532,6 @@ public class EDSDK
 
     #endregion Canon EDSDK Import
     #region Contrib
-    /*-----------------------------------------------------------------------------
-     Additional artifacts extracted from spec for convenience purposes
-    -----------------------------------------------------------------------------*/
-
-
-
-    /*-----------------------------------------------------------------------------
-     Drive mode enum, see PropID_DriveMode for get / set
-     NOTE: Does not seem to correspond to the recording properties for video
-    ----------------------------------------------------------------------------*/
-    public enum EdsDriveMode : uint
-    {
-        Single_Frame_Shooting = 0x00000000,
-        Continuous_Shooting = 0x00000001,
-        Video = 0x00000002,
-        Not_used = 0x00000003,
-        High_Speed_Continuous_Shooting = 0x00000004,
-        Low_Speed_Continuous_Shooting = 0x00000005,
-        Single_Silent_Shooting = 0x00000006,
-        _10_Sec_Self_Timer_plus_continuous_shots = 0x00000007,
-        _10_Sec_Self_Timer = 0x00000010,
-        _2_Sec_Self_Timer = 0x00000011,
-        _14fps_super_high_speed = 0x00000012,
-        Silent_single_shooting = 0x00000013,
-        Silent_contin_shooting = 0x00000014,
-        Silent_HS_continuous = 0x00000015,
-        Silent_LS_continuous = 0x00000016,
-    }
 
     /*-----------------------------------------------------------------------------
      Video record mode
@@ -2627,7 +2549,7 @@ public class EDSDK
 
     /*-----------------------------------------------------------------------------
 		 EVF Output Device [Flag]
-     Undocumented value, named consistent with SDK
+        Undocumented value, named consistent with SDK
 		-----------------------------------------------------------------------------*/
     public const uint EvfOutputDevice_Disabled = 0;
 
