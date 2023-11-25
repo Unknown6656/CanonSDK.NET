@@ -3,11 +3,11 @@ using System.Runtime.InteropServices;
 namespace EDSDK.Native;
 
 
-public delegate uint EdsProgressCallback(uint inPercent, nint inContext, ref bool outCancel);
-public delegate uint EdsCameraAddedHandler(nint inContext);
-public delegate uint EdsPropertyEventHandler(EdsEvent inEvent, uint inPropertyID, uint inParam, nint inContext);
-public delegate uint EdsObjectEventHandler(EdsEvent inEvent, nint inRef, nint inContext);
-public delegate uint EdsStateEventHandler(EdsEvent inEvent, uint inParameter, nint inContext);
+public delegate SDKError EdsProgressCallback(uint inPercent, nint inContext, ref bool outCancel);
+public delegate SDKError EdsCameraAddedHandler(nint inContext);
+public delegate SDKError EdsPropertyEventHandler(EdsEvent inEvent, uint inPropertyID, uint inParam, nint inContext);
+public delegate SDKError EdsObjectEventHandler(EdsEvent inEvent, nint inRef, nint inContext);
+public delegate SDKError EdsStateEventHandler(EdsEvent inEvent, uint inParameter, nint inContext);
 
 public enum EdsDataType
     : uint
@@ -676,33 +676,21 @@ public enum StateEvent
     AfResult = 0x00000309,
 }
 
-[StructLayout(LayoutKind.Sequential)]
-public record struct EdsPoint(int x, int y);
 
 [StructLayout(LayoutKind.Sequential)]
-public record struct EdsRect(int x, int y, int width, int height);
+public record struct EdsPoint(int X, int Y);
+
+[StructLayout(LayoutKind.Sequential)]
+public record struct EdsRect(int X, int Y, int Width, int Height);
 
 [StructLayout(LayoutKind.Sequential)]
 public record struct EdsSize(int width, int height);
 
 [StructLayout(LayoutKind.Sequential)]
-public struct EdsRational
-{
-    public int Numerator;
-    public uint Denominator;
-}
+public record struct EdsRational(int Numerator, uint Denominator);
 
 [StructLayout(LayoutKind.Sequential)]
-public struct EdsTime
-{
-    public int Year;
-    public int Month;
-    public int Day;
-    public int Hour;
-    public int Minute;
-    public int Second;
-    public int Milliseconds;
-}
+public record struct EdsTime(int Year, int Month, int Day, int Hour, int Minute, int Second, int Milliseconds);
 
 [StructLayout(LayoutKind.Sequential)]
 public struct EdsDeviceInfo
@@ -1612,7 +1600,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSendStatusCommand(nint inCameraRef, uint inCameraState, int inParam);
+    public static extern SDKError EdsSendStatusCommand(nint inCameraRef, CameraState inCameraState, int inParam);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2243,7 +2231,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsSetPropertyEventHandler(nint inCameraRef, PropertyEvent inEvnet, EdsPropertyEventHandler inPropertyEventHandler, nint inContext);
+    public static extern uint EdsSetPropertyEventHandler(nint inCameraRef, PropertyEvent inEvnet, EdsPropertyEventHandler? inPropertyEventHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2268,7 +2256,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsSetObjectEventHandler(nint inCameraRef, EdsEvent inEvnet, EdsObjectEventHandler inObjectEventHandler, nint inContext);
+    public static extern uint EdsSetObjectEventHandler(nint inCameraRef, EdsEvent inEvnet, EdsObjectEventHandler? inObjectEventHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2292,7 +2280,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSetCameraStateEventHandler(nint inCameraRef, uint inEvnet, EdsStateEventHandler inStateEventHandler, nint inContext);
+    public static extern SDKError EdsSetCameraStateEventHandler(nint inCameraRef, StateEvent inEvnet, EdsStateEventHandler? inStateEventHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
 		//

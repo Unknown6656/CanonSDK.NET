@@ -196,17 +196,12 @@ public sealed class SDKHandler
 
 
 
-
-
-
-
     public void SetUintSetting(string propertyName, string propertyValue)
     {
         bool error = false;
+
         if (!string.IsNullOrEmpty(propertyValue))
-        {
             propertyValue = propertyValue.Replace("0x", "");
-        }
 
         if (!uint.TryParse(propertyValue, NumberStyles.HexNumber, CultureInfo.CurrentCulture, out uint value))
         {
@@ -215,23 +210,15 @@ public sealed class SDKHandler
         }
 
         if (!string.IsNullOrEmpty(propertyName) && propertyName.StartsWith("kEds"))
-        {
             propertyName = propertyName[4..];
-        }
-
 
         SDKProperty prop = GetSDKProperty(propertyName);
+
         if (!prop.Matched)
-        {
-            LogWarning("Could not find property named {0}");
-        }
+            LogWarning($"Could not find property named {propertyName}");
 
         if (!error)
-        {
             SetSetting(prop.Value, value);
-        }
-
-
     }
 
     public void DumpAllProperties()
@@ -239,14 +226,9 @@ public sealed class SDKHandler
         LogInfo("=========Dumping properties=========");
 
         foreach (SDKProperty prop in SDKProperties)
-        {
-            uint value = GetSetting(prop.Value);
-
-            LogInfo("Property: {SDKProperty}, Value: {SDKPropertyValue}", prop.Name, $"0x{value:X}");
-        }
+            LogInfo($"Property: {prop.Name}, Value: 0x{GetSetting(prop.Value):X}");
     }
 
-    #endregion
     #region Basic SDK and Session handling
 
     public SDKProperty SDKObjectEventToProperty(EdsEvent @event) => FindProperty(SDKObjectEvents, @event);
@@ -330,7 +312,9 @@ public sealed class SDKHandler
     /// </summary>
     private void PopulateSDKConstantStructures()
     {
-        FieldInfo[] fields = typeof(EDSDKLib.EDSDK).GetFields(BindingFlags.Public | BindingFlags.Static);
+#error todo fix this shite
+
+        FieldInfo[] fields = typeof(EDSDK_API).GetFields(BindingFlags.Public | BindingFlags.Static);
 
         SDKStateEvents = FilterFields(fields, "StateEvent_");
         SDKObjectEvents = FilterFields(fields, "EdsEvent.");
@@ -423,9 +407,9 @@ public sealed class SDKHandler
             }
 
             //Remove the event handler
-            EDSDK_API.EdsSetCameraStateEventHandler(MainCamera.Handle, StateEvent_All, null, MainCamera.Handle);
+            EDSDK_API.EdsSetCameraStateEventHandler(MainCamera.Handle, StateEvent.All, null, MainCamera.Handle);
             EDSDK_API.EdsSetObjectEventHandler(MainCamera.Handle, EdsEvent.All, null, MainCamera.Handle);
-            EDSDK_API.EdsSetPropertyEventHandler(MainCamera.Handle, PropertyEvent_All, null, MainCamera.Handle);
+            EDSDK_API.EdsSetPropertyEventHandler(MainCamera.Handle, PropertyEvent.All, null, MainCamera.Handle);
 
             //close session and release camera
             SendSDKCommand(delegate { Error = EDSDK_API.EdsCloseSession(MainCamera.Handle); }, sdkAction: nameof(EDSDK_API.EdsCloseSession));
@@ -463,7 +447,7 @@ public sealed class SDKHandler
         return SDKError.OK;
     }
 
-    protected void OnCameraAdded() => CameraAdded?.Invoke();
+    private void OnCameraAdded() => CameraAdded?.Invoke();
 
 
     /// <summary>
@@ -532,7 +516,7 @@ public sealed class SDKHandler
         return SDKError.OK;
     }
 
-    protected void OnProgressChanged(int percent) => ProgressChanged?.Invoke(percent);
+    private void OnProgressChanged(int percent) => ProgressChanged?.Invoke(percent);
 
     /// <summary>
     /// A property changed
@@ -547,105 +531,9 @@ public sealed class SDKHandler
         if (inEvent is PropertyEvent.PropertyChanged)
             LogPropertyValue(inPropertyID, GetSetting(inPropertyID));
 
-        switch (inPropertyID)
-        {
-            case PropID_Unknown:
-            case PropID_ProductName:
-            case PropID_BodyIDEx:
-            case PropID_OwnerName:
-            case PropID_MakerName:
-            case PropID_DateTime:
-            case PropID_FirmwareVersion:
-            case PropID_BatteryLevel:
-            case PropID_CFn:
-            case PropID_SaveTo:
-            case PropID_ImageQuality:
-            case PropID_Orientation:
-            case PropID_ICCProfile:
-            case PropID_FocusInfo:
-            case PropID_WhiteBalance:
-            case PropID_ColorTemperature:
-            case PropID_WhiteBalanceShift:
-            case PropID_ColorSpace:
-            case PropID_PictureStyle:
-            case PropID_PictureStyleDesc:
-            case PropID_PictureStyleCaption:
-            case PropID_AEMode:
-            case PropID_AEModeSelect:
-            case PropID_DriveMode:
-            case PropID_ISOSpeed:
-            case PropID_MeteringMode:
-            case PropID_AFMode:
-            case PropID_Av:
-            case PropID_Tv:
-            case PropID_ExposureCompensation:
-            case PropID_FocalLength:
-            case PropID_AvailableShots:
-            case PropID_Bracket:
-            case PropID_WhiteBalanceBracket:
-            case PropID_LensName:
-            case PropID_AEBracket:
-            case PropID_FEBracket:
-            case PropID_ISOBracket:
-            case PropID_NoiseReduction:
-            case PropID_FlashOn:
-            case PropID_RedEye:
-            case PropID_FlashMode:
-            case PropID_LensStatus:
-            case PropID_Artist:
-            case PropID_Copyright:
-            case PropID_Evf_Mode:
-            case PropID_Evf_WhiteBalance:
-            case PropID_Evf_ColorTemperature:
-            case PropID_Evf_DepthOfFieldPreview:
-            case PropID_Evf_Zoom:
-            case PropID_Evf_ZoomPosition:
-            case PropID_Evf_ImagePosition:
-            case PropID_Evf_HistogramStatus:
-            case PropID_Evf_AFMode:
-            case PropID_Evf_HistogramY:
-            case PropID_Evf_HistogramR:
-            case PropID_Evf_HistogramG:
-            case PropID_Evf_HistogramB:
-            case PropID_Evf_CoordinateSystem:
-            case PropID_Evf_ZoomRect:
-            case PropID_Record:
-            case PropID_GPSVersionID:
-            case PropID_GPSLatitudeRef:
-            case PropID_GPSLatitude:
-            case PropID_GPSLongitudeRef:
-            case PropID_GPSLongitude:
-            case PropID_GPSAltitudeRef:
-            case PropID_GPSAltitude:
-            case PropID_GPSTimeStamp:
-            case PropID_GPSSatellites:
-            case PropID_GPSStatus:
-            case PropID_GPSMapDatum:
-            case PropID_GPSDateStamp:
-            case PropID_DC_Zoom:
-            case PropID_DC_Strobe:
-            case PropID_LensBarrelStatus:
-            case PropID_TempStatus:
-            case PropID_Evf_RollingPitching:
-            case PropID_FixedMovie:
-            case PropID_MovieParam:
-            case PropID_Evf_ClickWBCoeffs:
-            case PropID_ManualWhiteBalanceData:
-            case PropID_MirrorUpSetting:
-            case PropID_MirrorLockUpState:
-            case PropID_UTCTime:
-            case PropID_TimeZone:
-            case PropID_SummerTimeSetting:
-            case PropID_AutoPowerOffSetting:
-                break;
-            case PropID_Evf_OutputDevice:
-                if (IsLiveViewOn)
-                {
-                    DownloadEvf();
-                }
+        if (inPropertyID == PropID_Evf_OutputDevice && IsLiveViewOn)
+            DownloadEvf();
 
-                break;
-        }
         return SDKError.OK;
     }
 
@@ -668,27 +556,32 @@ public sealed class SDKHandler
             case StateEvent.All:
             case StateEvent.JobStatusChanged:
             case StateEvent.ShutDownTimerUpdate:
-            case StateEvent.CaptureError:
-                LogError("Error event. error: {error}", nameof(StateEvent_CaptureError));
                 break;
+            case StateEvent.CaptureError:
             case StateEvent.InternalError:
-                LogError("Error event. error: {error}", nameof(StateEvent_InternalError));
+                LogError($"Error event. error: {inEvent}");
+
                 break;
             case StateEvent.Shutdown:
                 CameraSessionOpen = false;
+
                 if (IsLiveViewOn)
                 {
                     StopLiveView();
-                    // Not supported in .NET Core. Transition to cancellation token LVThread.Abort();
+                    LVThread.Abort(); // Not supported in .NET Core. Transition to cancellation token LVThread.Abort();
+#error todo fix this shite
                 }
+
                 OnCameraHasShutdown();
+
                 break;
             case StateEvent.WillSoonShutDown:
                 if (KeepAlive)
                     SendSDKCommand(() =>
                     {
                         _logger.LogDebug("Extending camera shutdown timer");
-                        EDSDK_API.EdsSendCommand(MainCamera.Handle, CameraCommand.ExtendShutDownTimer, 0);
+
+                        Error = EDSDK_API.EdsSendCommand(MainCamera.Handle, CameraCommand.ExtendShutDownTimer, 0);
                     }, sdkAction: nameof(CameraCommand.ExtendShutDownTimer));
                 break;
         }
@@ -696,9 +589,9 @@ public sealed class SDKHandler
         return SDKError.OK;
     }
 
-    protected void OnCameraHasShutdown() => CameraHasShutdown?.Invoke(this, new EventArgs());
+    private void OnCameraHasShutdown() => CameraHasShutdown?.Invoke(this, new EventArgs());
 
-    protected void OnSdkError(SDKErrorEventArgs e) => SdkError?.Invoke(this, e);
+    private void OnSdkError(SDKErrorEventArgs e) => SdkError?.Invoke(this, e);
 
     #endregion Eventhandling
     #region Camera commands
@@ -889,11 +782,7 @@ public sealed class SDKHandler
             Error = EDSDK_API.EdsCreateImageRef(img_stream, out img_ref);
             Error = EDSDK_API.EdsGetImageInfo(img_ref, imageSource, out EdsImageInfo imageInfo);
 
-            EdsSize outputSize = new()
-            {
-                width = imageInfo.EffectiveRect.width,
-                height = imageInfo.EffectiveRect.height
-            };
+            EdsSize outputSize = new(imageInfo.EffectiveRect.Width, imageInfo.EffectiveRect.Height);
             //calculate amount of data
             int datalength = outputSize.height * outputSize.width * 3;
             //create buffer that stores the image
@@ -901,7 +790,7 @@ public sealed class SDKHandler
             //create a stream to the buffer
 
             nint ptr = new();
-            Marshal.StructureToPtr<byte[]>(buffer, ptr, false);
+            Marshal.StructureToPtr(buffer, ptr, false);
 
 
             Error = EDSDK_API.EdsCreateMemoryStreamFromPointer(ptr, (uint)datalength, out stream);
@@ -1086,16 +975,16 @@ public sealed class SDKHandler
     /// </summary>
     /// <param name="propertyId">The property ID</param>
     /// <param name="value">The value which will be set</param>
-    public async Task SendCommand(CameraCommand command, int value)
+    public void SendCommand(CameraCommand command, int value)
     {
         Log(LogLevel.Debug, $"Sending command. Command: {command}, Value: 0x{value:X}");
 
         if (MainCamera.Handle != 0)
-            await SendSDKCommand(async delegate
+            SendSDKCommand(delegate
             {
                 Thread cThread = Thread.CurrentThread;
 
-                await LogInfo($"Executing SDK command. ThreadName: {cThread.Name}, ApartmentState: {cThread.GetApartmentState()}");
+                LogInfo($"Executing SDK command. ThreadName: {cThread.Name}, ApartmentState: {cThread.GetApartmentState()}");
 
                 Error = EDSDK_API.EdsSendCommand(MainCamera.Handle, command, value);
             }, sdkAction: nameof(EDSDK_API.EdsSetPropertyData));
@@ -1110,7 +999,7 @@ public sealed class SDKHandler
     /// <param name="Value">The value which will be set</param>
     public void SetDateTimeSetting(uint propertyId, DateTime value)
     {
-        EDSDKLib.EDSDK.EdsTime dateTime = new()
+        EdsTime dateTime = new()
         {
             Year = value.Year,
             Month = value.Month,
@@ -1185,22 +1074,18 @@ public sealed class SDKHandler
     {
         if (!IsLiveViewOn)
         {
-            await LogInfo("Starting Liveview");
+            LogInfo("Starting Liveview");
 
             int listener_count = LiveViewUpdated?.GetInvocationList()?.Length ?? 0;
 
-            await LogInfo($"{listener_count} LiveViewUpdated listeners found");
-
-
+            LogInfo($"{listener_count} LiveViewUpdated listeners found");
             LogPropertyValue(nameof(PropID_Evf_OutputDevice), GetSetting(PropID_Evf_OutputDevice));
 
-
-
             SetSetting(PropID_Evf_OutputDevice, EvfOutputDevice_PC);
+
             IsLiveViewOn = true;
 
             LogPropertyValue(nameof(PropID_Evf_OutputDevice), GetSetting(PropID_Evf_OutputDevice));
-
         }
     }
 
@@ -1211,21 +1096,17 @@ public sealed class SDKHandler
     {
         if (IsLiveViewOn)
         {
-            await LogInfo("Stopping liveview");
+            LogInfo("Stopping liveview");
+
             LVoff = true;
             IsLiveViewOn = false;
 
             //Wait 5 seconds for evf thread to finish, otherwise manually stop
             if (!cancelLiveViewWait.WaitOne(TimeSpan.FromSeconds(5)))
-            {
                 KillLiveView();
-            }
-            else
-            {
-                _logger.LogDebug("LiveView stopped cleanly");
-            }
+            else
+                _logger.LogDebug("LiveView stopped cleanly");
         }
-
     }
 
     private readonly AutoResetEvent cancelLiveViewWait = new(false);
@@ -1253,20 +1134,18 @@ public sealed class SDKHandler
                     {
                         //download current live view image
                         err = EDSDK_API.EdsCreateEvfImageRef(stream, out EvfImageRef);
+
                         if (err == SDKError.OK)
-                        {
                             err = EDSDK_API.EdsDownloadEvfImage(MainCamera.Handle, EvfImageRef);
-                        }
 
                         if (err == SDKError.OBJECT_NOTREADY)
                         {
                             Thread.Sleep(4);
+
                             continue;
                         }
                         else
-                        {
                             Error = err;
-                        }
                     }
 
                     //get pointer
@@ -1279,6 +1158,7 @@ public sealed class SDKHandler
                         Evf_CoordinateSystem = GetEvfCoord(EvfImageRef);
                         IsCoordSystemSet = true;
                     }
+
                     Evf_ZoomRect = GetEvfZoomRect(EvfImageRef);
                     Evf_ZoomPosition = GetEvfPoints(PropID_Evf_ZoomPosition, EvfImageRef);
                     Evf_ImagePosition = GetEvfPoints(PropID_Evf_ImagePosition, EvfImageRef);
@@ -1313,7 +1193,8 @@ public sealed class SDKHandler
 
     private void KillLiveView()
     {
-        await LogInfo("Killing LiveView");
+        LogInfo("Killing LiveView");
+
         //stop the live view
         SetSetting(PropID_Evf_OutputDevice, LVoff ? 0 : EvfOutputDevice_TFT);
     }
@@ -1323,7 +1204,7 @@ public sealed class SDKHandler
     /// Fires the LiveViewUpdated event
     /// </summary>
     /// <param name="stream"></param>
-    protected void OnLiveViewUpdated(UnmanagedMemoryStream stream) => LiveViewUpdated?.Invoke(stream);
+    private void OnLiveViewUpdated(UnmanagedMemoryStream stream) => LiveViewUpdated?.Invoke(stream);
 
 
     /// <summary>
@@ -1333,13 +1214,9 @@ public sealed class SDKHandler
     /// <returns>ZoomRect value</returns>
     private EdsRect GetEvfZoomRect(nint imgRef)
     {
-        int size = Marshal.SizeOf(typeof(EdsRect));
-        nint ptr = Marshal.AllocHGlobal(size);
+        EDSDK_API.EdsGetPropertyData<EdsRect>(imgRef, EDSDK_API.PropID_Evf_ZoomPosition, 0, out EdsRect rect);
 
-        SDKError err = EDSDK_API.EdsGetPropertyData(imgRef, PropID_Evf_ZoomPosition, 0, size, ptr);
-        EdsRect rect = (EdsRect)Marshal.PtrToStructure(ptr, typeof(EdsRect));
-        Marshal.FreeHGlobal(ptr);
-        return err == SDKError.OK ? rect : new EdsRect();
+        return rect;
     }
 
     /// <summary>
@@ -1349,12 +1226,9 @@ public sealed class SDKHandler
     /// <returns>the live view coordinate system</returns>
     private static EdsSize GetEvfCoord(nint imgRef)
     {
-        int size = Marshal.SizeOf(typeof(EdsSize));
-        nint ptr = Marshal.AllocHGlobal(size);
-        SDKError err = EDSDK_API.EdsGetPropertyData(imgRef, EDSDK_API.PropID_Evf_CoordinateSystem, 0, size, ptr);
-        EdsSize coord = (EdsSize)Marshal.PtrToStructure(ptr, typeof(EdsSize));
-        Marshal.FreeHGlobal(ptr);
-        return err == SDKError.OK ? coord : new EdsSize();
+        EDSDK_API.EdsGetPropertyData<EdsSize>(imgRef, EDSDK_API.PropID_Evf_CoordinateSystem, 0, out EdsSize size);
+
+        return size;
     }
 
     /// <summary>
@@ -1364,12 +1238,9 @@ public sealed class SDKHandler
     /// <returns>a live view EdsPoint value</returns>
     private static EdsPoint GetEvfPoints(uint PropID, nint imgRef)
     {
-        int size = Marshal.SizeOf(typeof(EdsPoint));
-        nint ptr = Marshal.AllocHGlobal(size);
-        SDKError err = EDSDK_API.EdsGetPropertyData(imgRef, PropID, 0, size, ptr);
-        EdsPoint data = (EdsPoint)Marshal.PtrToStructure(ptr, typeof(EdsPoint));
-        Marshal.FreeHGlobal(ptr);
-        return err == SDKError.OK ? data : new EdsPoint();
+        EDSDK_API.EdsGetPropertyData<EdsPoint>(imgRef, PropID, 0, out EdsPoint point);
+
+        return point;
     }
 
     #endregion
@@ -1439,7 +1310,7 @@ public sealed class SDKHandler
             DownloadVideo = false;
             //start the video recording
 
-            await LogInfo("Start filming");
+            LogInfo("Start filming");
 
             SendSDKCommand(delegate { Error = EDSDK_API.EdsSetPropertyData(MainCamera.Handle, PropID_Record, 0, sizeof(PropID_Record_Status), (uint)PropID_Record_Status.Begin_movie_shooting); });
         }
@@ -1504,31 +1375,30 @@ public sealed class SDKHandler
     /// Takes a photo and returns the file info
     /// </summary>
     /// <returns></returns>
-    public async Task<FileInfo> TakePhotoAsync(FileInfo saveFile) => await Task.Run<FileInfo>(async () =>
-                                                                                                                                            {
-                                                                                                                                                if (IsFilming || IsLiveViewOn)
-                                                                                                                                                {
-                                                                                                                                                    _logger.LogWarning("Ignoring attempt to take photo whilst filming or in live-view mode. Filming: {Filming}, LiveView: {LiveView}", IsFilming, IsLiveViewOn);
-                                                                                                                                                    return null;
-                                                                                                                                                }
+    public async Task<FileInfo?> TakePhotoAsync(FileInfo saveFile)
+    {
+        if (IsFilming || IsLiveViewOn)
+        {
+            LogWarning($"Ignoring attempt to take photo whilst filming or in live-view mode. Filming: {IsFilming}, LiveView: {IsLiveViewOn}");
 
-                                                                                                                                                takePhotoCompletionSource = new TaskCompletionSource<FileInfo>();
-                                                                                                                                                SetSaveToLocation(saveFile.Directory);
-                                                                                                                                                ImageSaveFilename = saveFile.Name;
+            return null;
+        }
 
-                                                                                                                                                TakePhoto();
+        takePhotoCompletionSource = new TaskCompletionSource<FileInfo>();
+        SetSaveToLocation(saveFile.Directory);
+        ImageSaveFilename = saveFile.Name;
 
-                                                                                                                                                await takePhotoCompletionSource.Task;
-                                                                                                                                                if (takePhotoCompletionSource.Task.Status == TaskStatus.RanToCompletion)
-                                                                                                                                                {
-                                                                                                                                                    return takePhotoCompletionSource.Task.Result;
-                                                                                                                                                }
-                                                                                                                                                else
-                                                                                                                                                {
-                                                                                                                                                    LogError("Error taking photo, check previous messages");
-                                                                                                                                                    return null;
-                                                                                                                                                }
-                                                                                                                                            });
+        TakePhoto();
+
+        await takePhotoCompletionSource.Task;
+
+        if (takePhotoCompletionSource.Task.Status == TaskStatus.RanToCompletion)
+            return takePhotoCompletionSource.Task.Result;
+
+        LogError("Error taking photo, check previous messages");
+
+        return null;
+    }
 
 
 
@@ -1807,11 +1677,7 @@ public sealed class SDKHandler
     /// Locks or unlocks the cameras UI
     /// </summary>
     /// <param name="lockState">True for locked, false to unlock</param>
-    public void UILock(bool lockState) => SendSDKCommand(delegate
-    {
-        Error = lockState ? EDSDK_API.EdsSendStatusCommand(MainCamera.Handle, CameraState_UILock, 0)
-            : EDSDK_API.EdsSendStatusCommand(MainCamera.Handle, CameraState_UIUnLock, 0);
-    });
+    public void UILock(bool lockState) => SendSDKCommand(() => Error = EDSDK_API.EdsSendStatusCommand(MainCamera.Handle, lockState ? CameraState.UILock : CameraState.UIUnLock, 0));
 
     /// <summary>
     /// Gets the children of a camera folder/volume. Recursive method.
