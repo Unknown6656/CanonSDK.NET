@@ -1,35 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <AssemblyVersion>18.5.18.1619</AssemblyVersion>
-    <FileVersion>18.5.18.1619</FileVersion>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'  or '$(Configuration)|$(Platform)'=='Debug|x86' or '$(Configuration)|$(Platform)'=='Release|AnyCPU' or '$(Configuration)|$(Platform)'=='Release|x86'">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <Folder Include="Resources\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.9" />
-    <PackageReference Include="System.Drawing.Common" Version="4.7.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\Microsoft.Extensions.Logging.Summarized\src\Microsoft.Extensions.Logging.Summarized\Microsoft.Extensions.Logging.Summarized.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Resources\EDSDK.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Resources\EdsImage.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
+    <PropertyGroup>
+        <TargetFramework>net8</TargetFramework>
+        <AssemblyVersion>18.5.18.1619</AssemblyVersion>
+        <FileVersion>18.5.18.1619</FileVersion>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.9" />
+        <PackageReference Include="System.Drawing.Common" Version="4.7.0" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Update="Resources\EDSDK.dll">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Resources\EdsImage.dll">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 </Project>
