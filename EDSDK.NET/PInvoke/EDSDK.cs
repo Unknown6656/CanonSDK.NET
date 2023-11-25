@@ -9,7 +9,7 @@ public class EDSDK
     /// <summary>
     /// Path to the EDSDK DLL
     /// </summary>
-    const string DLLPath = ".\\Resources\\EDSDK.dll";
+    private const string DLLPath = "EDSDK.dll";
 
     #region Canon EDSDK Import
 
@@ -22,7 +22,6 @@ public class EDSDK
     public delegate uint EdsStateEventHandler(uint inEvent, uint inParameter, IntPtr inContext);
 
     #endregion
-
     #region Data Types
 
     public enum EdsDataType : uint
@@ -60,8 +59,6 @@ public class EDSDK
     }
 
     #endregion
-
-
     #region Property IDs
 
     /*----------------------------------
@@ -195,7 +192,6 @@ public class EDSDK
     public const uint PropID_AutoPowerOffSetting = 0x0100045e;
 
     #endregion
-
     #region Camera commands
 
     /*-----------------------------------------------------------------------------
@@ -230,7 +226,6 @@ public class EDSDK
         CameraCommand_ShutterButton_Completely_NonAF = 0x00010003,
     }
     #endregion
-
     #region Camera status command
 
     /*----------------------------------
@@ -242,8 +237,6 @@ public class EDSDK
     public const uint CameraState_ExitDirectTransfer = 0x00000003;
 
     #endregion
-
-
     #region  Enumeration of property value  
 
     /*-----------------------------------------------------------------------------
@@ -752,7 +745,6 @@ public class EDSDK
     }
 
     #endregion
-
     #region Event IDs
 
     /*-----------------------------------------------------------------------------
@@ -926,8 +918,6 @@ public class EDSDK
     public const uint StateEvent_AfResult = 0x00000309;
 
     #endregion
-
-
     #region Proto type defenition of EDSDK API
 
     /*----------------------------------
@@ -2172,8 +2162,6 @@ public class EDSDK
     public extern static uint EdsDownloadEvfImage(IntPtr inCameraRef, IntPtr outEvfImageRef);
 
     #endregion
-
-
     #region Definition of base Structures
 
     public const int EDS_MAX_NAME = 256;
@@ -2416,8 +2404,6 @@ public class EDSDK
         public byte[] data;
     }
     #endregion
-
-
     #region  Definition of error Codes
 
     /*-----------------------------------------------------------------------

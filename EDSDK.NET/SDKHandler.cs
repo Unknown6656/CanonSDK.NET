@@ -319,7 +319,6 @@ public class SDKHandler : IDisposable
     public object Value { get; private set; }
     public bool KeepAlive { get; set; }
 
-    SummarizedLogger summaryLogger;
 
     /// <summary>
     /// Initializes the SDK and adds events
@@ -329,11 +328,7 @@ public class SDKHandler : IDisposable
         this.logger = loggerFactory.CreateLogger<SDKHandler>();
 
         STAThread.SetLogAction(loggerFactory.CreateLogger(nameof(STAThread)));
-
         STAThread.FatalError += STAThread_FatalError;
-
-        summaryLogger = new SummarizedLogger(logger, LogLevel.Debug, nameof(SDKHandler))
-            .SetFrequency(TimeSpan.FromSeconds(10));
 
         PopulateSDKConstantStructures();
 
@@ -543,7 +538,7 @@ public class SDKHandler : IDisposable
     {
         var eventProperty = SDKObjectEventToProperty(inEvent);
         //LogInfo("SDK Object Event. Name: {SDKEventName}, Value: {SDKEventHex}", eventProperty.Name, eventProperty.ValueToString());
-        var t = summaryLogger.LogEventAsync($"Camera_SDKObjectEvent. EventName: {eventProperty.Name}");
+
         //handle object event here
         switch (inEvent)
         {
@@ -1449,7 +1444,6 @@ public class SDKHandler : IDisposable
     /// <param name="stream"></param>
     protected void OnLiveViewUpdated(UnmanagedMemoryStream stream)
     {
-        var t = summaryLogger.LogEventAsync(nameof(OnLiveViewUpdated));
         if (LiveViewUpdated != null)
         {
             LiveViewUpdated(stream);
