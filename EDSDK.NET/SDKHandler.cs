@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Drawing;
@@ -61,7 +61,7 @@ namespace EDSDK.NET
             get => _imageSaveFilename;
             set
             {
-                var t = LogInfoAsync("Setting ImageSaveFilename. ImageSaveFilename: {ImageSaveFilename}", _imageSaveFilename);
+                var t = LogInfoAsync("Setting ImageSaveFilename. ImageSaveFilename: {ImageSaveFilename}", value);
                 _imageSaveFilename = value;
             }
         }
@@ -760,8 +760,10 @@ namespace EDSDK.NET
                 case StateEvent_JobStatusChanged:
                 case StateEvent_ShutDownTimerUpdate:
                 case StateEvent_CaptureError:
+                    LogError("Error event. error: {error}", nameof(StateEvent_CaptureError));
+                    break;
                 case StateEvent_InternalError:
-                case StateEvent_AfResult:
+                    LogError("Error event. error: {error}", nameof(StateEvent_InternalError));
                     break;
                 case StateEvent_Shutdown:
                     CameraSessionOpen = false;
@@ -1330,6 +1332,10 @@ namespace EDSDK.NET
                 {
                     KillLiveView();
                 }
+                else
+                {
+                    logger.LogDebug("LiveView stopped cleanly");
+                }
             }
 
         }
@@ -1520,11 +1526,19 @@ namespace EDSDK.NET
                 SetSetting(PropID_Evf_OutputDevice, 3);
 
                 //Check if the camera is ready to film
-                if (GetSetting(PropID_FixedMovie) == 0)
-                {                    
-                    LogPropertyValue(PropID_Record, GetSetting(PropID_Record));
-                    var tx = Log(LogLevel.Critical, "Camera is not in movie mode. Check 'PropID_FixedMovie'. Call EdsSendCommand(CameraCommand_MovieSelectSwON, 0). Exit!");
-                    //throw new ArgumentException("Camera in invalid mode", nameof(PropID_FixedMovie));
+                var recordStatus = GetSetting(PropID_Record);
+                if (recordStatus != (uint)PropID_Record_Status.Movie_shooting_ready)
+                {
+                    //DOES NOT WORK, readonly setting?
+                    //DOES NOT THROW AN ERROR
+                    //SetSetting(PropID_Record, (uint)EdsDriveMode.Video);
+                    //SetSetting(PropID_Record, (uint)PropID_Record_Status.Movie_shooting_ready);
+
+
+                    LogPropertyValue(PropID_Record, recordStatus);
+                    var tx = Log(LogLevel.Information, "Camera reporting incorrect mode. expected. Continue. {expected}, was: {was}", PropID_Record_Status.Movie_shooting_ready, recordStatus);
+                    tx = Log(LogLevel.Information, "Camera physical switch must be in movie record mode. Leave in this mode permanently!");
+                    //throw new ArgumentException("Camera in invalid mode", nameof(PropID_Record));
                 }
                 IsFilming = true;
 
