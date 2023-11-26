@@ -5,9 +5,9 @@ namespace EDSDK.Native;
 
 public delegate SDKError EdsProgressCallback(uint inPercent, nint inContext, ref bool outCancel);
 public delegate SDKError EdsCameraAddedHandler(nint inContext);
-public delegate SDKError EdsPropertyEventHandler(EdsEvent inEvent, uint inPropertyID, uint inParam, nint inContext);
+public delegate SDKError EdsPropertyEventHandler(PropertyEvent inEvent, uint inPropertyID, uint inParam, nint inContext);
 public delegate SDKError EdsObjectEventHandler(EdsEvent inEvent, nint inRef, nint inContext);
-public delegate SDKError EdsStateEventHandler(EdsEvent inEvent, uint inParameter, nint inContext);
+public delegate SDKError EdsStateEventHandler(StateEvent inEvent, uint inParameter, nint inContext);
 
 public enum EdsDataType
     : uint
@@ -546,6 +546,110 @@ public enum AEMode
     Unknown = 0xffffffff,
 }
 
+public enum PictureStyle
+    : uint
+{
+    Standard = 0x0081,
+    Portrait = 0x0082,
+    Landscape = 0x0083,
+    Neutral = 0x0084,
+    Faithful = 0x0085,
+    Monochrome = 0x0086,
+    Auto = 0x0087,
+    FineDetail = 0x0088,
+    User1 = 0x0021,
+    User2 = 0x0022,
+    User3 = 0x0023,
+    PC1 = 0x0041,
+    PC2 = 0x0042,
+    PC3 = 0x0043,
+}
+
+public enum ColorSpace
+    : uint
+{
+    sRGB = 1,
+    AdobeRGB = 2,
+    Unknown = 0xffffffff,
+}
+
+public enum WhiteBalanace
+    : uint
+{
+    Click = 0xFFFFFFFF,
+    Auto = 0,
+    Daylight = 1,
+    Cloudy = 2,
+    Tungsten = 3,
+    Fluorescent = 4,
+    Strobe = 5,
+    Shade = 8,
+    ColorTemp = 9,
+    Manual1 = 6,
+    Manual2 = 15,
+    Manual3 = 16,
+    Manual4 = 18,
+    Manual5 = 19,
+    PCSet1 = 10,
+    PCSet2 = 11,
+    PCSet3 = 12,
+    PCSet4 = 20,
+    PCSet5 = 21,
+    AwbWhite = 23,
+}
+
+public enum BatteryLevel
+    : uint
+{
+    Empty = 1,
+    Low = 30,
+    Half = 50,
+    Normal = 80,
+    AC = 0xFFFFFFFF,
+}
+
+public enum EvfDriveLens
+    : uint
+{
+    Near1 = 0x00000001,
+    Near2 = 0x00000002,
+    Near3 = 0x00000003,
+    Far1 = 0x00008001,
+    Far2 = 0x00008002,
+    Far3 = 0x00008003,
+}
+
+/// <summary>
+/// Depth of Field Preview
+/// </summary>
+public enum EvfDepthOfFieldPreview
+    : uint
+{
+    OFF = 0x00000000,
+    ON = 0x00000001,
+}
+
+/// <summary>
+/// EVF Output Device [Flag]
+/// </summary>
+public enum EvfOutputDevice
+    : uint
+{
+    TFT = 1,
+    PC = 2,
+}
+
+/// <summary>
+/// EVF Zoom
+/// </summary>
+public enum Zoom
+    : uint
+{
+    Fit = 1,
+    x5 = 5,
+    x10 = 10,
+}
+
 public enum EdsEvent
     : uint
 {
@@ -854,14 +958,18 @@ public static unsafe class EDSDK_API
     /// </summary>
     private const string _DLL_PATH = "EDSDK.dll";
 
-    #region Canon EDSDK Import
-    #region Property IDs
+
+
+    //public enum EdsBracket
+    //    : uint
+    //{
+    //}
+
 
     /*----------------------------------
      Camera Setting Properties
     ----------------------------------*/
     public const uint PropID_Unknown = 0x0000ffff;
-
     public const uint PropID_ProductName = 0x00000002;
     public const uint PropID_BodyIDEx = 0x00000015;
     public const uint PropID_OwnerName = 0x00000004;
@@ -873,7 +981,6 @@ public static unsafe class EDSDK_API
     public const uint PropID_SaveTo = 0x0000000b;
     public const uint kEdsPropID_CurrentStorage = 0x0000000c;
     public const uint kEdsPropID_CurrentFolder = 0x0000000d;
-
     public const uint PropID_BatteryQuality = 0x00000010;
 
     /*----------------------------------
@@ -890,7 +997,6 @@ public static unsafe class EDSDK_API
     public const uint PropID_PictureStyle = 0x00000114;
     public const uint PropID_PictureStyleDesc = 0x00000115;
     public const uint PropID_PictureStyleCaption = 0x00000200;
-
 
     /*----------------------------------
      Capture Properties
@@ -917,7 +1023,6 @@ public static unsafe class EDSDK_API
     public const uint PropID_RedEye = 0x00000413;
     public const uint PropID_FlashMode = 0x00000414;
     public const uint PropID_LensStatus = 0x00000416;
-
     public const uint PropID_Artist = 0x00000418;
     public const uint PropID_Copyright = 0x00000419;
 
@@ -940,10 +1045,8 @@ public static unsafe class EDSDK_API
     public const uint PropID_Evf_HistogramR = 0x00000516;
     public const uint PropID_Evf_HistogramG = 0x00000517;
     public const uint PropID_Evf_HistogramB = 0x00000518;
-
     public const uint PropID_Evf_CoordinateSystem = 0x00000540;
     public const uint PropID_Evf_ZoomRect = 0x00000541;
-
     public const uint PropID_Record = 0x00000510;
 
     /*----------------------------------
@@ -968,175 +1071,21 @@ public static unsafe class EDSDK_API
     public const uint PropID_DC_Zoom = 0x00000600;
     public const uint PropID_DC_Strobe = 0x00000601;
     public const uint PropID_LensBarrelStatus = 0x00000605;
-
-
     public const uint PropID_TempStatus = 0x01000415;
     public const uint PropID_Evf_RollingPitching = 0x01000544;
     public const uint PropID_FixedMovie = 0x01000422;
     public const uint PropID_MovieParam = 0x01000423;
-
     public const uint PropID_Evf_ClickWBCoeffs = 0x01000506;
     public const uint PropID_ManualWhiteBalanceData = 0x01000204;
-
     public const uint PropID_MirrorUpSetting = 0x01000438;
     public const uint PropID_MirrorLockUpState = 0x01000421;
-
     public const uint PropID_UTCTime = 0x01000016;
     public const uint PropID_TimeZone = 0x01000017;
     public const uint PropID_SummerTimeSetting = 0x01000018;
-
     public const uint PropID_AutoPowerOffSetting = 0x0100045e;
 
-    #endregion
-
-    #endregion
-    #region  Enumeration of property value  
-
-    /*-----------------------------------------------------------------------------
-		 Drive Lens
-		-----------------------------------------------------------------------------*/
-    public const uint EvfDriveLens_Near1 = 0x00000001;
-    public const uint EvfDriveLens_Near2 = 0x00000002;
-    public const uint EvfDriveLens_Near3 = 0x00000003;
-    public const uint EvfDriveLens_Far1 = 0x00008001;
-    public const uint EvfDriveLens_Far2 = 0x00008002;
-    public const uint EvfDriveLens_Far3 = 0x00008003;
-
-    /*-----------------------------------------------------------------------------
-		 Depth of Field Preview
-		-----------------------------------------------------------------------------*/
-    public const uint EvfDepthOfFieldPreview_OFF = 0x00000000;
-    public const uint EvfDepthOfFieldPreview_ON = 0x00000001;
 
 
-    /*-----------------------------------------------------------------------------
-     Image Format 
-    -----------------------------------------------------------------------------*/
-
-
-    /*-----------------------------------------------------------------------------
-     Battery level
-    -----------------------------------------------------------------------------*/
-    public const uint BatteryLevel_Empty = 1;
-    public const uint BatteryLevel_Low = 30;
-    public const uint BatteryLevel_Half = 50;
-    public const uint BatteryLevel_Normal = 80;
-    public const uint BatteryLevel_AC = 0xFFFFFFFF;
-
-    /*-----------------------------------------------------------------------------
-     White Balance
-    -----------------------------------------------------------------------------*/
-    public const int WhiteBalance_Click = -1;
-    public const int WhiteBalance_Auto = 0;
-    public const int WhiteBalance_Daylight = 1;
-    public const int WhiteBalance_Cloudy = 2;
-    public const int WhiteBalance_Tungsten = 3;
-    public const int WhiteBalance_Fluorescent = 4;
-    public const int WhiteBalance_Strobe = 5;
-    public const int WhiteBalance_Shade = 8;
-    public const int WhiteBalance_ColorTemp = 9;
-    public const int WhiteBalance_Manual1 = 6;
-    public const int WhiteBalance_Manual2 = 15;
-    public const int WhiteBalance_Manual3 = 16;
-    public const int WhiteBalance_Manual4 = 18;
-    public const int WhiteBalance_Manual5 = 19;
-    public const int WhiteBalance_PCSet1 = 10;
-    public const int WhiteBalance_PCSet2 = 11;
-    public const int WhiteBalance_PCSet3 = 12;
-    public const int WhiteBalance_PCSet4 = 20;
-    public const int WhiteBalance_PCSet5 = 21;
-    public const int WhiteBalance_AwbWhite = 23;
-
-    /*-----------------------------------------------------------------------------
-     Color Space
-    -----------------------------------------------------------------------------*/
-    public const uint ColorSpace_sRGB = 1;
-    public const uint ColorSpace_AdobeRGB = 2;
-    public const uint ColorSpace_Unknown = 0xffffffff;
-
-    /*-----------------------------------------------------------------------------
-     PictureStyle
-    -----------------------------------------------------------------------------*/
-    public const uint PictureStyle_Standard = 0x0081;
-    public const uint PictureStyle_Portrait = 0x0082;
-    public const uint PictureStyle_Landscape = 0x0083;
-    public const uint PictureStyle_Neutral = 0x0084;
-    public const uint PictureStyle_Faithful = 0x0085;
-    public const uint PictureStyle_Monochrome = 0x0086;
-    public const uint PictureStyle_Auto = 0x0087;
-    public const uint PictureStyle_FineDetail = 0x0088;
-    public const uint PictureStyle_User1 = 0x0021;
-    public const uint PictureStyle_User2 = 0x0022;
-    public const uint PictureStyle_User3 = 0x0023;
-    public const uint PictureStyle_PC1 = 0x0041;
-    public const uint PictureStyle_PC2 = 0x0042;
-    public const uint PictureStyle_PC3 = 0x0043;
-
-    
-    
-    
-    
-    
-
-
-    //public enum EdsBracket
-    //    : uint
-    //{
-    //}
-    //public enum EdsBracket
-    //    : uint
-    //{
-    //}
-    //public enum EdsBracket
-    //    : uint
-    //{
-    //}
-    //public enum EdsBracket
-    //    : uint
-    //{
-    //}
-    //public enum EdsBracket
-    //    : uint
-    //{
-    //}
-
-    //public enum EdsBracket
-    //    : uint
-    //{
-    //}
-
-    //public enum EdsBracket
-    //    : uint
-    //{
-    //}
-
-    //public enum EdsBracket
-    //    : uint
-    //{
-    //}
-
-    //public enum EdsBracket
-    //    : uint
-    //{
-    //}
-
-
-
-    /*-----------------------------------------------------------------------------
-		 EVF Output Device [Flag]
-		-----------------------------------------------------------------------------*/
-    public const uint EvfOutputDevice_TFT = 1;
-    public const uint EvfOutputDevice_PC = 2;
-
-
-    /*-----------------------------------------------------------------------------
-		 EVF Zoom
-		-----------------------------------------------------------------------------*/
-    public const int EvfZoom_Fit = 1;
-    public const int EvfZoom_x5 = 5;
-    public const int EvfZoom_x10 = 10;
-
-    #endregion
     #region Proto type defenition of EDSDK API
 
     /*----------------------------------
@@ -2351,7 +2300,8 @@ public static unsafe class EDSDK_API
      Video record mode
     ----------------------------------------------------------------------------*/
 
-    public enum PropID_Record_Status : uint
+    public enum PropID_Record_Status
+        : uint
     {
         End_movie_shooting = 0,
 
