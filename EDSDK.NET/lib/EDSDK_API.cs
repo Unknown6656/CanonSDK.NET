@@ -781,6 +781,131 @@ public enum StateEvent
 }
 
 
+
+public enum PropID
+    : uint
+{
+    /*----------------------------------
+     Camera Setting Properties
+    ----------------------------------*/
+    Unknown = 0x0000ffff,
+    ProductName = 0x00000002,
+    BodyIDEx = 0x00000015,
+    OwnerName = 0x00000004,
+    MakerName = 0x00000005,
+    DateTime = 0x00000006,
+    FirmwareVersion = 0x00000007,
+    BatteryLevel = 0x00000008,
+    CFn = 0x00000009,
+    SaveTo = 0x0000000b,
+    CurrentStorage = 0x0000000c,
+    CurrentFolder = 0x0000000d,
+    BatteryQuality = 0x00000010,
+
+    /*----------------------------------
+     Image Properties
+    ----------------------------------*/
+    ImageQuality = 0x00000100,
+    Orientation = 0x00000102,
+    ICCProfile = 0x00000103,
+    FocusInfo = 0x00000104,
+    WhiteBalance = 0x00000106,
+    ColorTemperature = 0x00000107,
+    WhiteBalanceShift = 0x00000108,
+    ColorSpace = 0x0000010d,
+    PictureStyle = 0x00000114,
+    PictureStyleDesc = 0x00000115,
+    PictureStyleCaption = 0x00000200,
+
+    /*----------------------------------
+     Capture Properties
+    ----------------------------------*/
+    AEMode = 0x00000400,
+    AEModeSelect = 0x00000436,
+    DriveMode = 0x00000401,
+    ISOSpeed = 0x00000402,
+    MeteringMode = 0x00000403,
+    AFMode = 0x00000404,
+    Av = 0x00000405,
+    Tv = 0x00000406,
+    ExposureCompensation = 0x00000407,
+    FocalLength = 0x00000409,
+    AvailableShots = 0x0000040a,
+    Bracket = 0x0000040b,
+    WhiteBalanceBracket = 0x0000040c,
+    LensName = 0x0000040d,
+    AEBracket = 0x0000040e,
+    FEBracket = 0x0000040f,
+    ISOBracket = 0x00000410,
+    NoiseReduction = 0x00000411,
+    FlashOn = 0x00000412,
+    RedEye = 0x00000413,
+    FlashMode = 0x00000414,
+    LensStatus = 0x00000416,
+    Artist = 0x00000418,
+    Copyright = 0x00000419,
+
+    /*----------------------------------
+         EVF Properties
+        ----------------------------------*/
+    Evf_OutputDevice = 0x00000500,
+    Evf_Mode = 0x00000501,
+    Evf_WhiteBalance = 0x00000502,
+    Evf_ColorTemperature = 0x00000503,
+    Evf_DepthOfFieldPreview = 0x00000504,
+
+    // EVF IMAGE DATA Properties
+    Evf_Zoom = 0x00000507,
+    Evf_ZoomPosition = 0x00000508,
+    Evf_ImagePosition = 0x0000050B,
+    Evf_HistogramStatus = 0x0000050C,
+    Evf_AFMode = 0x0000050E,
+    Evf_HistogramY = 0x00000515,
+    Evf_HistogramR = 0x00000516,
+    Evf_HistogramG = 0x00000517,
+    Evf_HistogramB = 0x00000518,
+    Evf_CoordinateSystem = 0x00000540,
+    Evf_ZoomRect = 0x00000541,
+
+    Record = 0x00000510,
+
+    /*----------------------------------
+     Image GPS Properties
+    ----------------------------------*/
+    GPSVersionID = 0x00000800,
+    GPSLatitudeRef = 0x00000801,
+    GPSLatitude = 0x00000802,
+    GPSLongitudeRef = 0x00000803,
+    GPSLongitude = 0x00000804,
+    GPSAltitudeRef = 0x00000805,
+    GPSAltitude = 0x00000806,
+    GPSTimeStamp = 0x00000807,
+    GPSSatellites = 0x00000808,
+    GPSStatus = 0x00000809,
+    GPSMapDatum = 0x00000812,
+    GPSDateStamp = 0x0000081D,
+
+    /*----------------------------------
+    DC Properties
+    ----------------------------------*/
+    DC_Zoom = 0x00000600,
+    DC_Strobe = 0x00000601,
+    LensBarrelStatus = 0x00000605,
+    TempStatus = 0x01000415,
+    Evf_RollingPitching = 0x01000544,
+    FixedMovie = 0x01000422,
+    MovieParam = 0x01000423,
+    Evf_ClickWBCoeffs = 0x01000506,
+    ManualWhiteBalanceData = 0x01000204,
+    MirrorUpSetting = 0x01000438,
+    MirrorLockUpState = 0x01000421,
+    UTCTime = 0x01000016,
+    TimeZone = 0x01000017,
+    SummerTimeSetting = 0x01000018,
+    AutoPowerOffSetting = 0x0100045e,
+}
+
+
 [StructLayout(LayoutKind.Sequential)]
 public record struct EdsPoint(int X, int Y);
 
@@ -958,134 +1083,6 @@ public static unsafe class EDSDK_API
     /// </summary>
     private const string _DLL_PATH = "EDSDK.dll";
 
-
-
-    //public enum EdsBracket
-    //    : uint
-    //{
-    //}
-
-
-    /*----------------------------------
-     Camera Setting Properties
-    ----------------------------------*/
-    public const uint PropID_Unknown = 0x0000ffff;
-    public const uint PropID_ProductName = 0x00000002;
-    public const uint PropID_BodyIDEx = 0x00000015;
-    public const uint PropID_OwnerName = 0x00000004;
-    public const uint PropID_MakerName = 0x00000005;
-    public const uint PropID_DateTime = 0x00000006;
-    public const uint PropID_FirmwareVersion = 0x00000007;
-    public const uint PropID_BatteryLevel = 0x00000008;
-    public const uint PropID_CFn = 0x00000009;
-    public const uint PropID_SaveTo = 0x0000000b;
-    public const uint kEdsPropID_CurrentStorage = 0x0000000c;
-    public const uint kEdsPropID_CurrentFolder = 0x0000000d;
-    public const uint PropID_BatteryQuality = 0x00000010;
-
-    /*----------------------------------
-     Image Properties
-    ----------------------------------*/
-    public const uint PropID_ImageQuality = 0x00000100;
-    public const uint PropID_Orientation = 0x00000102;
-    public const uint PropID_ICCProfile = 0x00000103;
-    public const uint PropID_FocusInfo = 0x00000104;
-    public const uint PropID_WhiteBalance = 0x00000106;
-    public const uint PropID_ColorTemperature = 0x00000107;
-    public const uint PropID_WhiteBalanceShift = 0x00000108;
-    public const uint PropID_ColorSpace = 0x0000010d;
-    public const uint PropID_PictureStyle = 0x00000114;
-    public const uint PropID_PictureStyleDesc = 0x00000115;
-    public const uint PropID_PictureStyleCaption = 0x00000200;
-
-    /*----------------------------------
-     Capture Properties
-    ----------------------------------*/
-    public const uint PropID_AEMode = 0x00000400;
-    public const uint PropID_AEModeSelect = 0x00000436;
-    public const uint PropID_DriveMode = 0x00000401;
-    public const uint PropID_ISOSpeed = 0x00000402;
-    public const uint PropID_MeteringMode = 0x00000403;
-    public const uint PropID_AFMode = 0x00000404;
-    public const uint PropID_Av = 0x00000405;
-    public const uint PropID_Tv = 0x00000406;
-    public const uint PropID_ExposureCompensation = 0x00000407;
-    public const uint PropID_FocalLength = 0x00000409;
-    public const uint PropID_AvailableShots = 0x0000040a;
-    public const uint PropID_Bracket = 0x0000040b;
-    public const uint PropID_WhiteBalanceBracket = 0x0000040c;
-    public const uint PropID_LensName = 0x0000040d;
-    public const uint PropID_AEBracket = 0x0000040e;
-    public const uint PropID_FEBracket = 0x0000040f;
-    public const uint PropID_ISOBracket = 0x00000410;
-    public const uint PropID_NoiseReduction = 0x00000411;
-    public const uint PropID_FlashOn = 0x00000412;
-    public const uint PropID_RedEye = 0x00000413;
-    public const uint PropID_FlashMode = 0x00000414;
-    public const uint PropID_LensStatus = 0x00000416;
-    public const uint PropID_Artist = 0x00000418;
-    public const uint PropID_Copyright = 0x00000419;
-
-    /*----------------------------------
-		 EVF Properties
-		----------------------------------*/
-    public const uint PropID_Evf_OutputDevice = 0x00000500;
-    public const uint PropID_Evf_Mode = 0x00000501;
-    public const uint PropID_Evf_WhiteBalance = 0x00000502;
-    public const uint PropID_Evf_ColorTemperature = 0x00000503;
-    public const uint PropID_Evf_DepthOfFieldPreview = 0x00000504;
-
-    // EVF IMAGE DATA Properties
-    public const uint PropID_Evf_Zoom = 0x00000507;
-    public const uint PropID_Evf_ZoomPosition = 0x00000508;
-    public const uint PropID_Evf_ImagePosition = 0x0000050B;
-    public const uint PropID_Evf_HistogramStatus = 0x0000050C;
-    public const uint PropID_Evf_AFMode = 0x0000050E;
-    public const uint PropID_Evf_HistogramY = 0x00000515;
-    public const uint PropID_Evf_HistogramR = 0x00000516;
-    public const uint PropID_Evf_HistogramG = 0x00000517;
-    public const uint PropID_Evf_HistogramB = 0x00000518;
-    public const uint PropID_Evf_CoordinateSystem = 0x00000540;
-    public const uint PropID_Evf_ZoomRect = 0x00000541;
-    public const uint PropID_Record = 0x00000510;
-
-    /*----------------------------------
-     Image GPS Properties
-    ----------------------------------*/
-    public const uint PropID_GPSVersionID = 0x00000800;
-    public const uint PropID_GPSLatitudeRef = 0x00000801;
-    public const uint PropID_GPSLatitude = 0x00000802;
-    public const uint PropID_GPSLongitudeRef = 0x00000803;
-    public const uint PropID_GPSLongitude = 0x00000804;
-    public const uint PropID_GPSAltitudeRef = 0x00000805;
-    public const uint PropID_GPSAltitude = 0x00000806;
-    public const uint PropID_GPSTimeStamp = 0x00000807;
-    public const uint PropID_GPSSatellites = 0x00000808;
-    public const uint PropID_GPSStatus = 0x00000809;
-    public const uint PropID_GPSMapDatum = 0x00000812;
-    public const uint PropID_GPSDateStamp = 0x0000081D;
-
-    /*----------------------------------
-    DC Properties
-    ----------------------------------*/
-    public const uint PropID_DC_Zoom = 0x00000600;
-    public const uint PropID_DC_Strobe = 0x00000601;
-    public const uint PropID_LensBarrelStatus = 0x00000605;
-    public const uint PropID_TempStatus = 0x01000415;
-    public const uint PropID_Evf_RollingPitching = 0x01000544;
-    public const uint PropID_FixedMovie = 0x01000422;
-    public const uint PropID_MovieParam = 0x01000423;
-    public const uint PropID_Evf_ClickWBCoeffs = 0x01000506;
-    public const uint PropID_ManualWhiteBalanceData = 0x01000204;
-    public const uint PropID_MirrorUpSetting = 0x01000438;
-    public const uint PropID_MirrorLockUpState = 0x01000421;
-    public const uint PropID_UTCTime = 0x01000016;
-    public const uint PropID_TimeZone = 0x01000017;
-    public const uint PropID_SummerTimeSetting = 0x01000018;
-    public const uint PropID_AutoPowerOffSetting = 0x0100045e;
-
-
-
     #region Proto type defenition of EDSDK API
 
     /*----------------------------------
@@ -1160,7 +1157,7 @@ public static unsafe class EDSDK_API
         return reference != 0 ? EdsRelease(reference) : SDKError.OK;
     }
 
-    
+
     /*----------------------------------
      Item-tree operating functions
     ----------------------------------*/
