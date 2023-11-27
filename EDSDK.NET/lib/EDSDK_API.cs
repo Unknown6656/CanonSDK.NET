@@ -780,8 +780,6 @@ public enum StateEvent
     AfResult = 0x00000309,
 }
 
-
-
 public enum PropID
     : uint
 {
@@ -1237,7 +1235,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetPropertySize(nint inRef, uint inPropertyID, int inParam, out EdsDataType outDataType, out int outSize);
+    public static extern SDKError EdsGetPropertySize(nint inRef, PropID inPropertyID, int inParam, out EdsDataType outDataType, out int outSize);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1259,11 +1257,11 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, int inPropertySize, nint outPropertyData);
+    public static extern SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, int inPropertySize, nint outPropertyData);
 
     #region GetPorpertyData Wrapper
 
-    public static SDKError EdsGetPropertyData<T>(nint inRef, uint inPropertyID, int inParam, out T outPropertyData)
+    public static SDKError EdsGetPropertyData<T>(nint inRef, PropID inPropertyID, int inParam, out T outPropertyData)
         where T : unmanaged
     {
         T value = default;
@@ -1274,13 +1272,13 @@ public static unsafe class EDSDK_API
         return error;
     }
 
-    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out uint outPropertyData) =>
+    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out uint outPropertyData) =>
         EdsGetPropertyData<uint>(inRef, inPropertyID, inParam, out outPropertyData);
 
-    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsTime outPropertyData) =>
+    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out EdsTime outPropertyData) =>
         EdsGetPropertyData<EdsTime>(inRef, inPropertyID, inParam, out outPropertyData);
 
-    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsFocusInfo outPropertyData)
+    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out EdsFocusInfo outPropertyData)
     {
         int size = Marshal.SizeOf(typeof(EdsFocusInfo));
         nint ptr = Marshal.AllocHGlobal(size);
@@ -1291,16 +1289,16 @@ public static unsafe class EDSDK_API
         return err;
     }
 
-    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsPoint outPropertyData) =>
+    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out EdsPoint outPropertyData) =>
         EdsGetPropertyData<EdsPoint>(inRef, inPropertyID, inParam, out outPropertyData);
 
-    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsRect outPropertyData) =>
+    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out EdsRect outPropertyData) =>
         EdsGetPropertyData<EdsRect>(inRef, inPropertyID, inParam, out outPropertyData);
 
-    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsSize outPropertyData) =>
+    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out EdsSize outPropertyData) =>
         EdsGetPropertyData<EdsSize>(inRef, inPropertyID, inParam, out outPropertyData);
 
-    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out string outPropertyData)
+    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out string outPropertyData)
     {
         nint ptr = Marshal.AllocHGlobal(256);
         SDKError err = EdsGetPropertyData(inRef, inPropertyID, inParam, 256, ptr);
@@ -1311,7 +1309,7 @@ public static unsafe class EDSDK_API
         return err;
     }
 
-    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out int[] outPropertyData)
+    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out int[] outPropertyData)
     {
         EdsGetPropertySize(inRef, inPropertyID, 0, out _, out int size);
 
@@ -1327,10 +1325,10 @@ public static unsafe class EDSDK_API
         return err;
     }
 
-    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out EdsCameraPos outPropertyData) =>
+    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out EdsCameraPos outPropertyData) =>
         EdsGetPropertyData<EdsCameraPos>(inRef, inPropertyID, inParam, out outPropertyData);
 
-    public static SDKError EdsGetPropertyData(nint inRef, uint inPropertyID, int inParam, out byte[] outPropertyData)
+    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out byte[] outPropertyData)
     {
         EdsGetPropertySize(inRef, inPropertyID, 0, out _, out int size);
 
@@ -1414,7 +1412,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSetPropertyData(nint inRef, uint inPropertyID, int inParam, int inPropertySize, [MarshalAs(UnmanagedType.AsAny), In] object inPropertyData);
+    public static extern SDKError EdsSetPropertyData(nint inRef, PropID inPropertyID, int inParam, int inPropertySize, [MarshalAs(UnmanagedType.AsAny), In] object inPropertyData);
 
     /*-----------------------------------------------------------------------------
     //  
@@ -1433,7 +1431,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetPropertyDesc(nint inRef, uint inPropertyID, out EdsPropertyDesc outPropertyDesc);
+    public static extern SDKError EdsGetPropertyDesc(nint inRef, PropID inPropertyID, out EdsPropertyDesc outPropertyDesc);
 
     /*--------------------------------------------
       Device-list and device operating functions

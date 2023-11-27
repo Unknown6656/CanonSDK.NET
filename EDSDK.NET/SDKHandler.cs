@@ -18,9 +18,9 @@ using Microsoft.Extensions.Logging;
 namespace EDSDK.NET;
 
 
-public sealed record SDKProperty(string Name, uint Value, bool Matched = true)
+public sealed record SDKProperty(string Name, PropID Value, bool Matched = true)
 {
-    public string ValueToString() => $"0x{Value:X8}";
+    public override string ToString() => $"{(Matched ? "[matched] " : "")}{Name} ({Value}, {(uint)Value}, 0x{(uint)Value:x8})";
 }
 
 public sealed class SDKErrorEventArgs(string error, LogLevel level)
@@ -180,9 +180,9 @@ public sealed class SDKHandler
         {
             if (value != SDKError.OK)
             {
-                SDKProperty errorProperty = SDKErrorToProperty(value);
+                SDKProperty property = SDKErrorToProperty(value);
 
-                LogError($"SDK Error. Name: {errorProperty.Name}, Value: {errorProperty.ValueToString()}");
+                LogError($"SDK Error. {property}");
 
                 if (value is SDKError.COMM_DISCONNECTED or SDKError.DEVICE_INVALID or SDKError.DEVICE_NOT_FOUND)
                 {
@@ -237,15 +237,15 @@ public sealed class SDKHandler
 
     private static SDKProperty FindProperty(SDKProperty[] properties, string property) => properties.FirstOrDefault(p => p.Name == property) ?? new(property, 0, false);
 
-    private static SDKProperty FindProperty(SDKProperty[] properties, uint property) => properties.FirstOrDefault(p => p.Value == property) ?? new("[UNKNOWN]", property, false);
+    private static SDKProperty FindProperty(SDKProperty[] properties, PropID property) => properties.FirstOrDefault(p => p.Value == property) ?? new("[UNKNOWN]", property, false);
 
-    public void SetSaveToHost() => SetSetting(EDSDK_API.PropID_SaveTo, (uint)EdsSaveTo.Host);
+    public void SetSaveToHost() => SetSetting(EDSDK_API.PropID.SaveTo, (uint)EdsSaveTo.Host);
 
     public SDKProperty GetStateEvent(StateEvent stateEvent) => FindProperty(SDKStateEvents, stateEvent);
 
     public SDKProperty GetSDKProperty(string property) => FindProperty(SDKProperties, property);
 
-    public SDKProperty GetSDKProperty(uint property) => FindProperty(SDKProperties, property);
+    public SDKProperty GetSDKProperty(PropID property) => FindProperty(SDKProperties, property);
 
     public SDKProperty[] SDKProperties { get; private set; }
 
@@ -319,7 +319,7 @@ public sealed class SDKHandler
         SDKStateEvents = FilterFields(fields, "StateEvent_");
         SDKObjectEvents = FilterFields(fields, "EdsEvent.");
         SDKErrors = FilterFields(fields, "EdsError.");
-        SDKProperties = FilterFields(fields, "kEdsPropID_", "PropID_");
+        SDKProperties = FilterFields(fields, "kEdsPropID.", "PropID_");
     }
 
     private static SDKProperty[] FilterFields(FieldInfo[] fields, string prefix, string prefix2 = null)
@@ -531,7 +531,7 @@ public sealed class SDKHandler
         if (inEvent is PropertyEvent.PropertyChanged)
             LogPropertyValue(inPropertyID, GetSetting(inPropertyID));
 
-        if (inPropertyID == PropID_Evf_OutputDevice && IsLiveViewOn)
+        if (inPropertyID == PropID.Evf_OutputDevice && IsLiveViewOn)
             DownloadEvf();
 
         return SDKError.OK;
@@ -548,7 +548,7 @@ public sealed class SDKHandler
     {
         SDKProperty stateProperty = GetStateEvent(inEvent);
 
-        LogInfo($"SDK State Event. Name: {stateProperty.Name}, Hex {stateProperty.ValueToString()}");
+        LogInfo($"SDK State Event. {stateProperty}");
 
         //Handle state event here
         switch (inEvent)
@@ -843,8 +843,8 @@ public sealed class SDKHandler
         if (MainCamera.Handle != 0)
         {
             //a list of settings can only be retrieved for following properties
-            if (PropID == PropID_AEModeSelect || PropID == PropID_ISOSpeed || PropID == PropID_Av
-                || PropID == PropID_Tv || PropID == PropID_MeteringMode || PropID == PropID_ExposureCompensation)
+            if (PropID == PropID.AEModeSelect || PropID == PropID.ISOSpeed || PropID == PropID.Av
+                || PropID == PropID.Tv || PropID == PropID.MeteringMode || PropID == PropID.ExposureCompensation)
             {
                 //get the list of possible values
                 EdsPropertyDesc des = new();
@@ -946,11 +946,11 @@ public sealed class SDKHandler
     /// <summary>
     /// Sets an uint value for the given property ID
     /// </summary>
-    /// <param name="propertyId">The property ID</param>
+    /// <param name="property">The property ID</param>
     /// <param name="value">The value which will be set</param>
-    public void SetSetting(uint propertyId, uint value)
+    public void SetSetting(PropID property, uint value)
     {
-        LogSetProperty(propertyId, $"0x{value:X}");
+        LogSetProperty(property, $"0x{value:X}");
         
         if (MainCamera.Handle != 0)
         {
@@ -961,9 +961,9 @@ public sealed class SDKHandler
                 LogInfo($"Executing SDK command. ThreadName: {cThread.Name}, ApartmentState: {cThread.GetApartmentState()}");
 
                 //get size of property
-                Error = EDSDK_API.EdsGetPropertySize(MainCamera.Handle, propertyId, 0, out EdsDataType proptype, out int propsize);
+                Error = EDSDK_API.EdsGetPropertySize(MainCamera.Handle, property, 0, out EdsDataType proptype, out int propsize);
                 //set given property
-                Error = EDSDK_API.EdsSetPropertyData(MainCamera.Handle, propertyId, 0, propsize, value);
+                Error = EDSDK_API.EdsSetPropertyData(MainCamera.Handle, property, 0, propsize, value);
             }, sdkAction: nameof(EDSDK_API.EdsSetPropertyData));
         }
         else
@@ -1079,13 +1079,13 @@ public sealed class SDKHandler
             int listener_count = LiveViewUpdated?.GetInvocationList()?.Length ?? 0;
 
             LogInfo($"{listener_count} LiveViewUpdated listeners found");
-            LogPropertyValue(nameof(PropID_Evf_OutputDevice), GetSetting(PropID_Evf_OutputDevice));
+            LogPropertyValue(nameof(PropID.Evf_OutputDevice), GetSetting(PropID.Evf_OutputDevice));
 
-            SetSetting(PropID_Evf_OutputDevice, EvfOutputDevice_PC);
+            SetSetting(PropID.Evf_OutputDevice, EvfOutputDevice_PC);
 
             IsLiveViewOn = true;
 
-            LogPropertyValue(nameof(PropID_Evf_OutputDevice), GetSetting(PropID_Evf_OutputDevice));
+            LogPropertyValue(nameof(PropID.Evf_OutputDevice), GetSetting(PropID.Evf_OutputDevice));
         }
     }
 
@@ -1160,8 +1160,8 @@ public sealed class SDKHandler
                     }
 
                     Evf_ZoomRect = GetEvfZoomRect(EvfImageRef);
-                    Evf_ZoomPosition = GetEvfPoints(PropID_Evf_ZoomPosition, EvfImageRef);
-                    Evf_ImagePosition = GetEvfPoints(PropID_Evf_ImagePosition, EvfImageRef);
+                    Evf_ZoomPosition = GetEvfPoints(PropID.Evf_ZoomPosition, EvfImageRef);
+                    Evf_ImagePosition = GetEvfPoints(PropID.Evf_ImagePosition, EvfImageRef);
 
                     //release current evf image
                     Error = EDSDK_API.Release(EvfImageRef);
@@ -1196,7 +1196,7 @@ public sealed class SDKHandler
         LogInfo("Killing LiveView");
 
         //stop the live view
-        SetSetting(PropID_Evf_OutputDevice, LVoff ? 0 : EvfOutputDevice_TFT);
+        SetSetting(PropID.Evf_OutputDevice, LVoff ? 0 : EvfOutputDevice_TFT);
     }
 
 
@@ -1214,7 +1214,7 @@ public sealed class SDKHandler
     /// <returns>ZoomRect value</returns>
     private EdsRect GetEvfZoomRect(nint imgRef)
     {
-        EDSDK_API.EdsGetPropertyData<EdsRect>(imgRef, EDSDK_API.PropID_Evf_ZoomPosition, 0, out EdsRect rect);
+        EDSDK_API.EdsGetPropertyData<EdsRect>(imgRef, EDSDK_API.PropID.Evf_ZoomPosition, 0, out EdsRect rect);
 
         return rect;
     }
@@ -1226,7 +1226,7 @@ public sealed class SDKHandler
     /// <returns>the live view coordinate system</returns>
     private static EdsSize GetEvfCoord(nint imgRef)
     {
-        EDSDK_API.EdsGetPropertyData<EdsSize>(imgRef, EDSDK_API.PropID_Evf_CoordinateSystem, 0, out EdsSize size);
+        EDSDK_API.EdsGetPropertyData<EdsSize>(imgRef, PropID.Evf_CoordinateSystem, 0, out EdsSize size);
 
         return size;
     }
@@ -1236,9 +1236,9 @@ public sealed class SDKHandler
     /// </summary>
     /// <param name="imgRef">The live view reference</param>
     /// <returns>a live view EdsPoint value</returns>
-    private static EdsPoint GetEvfPoints(uint PropID, nint imgRef)
+    private static EdsPoint GetEvfPoints(PropID property, nint imgRef)
     {
-        EDSDK_API.EdsGetPropertyData<EdsPoint>(imgRef, PropID, 0, out EdsPoint point);
+        EDSDK_API.EdsGetPropertyData<EdsPoint>(imgRef, property, 0, out EdsPoint point);
 
         return point;
     }
@@ -1260,7 +1260,7 @@ public sealed class SDKHandler
         }
     }
 
-    public static void SetTFTEvf() => SetSetting(PropID_Evf_OutputDevice, EvfOutputDevice_TFT);
+    public static void SetTFTEvf() => SetSetting(PropID.Evf_OutputDevice, EvfOutputDevice.TFT);
 
     /// <summary>
     /// Starts recording a video
@@ -1271,48 +1271,48 @@ public sealed class SDKHandler
         if (!IsFilming)
         {
             //Snapshot setting for restoration after filming completes
-            PrevEVFSetting = GetSetting(PropID_Evf_OutputDevice);
+            PrevEVFSetting = GetSetting(PropID.Evf_OutputDevice);
 
 
             //Set EVF output to TFT to enable film, otherwise
             //NOTE: Not working to set it and start video in the same action, disabling
-            //SetSetting(PropID_Evf_OutputDevice, EvfOutputDevice_TFT);
+            //SetSetting(PropID.Evf_OutputDevice, EvfOutputDevice_TFT);
             //SetTFTEvf();
 
-            //LogPropertyValue(nameof(PropID_Record), GetSetting(PropID_Record));
+            //LogPropertyValue(nameof(PropID.Record), GetSetting(PropID.Record));
 
-            SetSetting(PropID_Evf_OutputDevice, 3);
+            SetSetting(PropID.Evf_OutputDevice, 3);
 
             //Check if the camera is ready to film
-            uint recordStatus = GetSetting(PropID_Record);
-            if (recordStatus != (uint)PropID_Record_Status.Movie_shooting_ready)
+            uint recordStatus = GetSetting(PropID.Record);
+            if (recordStatus != (uint)PropID.Record_Status.Movie_shooting_ready)
             {
                 //DOES NOT WORK, readonly setting?
                 //DOES NOT THROW AN ERROR
-                //SetSetting(PropID_Record, (uint)EdsDriveMode.Video);
-                //SetSetting(PropID_Record, (uint)PropID_Record_Status.Movie_shooting_ready);
+                //SetSetting(PropID.Record, (uint)EdsDriveMode.Video);
+                //SetSetting(PropID.Record, (uint)PropID.Record_Status.Movie_shooting_ready);
 
 
-                LogPropertyValue(PropID_Record, recordStatus);
-                Task tx = Log(LogLevel.Information, "Camera reporting incorrect mode. expected. Continue. {expected}, was: {was}", PropID_Record_Status.Movie_shooting_ready, recordStatus);
+                LogPropertyValue(PropID.Record, recordStatus);
+                Task tx = Log(LogLevel.Information, "Camera reporting incorrect mode. expected. Continue. {expected}, was: {was}", PropID.Record_Status.Movie_shooting_ready, recordStatus);
                 tx = Log(LogLevel.Information, "Camera physical switch must be in movie record mode. Leave in this mode permanently!");
-                //throw new ArgumentException("Camera in invalid mode", nameof(PropID_Record));
+                //throw new ArgumentException("Camera in invalid mode", nameof(PropID.Record));
             }
             IsFilming = true;
 
 
             //to restore the current setting after recording
-            PrevSaveTo = GetSetting(PropID_SaveTo);
+            PrevSaveTo = GetSetting(PropID.SaveTo);
 
 
             //when recording videos, it has to be saved on the camera internal memory
-            SetSetting(PropID_SaveTo, (uint)EdsSaveTo.Camera);
+            SetSetting(PropID.SaveTo, (uint)EdsSaveTo.Camera);
             DownloadVideo = false;
             //start the video recording
 
             LogInfo("Start filming");
 
-            SendSDKCommand(delegate { Error = EDSDK_API.EdsSetPropertyData(MainCamera.Handle, PropID_Record, 0, sizeof(PropID_Record_Status), (uint)PropID_Record_Status.Begin_movie_shooting); });
+            SendSDKCommand(delegate { Error = EDSDK_API.EdsSetPropertyData(MainCamera.Handle, PropID.Record, 0, sizeof(PropID.Record_Status), (uint)PropID.Record_Status.Begin_movie_shooting); });
         }
     }
 
@@ -1332,12 +1332,12 @@ public sealed class SDKHandler
                 //Shut off live view (it will hang otherwise)
                 //StopLiveView(false);
                 //stop video recording
-                Error = EDSDK_API.EdsSetPropertyData(MainCamera.Handle, PropID_Record, 0, sizeof(PropID_Record_Status), (uint)PropID_Record_Status.End_movie_shooting);
+                Error = EDSDK_API.EdsSetPropertyData(MainCamera.Handle, PropID.Record, 0, sizeof(PropID.Record_Status), (uint)PropID.Record_Status.End_movie_shooting);
                 stopMs = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                 //set back to previous state
             });
-            SetSetting(PropID_SaveTo, PrevSaveTo);
-            SetSetting(PropID_Evf_OutputDevice, PrevEVFSetting);
+            SetSetting(PropID.SaveTo, PrevSaveTo);
+            SetSetting(PropID.Evf_OutputDevice, PrevEVFSetting);
             if (PrevCapacity.NumberOfFreeClusters != 0)
             {
                 SetCapacity(PrevCapacity);
@@ -1734,18 +1734,19 @@ public sealed class SDKHandler
     #endregion
 
 
-    private void LogSetProperty(uint propertyId, string value)
+    private void LogSetProperty(PropID property, string value)
     {
-        SDKProperty prop = GetSDKProperty(propertyId);
+        SDKProperty prop = GetSDKProperty(property);
 
         LogInfo($"Setting property. Name: {prop.Name}, Id: {prop.Value}, Value: {value}");
     }
 
     public void LogPropertyValue(string propertyName, uint propertyValue) => LogInfo($"Camera_SDKPropertyEvent. Property {propertyName} changed to 0x{propertyValue:X}");
 
-    public void LogPropertyValue(uint propertyID, uint propertyValue)
+    public void LogPropertyValue(PropID property, uint propertyValue)
     {
-        SDKProperty prop = GetSDKProperty(propertyID);
+        SDKProperty prop = GetSDKProperty(property);
+
         LogPropertyValue(prop.Name, propertyValue);
         //do nothing with task, continue
     }
