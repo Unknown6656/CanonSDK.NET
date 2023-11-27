@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace EDSDK.Native;
@@ -5,9 +7,9 @@ namespace EDSDK.Native;
 
 public delegate SDKError EdsProgressCallback(uint inPercent, nint inContext, ref bool outCancel);
 public delegate SDKError EdsCameraAddedHandler(nint inContext);
-public delegate SDKError EdsPropertyEventHandler(PropertyEvent inEvent, uint inPropertyID, uint inParam, nint inContext);
-public delegate SDKError EdsObjectEventHandler(EdsEvent inEvent, nint inRef, nint inContext);
-public delegate SDKError EdsStateEventHandler(StateEvent inEvent, uint inParameter, nint inContext);
+public delegate SDKError EdsPropertyEventHandler(PropertyEvent @event, SDKProperty property, uint inParam, nint inContext);
+public delegate SDKError EdsObjectEventHandler(EdsEvent @event, nint inRef, nint inContext);
+public delegate SDKError EdsStateEventHandler(StateEvent @event, uint inParameter, nint inContext);
 
 public enum EdsDataType
     : uint
@@ -198,7 +200,7 @@ public enum EdsMirrorUpSetting
 }
 
 /// <summary>
-/// Drive mode enum, see PropID_DriveMode for get / set
+/// Drive mode enum, see SDKProperty_DriveMode for get / set
 /// <para/>
 /// <i>NOTE: Does not seem to correspond to the recording properties for video</i>
 /// </summary>
@@ -635,6 +637,7 @@ public enum EvfDepthOfFieldPreview
 public enum EvfOutputDevice
     : uint
 {
+    Off = 0,
     TFT = 1,
     PC = 2,
 }
@@ -648,6 +651,18 @@ public enum Zoom
     Fit = 1,
     x5 = 5,
     x10 = 10,
+}
+
+/// <summary>
+/// Video record mode
+/// </summary>
+public enum VideoRecordStatus
+    : uint
+{
+    End_movie_shooting = 0,
+    //NOTE: This is not documented anywhere, purely taken from the original implementation
+    Movie_shooting_ready = 3,
+    Begin_movie_shooting = 4,
 }
 
 public enum EdsEvent
@@ -780,129 +795,281 @@ public enum StateEvent
     AfResult = 0x00000309,
 }
 
-public enum PropID
+public enum SDKError
     : uint
+{
+    /// <summary>
+    /// ED-SDK Function Success Code
+    /// </summary>
+    OK = 0x00000000,
+
+    /* Miscellaneous errors */
+    UNIMPLEMENTED = 0x00000001,
+    INTERNAL_ERROR = 0x00000002,
+    MEM_ALLOC_FAILED = 0x00000003,
+    MEM_FREE_FAILED = 0x00000004,
+    OPERATION_CANCELLED = 0x00000005,
+    INCOMPATIBLE_VERSION = 0x00000006,
+    NOT_SUPPORTED = 0x00000007,
+    UNEXPECTED_EXCEPTION = 0x00000008,
+    PROTECTION_VIOLATION = 0x00000009,
+    MISSING_SUBCOMPONENT = 0x0000000A,
+    SELECTION_UNAVAILABLE = 0x0000000B,
+
+    /* File errors */
+    FILE_IO_ERROR = 0x00000020,
+    FILE_TOO_MANY_OPEN = 0x00000021,
+    FILE_NOT_FOUND = 0x00000022,
+    FILE_OPEN_ERROR = 0x00000023,
+    FILE_CLOSE_ERROR = 0x00000024,
+    FILE_SEEK_ERROR = 0x00000025,
+    FILE_TELL_ERROR = 0x00000026,
+    FILE_READ_ERROR = 0x00000027,
+    FILE_WRITE_ERROR = 0x00000028,
+    FILE_PERMISSION_ERROR = 0x00000029,
+    FILE_DISK_FULL_ERROR = 0x0000002A,
+    FILE_ALREADY_EXISTS = 0x0000002B,
+    FILE_FORMAT_UNRECOGNIZED = 0x0000002C,
+    FILE_DATA_CORRUPT = 0x0000002D,
+    FILE_NAMING_NA = 0x0000002E,
+
+    /* Directory errors */
+    DIR_NOT_FOUND = 0x00000040,
+    DIR_IO_ERROR = 0x00000041,
+    DIR_ENTRY_NOT_FOUND = 0x00000042,
+    DIR_ENTRY_EXISTS = 0x00000043,
+    DIR_NOT_EMPTY = 0x00000044,
+
+    /* Property errors */
+    PROPERTIES_UNAVAILABLE = 0x00000050,
+    PROPERTIES_MISMATCH = 0x00000051,
+    PROPERTIES_NOT_LOADED = 0x00000053,
+
+    /* Function Parameter errors */
+    INVALID_PARAMETER = 0x00000060,
+    INVALID_HANDLE = 0x00000061,
+    INVALID_POINTER = 0x00000062,
+    INVALID_INDEX = 0x00000063,
+    INVALID_LENGTH = 0x00000064,
+    INVALID_FN_POINTER = 0x00000065,
+    INVALID_SORT_FN = 0x00000066,
+
+    /* Device errors */
+    DEVICE_NOT_FOUND = 0x00000080,
+    DEVICE_BUSY = 0x00000081,
+    DEVICE_INVALID = 0x00000082,
+    DEVICE_EMERGENCY = 0x00000083,
+    DEVICE_MEMORY_FULL = 0x00000084,
+    DEVICE_INTERNAL_ERROR = 0x00000085,
+    DEVICE_INVALID_PARAMETER = 0x00000086,
+    DEVICE_NO_DISK = 0x00000087,
+    DEVICE_DISK_ERROR = 0x00000088,
+    DEVICE_CF_GATE_CHANGED = 0x00000089,
+    DEVICE_DIAL_CHANGED = 0x0000008A,
+    DEVICE_NOT_INSTALLED = 0x0000008B,
+    DEVICE_STAY_AWAKE = 0x0000008C,
+    DEVICE_NOT_RELEASED = 0x0000008D,
+
+    /* Stream errors */
+    STREAM_IO_ERROR = 0x000000A0,
+    STREAM_NOT_OPEN = 0x000000A1,
+    STREAM_ALREADY_OPEN = 0x000000A2,
+    STREAM_OPEN_ERROR = 0x000000A3,
+    STREAM_CLOSE_ERROR = 0x000000A4,
+    STREAM_SEEK_ERROR = 0x000000A5,
+    STREAM_TELL_ERROR = 0x000000A6,
+    STREAM_READ_ERROR = 0x000000A7,
+    STREAM_WRITE_ERROR = 0x000000A8,
+    STREAM_PERMISSION_ERROR = 0x000000A9,
+    STREAM_COULDNT_BEGIN_THREAD = 0x000000AA,
+    STREAM_BAD_OPTIONS = 0x000000AB,
+    STREAM_END_OF_STREAM = 0x000000AC,
+
+    /* Communications errors */
+    COMM_PORT_IS_IN_USE = 0x000000C0,
+    COMM_DISCONNECTED = 0x000000C1,
+    COMM_DEVICE_INCOMPATIBLE = 0x000000C2,
+    COMM_BUFFER_FULL = 0x000000C3,
+    COMM_USB_BUS_ERR = 0x000000C4,
+
+    /* Lock/Unlock */
+    USB_DEVICE_LOCK_ERROR = 0x000000D0,
+    USB_DEVICE_UNLOCK_ERROR = 0x000000D1,
+
+    /* STI/WIA */
+    STI_UNKNOWN_ERROR = 0x000000E0,
+    STI_INTERNAL_ERROR = 0x000000E1,
+    STI_DEVICE_CREATE_ERROR = 0x000000E2,
+    STI_DEVICE_RELEASE_ERROR = 0x000000E3,
+    DEVICE_NOT_LAUNCHED = 0x000000E4,
+
+    ENUM_NA = 0x000000F0,
+    INVALID_FN_CALL = 0x000000F1,
+    HANDLE_NOT_FOUND = 0x000000F2,
+    INVALID_ID = 0x000000F3,
+    WAIT_TIMEOUT_ERROR = 0x000000F4,
+
+    /* PTP */
+    SESSION_NOT_OPEN = 0x00002003,
+    INVALID_TRANSACTIONID = 0x00002004,
+    INCOMPLETE_TRANSFER = 0x00002007,
+    INVALID_STRAGEID = 0x00002008,
+    DEVICEPROP_NOT_SUPPORTED = 0x0000200A,
+    INVALID_OBJECTFORMATCODE = 0x0000200B,
+    SELF_TEST_FAILED = 0x00002011,
+    PARTIAL_DELETION = 0x00002012,
+    SPECIFICATION_BY_FORMAT_UNSUPPORTED = 0x00002014,
+    NO_VALID_OBJECTINFO = 0x00002015,
+    INVALID_CODE_FORMAT = 0x00002016,
+    UNKNOWN_VENDER_CODE = 0x00002017,
+    CAPTURE_ALREADY_TERMINATED = 0x00002018,
+    INVALID_PARENTOBJECT = 0x0000201A,
+    INVALID_DEVICEPROP_FORMAT = 0x0000201B,
+    INVALID_DEVICEPROP_VALUE = 0x0000201C,
+    SESSION_ALREADY_OPEN = 0x0000201E,
+    TRANSACTION_CANCELLED = 0x0000201F,
+    SPECIFICATION_OF_DESTINATION_UNSUPPORTED = 0x00002020,
+    UNKNOWN_COMMAND = 0x0000A001,
+    OPERATION_REFUSED = 0x0000A005,
+    LENS_COVER_CLOSE = 0x0000A006,
+    LOW_BATTERY = 0x0000A101,
+    OBJECT_NOTREADY = 0x0000A102,
+
+    /* Capture Error */
+    TAKE_PICTURE_AF_NG = 0x00008D01,
+    TAKE_PICTURE_RESERVED = 0x00008D02,
+    TAKE_PICTURE_MIRROR_UP_NG = 0x00008D03,
+    TAKE_PICTURE_SENSOR_CLEANING_NG = 0x00008D04,
+    TAKE_PICTURE_SILENCE_NG = 0x00008D05,
+    TAKE_PICTURE_NO_CARD_NG = 0x00008D06,
+    TAKE_PICTURE_CARD_NG = 0x00008D07,
+    TAKE_PICTURE_CARD_PROTECT_NG = 0x00008D08,
+
+    LAST_GENERIC_ERROR_PLUS_ONE = 0x000000F5,
+}
+
+
+public readonly partial struct SDKProperty
 {
     /*----------------------------------
      Camera Setting Properties
     ----------------------------------*/
-    Unknown = 0x0000ffff,
-    ProductName = 0x00000002,
-    BodyIDEx = 0x00000015,
-    OwnerName = 0x00000004,
-    MakerName = 0x00000005,
-    DateTime = 0x00000006,
-    FirmwareVersion = 0x00000007,
-    BatteryLevel = 0x00000008,
-    CFn = 0x00000009,
-    SaveTo = 0x0000000b,
-    CurrentStorage = 0x0000000c,
-    CurrentFolder = 0x0000000d,
-    BatteryQuality = 0x00000010,
+    public static SDKProperty Unknown { get; } = new(0x0000ffff);
+    public static SDKProperty ProductName { get; } = new(0x00000002);
+    public static SDKProperty BodyIDEx { get; } = new(0x00000015);
+    public static SDKProperty OwnerName { get; } = new(0x00000004);
+    public static SDKProperty MakerName { get; } = new(0x00000005);
+    public static SDKProperty DateTime { get; } = new(0x00000006);
+    public static SDKProperty FirmwareVersion { get; } = new(0x00000007);
+    public static SDKProperty BatteryLevel { get; } = new(0x00000008);
+    public static SDKProperty CFn { get; } = new(0x00000009);
+    public static SDKProperty SaveTo { get; } = new(0x0000000b);
+    public static SDKProperty CurrentStorage { get; } = new(0x0000000c);
+    public static SDKProperty CurrentFolder { get; } = new(0x0000000d);
+    public static SDKProperty BatteryQuality { get; } = new(0x00000010);
 
     /*----------------------------------
      Image Properties
     ----------------------------------*/
-    ImageQuality = 0x00000100,
-    Orientation = 0x00000102,
-    ICCProfile = 0x00000103,
-    FocusInfo = 0x00000104,
-    WhiteBalance = 0x00000106,
-    ColorTemperature = 0x00000107,
-    WhiteBalanceShift = 0x00000108,
-    ColorSpace = 0x0000010d,
-    PictureStyle = 0x00000114,
-    PictureStyleDesc = 0x00000115,
-    PictureStyleCaption = 0x00000200,
+    public static SDKProperty ImageQuality { get; } = new(0x00000100);
+    public static SDKProperty Orientation { get; } = new(0x00000102);
+    public static SDKProperty ICCProfile { get; } = new(0x00000103);
+    public static SDKProperty FocusInfo { get; } = new(0x00000104);
+    public static SDKProperty WhiteBalance { get; } = new(0x00000106);
+    public static SDKProperty ColorTemperature { get; } = new(0x00000107);
+    public static SDKProperty WhiteBalanceShift { get; } = new(0x00000108);
+    public static SDKProperty ColorSpace { get; } = new(0x0000010d);
+    public static SDKProperty PictureStyle { get; } = new(0x00000114);
+    public static SDKProperty PictureStyleDesc { get; } = new(0x00000115);
+    public static SDKProperty PictureStyleCaption { get; } = new(0x00000200);
 
     /*----------------------------------
      Capture Properties
     ----------------------------------*/
-    AEMode = 0x00000400,
-    AEModeSelect = 0x00000436,
-    DriveMode = 0x00000401,
-    ISOSpeed = 0x00000402,
-    MeteringMode = 0x00000403,
-    AFMode = 0x00000404,
-    Av = 0x00000405,
-    Tv = 0x00000406,
-    ExposureCompensation = 0x00000407,
-    FocalLength = 0x00000409,
-    AvailableShots = 0x0000040a,
-    Bracket = 0x0000040b,
-    WhiteBalanceBracket = 0x0000040c,
-    LensName = 0x0000040d,
-    AEBracket = 0x0000040e,
-    FEBracket = 0x0000040f,
-    ISOBracket = 0x00000410,
-    NoiseReduction = 0x00000411,
-    FlashOn = 0x00000412,
-    RedEye = 0x00000413,
-    FlashMode = 0x00000414,
-    LensStatus = 0x00000416,
-    Artist = 0x00000418,
-    Copyright = 0x00000419,
+    public static SDKProperty AEMode { get; } = new(0x00000400);
+    public static SDKProperty AEModeSelect { get; } = new(0x00000436);
+    public static SDKProperty DriveMode { get; } = new(0x00000401);
+    public static SDKProperty ISOSpeed { get; } = new(0x00000402);
+    public static SDKProperty MeteringMode { get; } = new(0x00000403);
+    public static SDKProperty AFMode { get; } = new(0x00000404);
+    public static SDKProperty Av { get; } = new(0x00000405);
+    public static SDKProperty Tv { get; } = new(0x00000406);
+    public static SDKProperty ExposureCompensation { get; } = new(0x00000407);
+    public static SDKProperty FocalLength { get; } = new(0x00000409);
+    public static SDKProperty AvailableShots { get; } = new(0x0000040a);
+    public static SDKProperty Bracket { get; } = new(0x0000040b);
+    public static SDKProperty WhiteBalanceBracket { get; } = new(0x0000040c);
+    public static SDKProperty LensName { get; } = new(0x0000040d);
+    public static SDKProperty AEBracket { get; } = new(0x0000040e);
+    public static SDKProperty FEBracket { get; } = new(0x0000040f);
+    public static SDKProperty ISOBracket { get; } = new(0x00000410);
+    public static SDKProperty NoiseReduction { get; } = new(0x00000411);
+    public static SDKProperty FlashOn { get; } = new(0x00000412);
+    public static SDKProperty RedEye { get; } = new(0x00000413);
+    public static SDKProperty FlashMode { get; } = new(0x00000414);
+    public static SDKProperty LensStatus { get; } = new(0x00000416);
+    public static SDKProperty Artist { get; } = new(0x00000418);
+    public static SDKProperty Copyright { get; } = new(0x00000419);
 
     /*----------------------------------
          EVF Properties
         ----------------------------------*/
-    Evf_OutputDevice = 0x00000500,
-    Evf_Mode = 0x00000501,
-    Evf_WhiteBalance = 0x00000502,
-    Evf_ColorTemperature = 0x00000503,
-    Evf_DepthOfFieldPreview = 0x00000504,
+    public static SDKProperty Evf_OutputDevice { get; } = new(0x00000500);
+    public static SDKProperty Evf_Mode { get; } = new(0x00000501);
+    public static SDKProperty Evf_WhiteBalance { get; } = new(0x00000502);
+    public static SDKProperty Evf_ColorTemperature { get; } = new(0x00000503);
+    public static SDKProperty Evf_DepthOfFieldPreview { get; } = new(0x00000504);
 
     // EVF IMAGE DATA Properties
-    Evf_Zoom = 0x00000507,
-    Evf_ZoomPosition = 0x00000508,
-    Evf_ImagePosition = 0x0000050B,
-    Evf_HistogramStatus = 0x0000050C,
-    Evf_AFMode = 0x0000050E,
-    Evf_HistogramY = 0x00000515,
-    Evf_HistogramR = 0x00000516,
-    Evf_HistogramG = 0x00000517,
-    Evf_HistogramB = 0x00000518,
-    Evf_CoordinateSystem = 0x00000540,
-    Evf_ZoomRect = 0x00000541,
+    public static SDKProperty Evf_Zoom { get; } = new(0x00000507);
+    public static SDKProperty Evf_ZoomPosition { get; } = new(0x00000508);
+    public static SDKProperty Evf_ImagePosition { get; } = new(0x0000050B);
+    public static SDKProperty Evf_HistogramStatus { get; } = new(0x0000050C);
+    public static SDKProperty Evf_AFMode { get; } = new(0x0000050E);
+    public static SDKProperty Evf_HistogramY { get; } = new(0x00000515);
+    public static SDKProperty Evf_HistogramR { get; } = new(0x00000516);
+    public static SDKProperty Evf_HistogramG { get; } = new(0x00000517);
+    public static SDKProperty Evf_HistogramB { get; } = new(0x00000518);
+    public static SDKProperty Evf_CoordinateSystem { get; } = new(0x00000540);
+    public static SDKProperty Evf_ZoomRect { get; } = new(0x00000541);
 
-    Record = 0x00000510,
+    public static SDKProperty Record { get; } = new(0x00000510);
 
     /*----------------------------------
      Image GPS Properties
     ----------------------------------*/
-    GPSVersionID = 0x00000800,
-    GPSLatitudeRef = 0x00000801,
-    GPSLatitude = 0x00000802,
-    GPSLongitudeRef = 0x00000803,
-    GPSLongitude = 0x00000804,
-    GPSAltitudeRef = 0x00000805,
-    GPSAltitude = 0x00000806,
-    GPSTimeStamp = 0x00000807,
-    GPSSatellites = 0x00000808,
-    GPSStatus = 0x00000809,
-    GPSMapDatum = 0x00000812,
-    GPSDateStamp = 0x0000081D,
+    public static SDKProperty GPSVersionID { get; } = new(0x00000800);
+    public static SDKProperty GPSLatitudeRef { get; } = new(0x00000801);
+    public static SDKProperty GPSLatitude { get; } = new(0x00000802);
+    public static SDKProperty GPSLongitudeRef { get; } = new(0x00000803);
+    public static SDKProperty GPSLongitude { get; } = new(0x00000804);
+    public static SDKProperty GPSAltitudeRef { get; } = new(0x00000805);
+    public static SDKProperty GPSAltitude { get; } = new(0x00000806);
+    public static SDKProperty GPSTimeStamp { get; } = new(0x00000807);
+    public static SDKProperty GPSSatellites { get; } = new(0x00000808);
+    public static SDKProperty GPSStatus { get; } = new(0x00000809);
+    public static SDKProperty GPSMapDatum { get; } = new(0x00000812);
+    public static SDKProperty GPSDateStamp { get; } = new(0x0000081D);
 
     /*----------------------------------
     DC Properties
     ----------------------------------*/
-    DC_Zoom = 0x00000600,
-    DC_Strobe = 0x00000601,
-    LensBarrelStatus = 0x00000605,
-    TempStatus = 0x01000415,
-    Evf_RollingPitching = 0x01000544,
-    FixedMovie = 0x01000422,
-    MovieParam = 0x01000423,
-    Evf_ClickWBCoeffs = 0x01000506,
-    ManualWhiteBalanceData = 0x01000204,
-    MirrorUpSetting = 0x01000438,
-    MirrorLockUpState = 0x01000421,
-    UTCTime = 0x01000016,
-    TimeZone = 0x01000017,
-    SummerTimeSetting = 0x01000018,
-    AutoPowerOffSetting = 0x0100045e,
+    public static SDKProperty DC_Zoom { get; } = new(0x00000600);
+    public static SDKProperty DC_Strobe { get; } = new(0x00000601);
+    public static SDKProperty LensBarrelStatus { get; } = new(0x00000605);
+    public static SDKProperty TempStatus { get; } = new(0x01000415);
+    public static SDKProperty Evf_RollingPitching { get; } = new(0x01000544);
+    public static SDKProperty FixedMovie { get; } = new(0x01000422);
+    public static SDKProperty MovieParam { get; } = new(0x01000423);
+    public static SDKProperty Evf_ClickWBCoeffs { get; } = new(0x01000506);
+    public static SDKProperty ManualWhiteBalanceData { get; } = new(0x01000204);
+    public static SDKProperty MirrorUpSetting { get; } = new(0x01000438);
+    public static SDKProperty MirrorLockUpState { get; } = new(0x01000421);
+    public static SDKProperty UTCTime { get; } = new(0x01000016);
+    public static SDKProperty TimeZone { get; } = new(0x01000017);
+    public static SDKProperty SummerTimeSetting { get; } = new(0x01000018);
+    public static SDKProperty AutoPowerOffSetting { get; } = new(0x0100045e);
 }
-
 
 [StructLayout(LayoutKind.Sequential)]
 public record struct EdsPoint(int X, int Y);
@@ -1120,7 +1287,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsTerminateSDK();
+    public static extern SDKError EdsTerminateSDK();
 
     /*-------------------------------------------
      Reference-counter operating functions
@@ -1223,7 +1390,7 @@ public static unsafe class EDSDK_API
     //
     //  Parameters:
     //       In:    inRef - The reference of the item.
-    //              inPropertyID - The ProprtyID
+    //              property - The ProprtyID
     //              inParam - Additional information of property.
     //                   We use this parameter in order to specify an index
     //                   in case there are two or more values over the same ID.
@@ -1235,7 +1402,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetPropertySize(nint inRef, PropID inPropertyID, int inParam, out EdsDataType outDataType, out int outSize);
+    public static extern SDKError EdsGetPropertySize(nint inRef, SDKProperty property, int inParam, out EdsDataType outDataType, out int outSize);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1246,7 +1413,7 @@ public static unsafe class EDSDK_API
     //
     //  Parameters:
     //       In:    inRef - The reference of the item.
-    //              inPropertyID - The ProprtyID
+    //              property - The ProprtyID
     //              inParam - Additional information of property.
     //                   We use this parameter in order to specify an index
     //                   in case there are two or more values over the same ID.
@@ -1257,51 +1424,51 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, int inPropertySize, nint outPropertyData);
+    public static extern SDKError EdsGetPropertyData(nint inRef, SDKProperty property, int inParam, int inPropertySize, nint outPropertyData);
 
     #region GetPorpertyData Wrapper
 
-    public static SDKError EdsGetPropertyData<T>(nint inRef, PropID inPropertyID, int inParam, out T outPropertyData)
+    public static SDKError EdsGetPropertyData<T>(nint inRef, SDKProperty property, int inParam, out T outPropertyData)
         where T : unmanaged
     {
         T value = default;
-        SDKError error = EdsGetPropertyData(inRef, inPropertyID, inParam, sizeof(T), (nint)(void*)&value);
+        SDKError error = EdsGetPropertyData(inRef, property, inParam, sizeof(T), (nint)(void*)&value);
 
         outPropertyData = value;
 
         return error;
     }
 
-    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out uint outPropertyData) =>
-        EdsGetPropertyData<uint>(inRef, inPropertyID, inParam, out outPropertyData);
+    public static SDKError EdsGetPropertyData(nint inRef, SDKProperty property, int inParam, out uint outPropertyData) =>
+        EdsGetPropertyData<uint>(inRef, property, inParam, out outPropertyData);
 
-    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out EdsTime outPropertyData) =>
-        EdsGetPropertyData<EdsTime>(inRef, inPropertyID, inParam, out outPropertyData);
+    public static SDKError EdsGetPropertyData(nint inRef, SDKProperty property, int inParam, out EdsTime outPropertyData) =>
+        EdsGetPropertyData<EdsTime>(inRef, property, inParam, out outPropertyData);
 
-    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out EdsFocusInfo outPropertyData)
+    public static SDKError EdsGetPropertyData(nint inRef, SDKProperty property, int inParam, out EdsFocusInfo outPropertyData)
     {
         int size = Marshal.SizeOf(typeof(EdsFocusInfo));
         nint ptr = Marshal.AllocHGlobal(size);
-        SDKError err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
+        SDKError err = EdsGetPropertyData(inRef, property, inParam, size, ptr);
 
         outPropertyData = (EdsFocusInfo)Marshal.PtrToStructure(ptr, typeof(EdsFocusInfo));
         Marshal.FreeHGlobal(ptr);
         return err;
     }
 
-    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out EdsPoint outPropertyData) =>
-        EdsGetPropertyData<EdsPoint>(inRef, inPropertyID, inParam, out outPropertyData);
+    public static SDKError EdsGetPropertyData(nint inRef, SDKProperty property, int inParam, out EdsPoint outPropertyData) =>
+        EdsGetPropertyData<EdsPoint>(inRef, property, inParam, out outPropertyData);
 
-    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out EdsRect outPropertyData) =>
-        EdsGetPropertyData<EdsRect>(inRef, inPropertyID, inParam, out outPropertyData);
+    public static SDKError EdsGetPropertyData(nint inRef, SDKProperty property, int inParam, out EdsRect outPropertyData) =>
+        EdsGetPropertyData<EdsRect>(inRef, property, inParam, out outPropertyData);
 
-    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out EdsSize outPropertyData) =>
-        EdsGetPropertyData<EdsSize>(inRef, inPropertyID, inParam, out outPropertyData);
+    public static SDKError EdsGetPropertyData(nint inRef, SDKProperty property, int inParam, out EdsSize outPropertyData) =>
+        EdsGetPropertyData<EdsSize>(inRef, property, inParam, out outPropertyData);
 
-    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out string outPropertyData)
+    public static SDKError EdsGetPropertyData(nint inRef, SDKProperty property, int inParam, out string outPropertyData)
     {
         nint ptr = Marshal.AllocHGlobal(256);
-        SDKError err = EdsGetPropertyData(inRef, inPropertyID, inParam, 256, ptr);
+        SDKError err = EdsGetPropertyData(inRef, property, inParam, 256, ptr);
 
         outPropertyData = Marshal.PtrToStringAnsi(ptr);
         Marshal.FreeHGlobal(ptr);
@@ -1309,12 +1476,12 @@ public static unsafe class EDSDK_API
         return err;
     }
 
-    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out int[] outPropertyData)
+    public static SDKError EdsGetPropertyData(nint inRef, SDKProperty property, int inParam, out int[] outPropertyData)
     {
-        EdsGetPropertySize(inRef, inPropertyID, 0, out _, out int size);
+        EdsGetPropertySize(inRef, property, 0, out _, out int size);
 
         nint ptr = Marshal.AllocHGlobal(size);
-        SDKError err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
+        SDKError err = EdsGetPropertyData(inRef, property, inParam, size, ptr);
         int len = size / 4;
 
         outPropertyData = new int[len];
@@ -1325,15 +1492,15 @@ public static unsafe class EDSDK_API
         return err;
     }
 
-    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out EdsCameraPos outPropertyData) =>
-        EdsGetPropertyData<EdsCameraPos>(inRef, inPropertyID, inParam, out outPropertyData);
+    public static SDKError EdsGetPropertyData(nint inRef, SDKProperty property, int inParam, out EdsCameraPos outPropertyData) =>
+        EdsGetPropertyData<EdsCameraPos>(inRef, property, inParam, out outPropertyData);
 
-    public static SDKError EdsGetPropertyData(nint inRef, PropID inPropertyID, int inParam, out byte[] outPropertyData)
+    public static SDKError EdsGetPropertyData(nint inRef, SDKProperty property, int inParam, out byte[] outPropertyData)
     {
-        EdsGetPropertySize(inRef, inPropertyID, 0, out _, out int size);
+        EdsGetPropertySize(inRef, property, 0, out _, out int size);
 
         nint ptr = Marshal.AllocHGlobal(size);
-        SDKError err = EdsGetPropertyData(inRef, inPropertyID, inParam, size, ptr);
+        SDKError err = EdsGetPropertyData(inRef, property, inParam, size, ptr);
 
         int len = size;
         outPropertyData = new byte[len];
@@ -1402,7 +1569,7 @@ public static unsafe class EDSDK_API
     //
     //  Parameters:
     //       In:    inRef - The reference of the item.
-    //              inPropertyID - The ProprtyID
+    //              property - The ProprtyID
     //              inParam - Additional information of property.
     //              inPropertySize - The number of bytes of the prepared buffer
     //                  for set property-value.
@@ -1412,7 +1579,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSetPropertyData(nint inRef, PropID inPropertyID, int inParam, int inPropertySize, [MarshalAs(UnmanagedType.AsAny), In] object inPropertyData);
+    public static extern SDKError EdsSetPropertyData(nint inRef, SDKProperty property, int inParam, int inPropertySize, [MarshalAs(UnmanagedType.AsAny), In] object inPropertyData);
 
     /*-----------------------------------------------------------------------------
     //  
@@ -1425,13 +1592,13 @@ public static unsafe class EDSDK_API
     //
     //  Parameters:
     //       In:    inRef - The reference of the camera.
-    //              inPropertyID - The Property ID.
+    //              property - The Property ID.
     //       Out:   outPropertyDesc - Array of the value which can be set up.
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetPropertyDesc(nint inRef, PropID inPropertyID, out EdsPropertyDesc outPropertyDesc);
+    public static extern SDKError EdsGetPropertyDesc(nint inRef, SDKProperty property, out EdsPropertyDesc outPropertyDesc);
 
     /*--------------------------------------------
       Device-list and device operating functions
@@ -1467,13 +1634,13 @@ public static unsafe class EDSDK_API
     //          (that is, before a session is opened). 
     //
     //  Parameters:
-    //       In:    inCameraRef - The reference of the camera.
+    //       In:    camera - The reference of the camera.
     //      Out:    outDeviceInfo - Information as device of camera.
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetDeviceInfo(nint inCameraRef, out EdsDeviceInfo outDeviceInfo);
+    public static extern SDKError EdsGetDeviceInfo(nint camera, out EdsDeviceInfo outDeviceInfo);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1484,13 +1651,13 @@ public static unsafe class EDSDK_API
     //      Use this API after getting the camera's EdsCamera object.
     //
     //  Parameters:
-    //       In:    inCameraRef - The reference of the camera 
+    //       In:    camera - The reference of the camera 
     //      Out:    None
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsOpenSession(nint inCameraRef);
+    public static extern SDKError EdsOpenSession(nint camera);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1500,13 +1667,13 @@ public static unsafe class EDSDK_API
     //       Closes a logical connection with a remote camera.
     //
     //  Parameters:
-    //       In:    inCameraRef - The reference of the camera 
+    //       In:    camera - The reference of the camera 
     //      Out:    None
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsCloseSession(nint inCameraRef);
+    public static extern SDKError EdsCloseSession(nint camera);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1516,7 +1683,7 @@ public static unsafe class EDSDK_API
     //       Sends a command such as "Shoot" to a remote camera. 
     //
     //  Parameters:
-    //       In:    inCameraRef - The reference of the camera which will receive the 
+    //       In:    camera - The reference of the camera which will receive the 
     //                      command.
     //              inCommand - Specifies the command to be sent.
     //              inParam -     Specifies additional command-specific information.
@@ -1525,7 +1692,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSendCommand(nint inCameraRef, CameraCommand inCommand, int inParam);
+    public static extern SDKError EdsSendCommand(nint camera, CameraCommand inCommand, int inParam);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1535,7 +1702,7 @@ public static unsafe class EDSDK_API
     //       Sets the remote camera state or mode.
     //
     //  Parameters:
-    //       In:    inCameraRef - The reference of the camera which will receive the 
+    //       In:    camera - The reference of the camera which will receive the 
     //                      command.
     //              inStatusCommand - Specifies the command to be sent.
     //              inParam -     Specifies additional command-specific information.
@@ -1544,7 +1711,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSendStatusCommand(nint inCameraRef, CameraState inCameraState, int inParam);
+    public static extern SDKError EdsSendStatusCommand(nint camera, CameraState cameraState, int inParam);
 
     /*-----------------------------------------------------------------------------
     //
@@ -1564,7 +1731,7 @@ public static unsafe class EDSDK_API
     //          of the host computer.
     //
     //  Parameters:
-    //       In:    inCameraRef - The reference of the camera which will receive the 
+    //       In:    camera - The reference of the camera which will receive the 
     //                      command.
     //              inCapacity -  The remaining capacity of a transmission place.
     //      Out:    None
@@ -1572,7 +1739,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSetCapacity(nint inCameraRef, EdsCapacity inCapacity);
+    public static extern SDKError EdsSetCapacity(nint camera, EdsCapacity inCapacity);
 
 
     /*--------------------------------------------
@@ -1592,7 +1759,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetVolumeInfo(nint inCameraRef, out EdsVolumeInfo outVolumeInfo);
+    public static extern SDKError EdsGetVolumeInfo(nint camera, out EdsVolumeInfo outVolumeInfo);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2143,7 +2310,7 @@ public static unsafe class EDSDK_API
    //      Registers a callback function for when a camera is detected.
    //
    //  Parameters:
-   //       In:    inCameraAddedHandler - Pointer to a callback function
+   //       In:    cameraAddedHandler - Pointer to a callback function
    //                          called when a camera is connected physically
    //              inContext - Specifies an application-defined value to be sent to
    //                          the callback function pointed to by CallBack parameter.
@@ -2152,7 +2319,7 @@ public static unsafe class EDSDK_API
    //  Returns:    Any of the sdk errors.
    -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSetCameraAddedHandler(EdsCameraAddedHandler inCameraAddedHandler, nint inContext);
+    public static extern SDKError EdsSetCameraAddedHandler(EdsCameraAddedHandler cameraAddedHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2163,8 +2330,8 @@ public static unsafe class EDSDK_API
     //          change notification events for property states on a camera.
     //
     //  Parameters:
-    //       In:    inCameraRef - Designate the camera object. 
-    //              inEvent - Designate one or all events to be supplemented.
+    //       In:    camera - Designate the camera object. 
+    //              @event - Designate one or all events to be supplemented.
     //              inPropertyEventHandler - Designate the pointer to the callback
     //                      function for receiving property-related camera events.
     //              inContext - Designate application information to be passed by 
@@ -2175,7 +2342,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsSetPropertyEventHandler(nint inCameraRef, PropertyEvent inEvnet, EdsPropertyEventHandler? inPropertyEventHandler, nint inContext);
+    public static extern SDKError EdsSetPropertyEventHandler(nint camera, PropertyEvent @event, EdsPropertyEventHandler? inPropertyEventHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2188,8 +2355,8 @@ public static unsafe class EDSDK_API
     //          and shot images stored in memory, in particular. 
     //
     //  Parameters:
-    //       In:    inCameraRef - Designate the camera object. 
-    //              inEvent - Designate one or all events to be supplemented.
+    //       In:    camera - Designate the camera object. 
+    //              @event - Designate one or all events to be supplemented.
     //                  To designate all events, use kEdsObjectEvent_All. 
     //              inObjectEventHandler - Designate the pointer to the callback function
     //                  for receiving object-related camera events.
@@ -2200,7 +2367,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsSetObjectEventHandler(nint inCameraRef, EdsEvent inEvnet, EdsObjectEventHandler? inObjectEventHandler, nint inContext);
+    public static extern SDKError EdsSetObjectEventHandler(nint camera, EdsEvent @event, EdsObjectEventHandler? inObjectEventHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2211,8 +2378,8 @@ public static unsafe class EDSDK_API
     //          change notification events for property states on a camera.
     //
     //  Parameters:
-    //       In:    inCameraRef - Designate the camera object. 
-    //              inEvent - Designate one or all events to be supplemented.
+    //       In:    camera - Designate the camera object. 
+    //              @event - Designate one or all events to be supplemented.
     //                  To designate all events, use kEdsStateEvent_All. 
     //              inStateEventHandler - Designate the pointer to the callback function
     //                  for receiving events related to camera object states.
@@ -2224,7 +2391,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSetCameraStateEventHandler(nint inCameraRef, StateEvent inEvnet, EdsStateEventHandler? inStateEventHandler, nint inContext);
+    public static extern SDKError EdsSetCameraStateEventHandler(nint camera, StateEvent @event, EdsStateEventHandler? inStateEventHandler, nint inContext);
 
     /*-----------------------------------------------------------------------------
 		//
@@ -2253,16 +2420,16 @@ public static unsafe class EDSDK_API
 		//		is included in the image data set. Image data is saved in a stream maintained by EdsEvfImageRef.
 		//		EdsGetPropertyData can be used to get information such as the zoom, focus position, etc.
 		//		Although the information of the zoom and focus position can be obtained from EdsEvfImageRef,
-		//		settings are applied to EdsCameraRef.
+		//		settings are applied to Edscamera.
 		//
 		//  Parameters:
-		//      In:     inCameraRef - The Camera reference.
+		//      In:     camera - The Camera reference.
 		//      In:     inEvfImageRef - The EVFData reference.
 		//
 		//  Returns:    Any of the sdk errors.
 		-----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsDownloadEvfImage(nint inCameraRef, nint outEvfImageRef);
+    public static extern SDKError EdsDownloadEvfImage(nint camera, nint outEvfImageRef);
 
 
 
@@ -2289,23 +2456,6 @@ public static unsafe class EDSDK_API
     public const uint EDS_CMP_ID_HLSDK_COMPONENTID = 0x03000000;
 
 
-
-
-    /*-----------------------------------------------------------------------------
-     Video record mode
-    ----------------------------------------------------------------------------*/
-
-    public enum PropID_Record_Status
-        : uint
-    {
-        End_movie_shooting = 0,
-
-        //NOTE: This is not documented anywhere, purely taken from the original implementation
-        Movie_shooting_ready = 3,
-
-        Begin_movie_shooting = 4,
-    }
-
     /*-----------------------------------------------------------------------------
 		 EVF Output Device [Flag]
         Undocumented value, named consistent with SDK
@@ -2313,157 +2463,4 @@ public static unsafe class EDSDK_API
     public const uint EvfOutputDevice_Disabled = 0;
 
     #endregion Contrib
-}
-
-public enum SDKError
-    : uint
-{
-    /// <summary>
-    /// ED-SDK Function Success Code
-    /// </summary>
-    OK = 0x00000000,
-
-    /* Miscellaneous errors */
-    UNIMPLEMENTED = 0x00000001,
-    INTERNAL_ERROR = 0x00000002,
-    MEM_ALLOC_FAILED = 0x00000003,
-    MEM_FREE_FAILED = 0x00000004,
-    OPERATION_CANCELLED = 0x00000005,
-    INCOMPATIBLE_VERSION = 0x00000006,
-    NOT_SUPPORTED = 0x00000007,
-    UNEXPECTED_EXCEPTION = 0x00000008,
-    PROTECTION_VIOLATION = 0x00000009,
-    MISSING_SUBCOMPONENT = 0x0000000A,
-    SELECTION_UNAVAILABLE = 0x0000000B,
-
-    /* File errors */
-    FILE_IO_ERROR = 0x00000020,
-    FILE_TOO_MANY_OPEN = 0x00000021,
-    FILE_NOT_FOUND = 0x00000022,
-    FILE_OPEN_ERROR = 0x00000023,
-    FILE_CLOSE_ERROR = 0x00000024,
-    FILE_SEEK_ERROR = 0x00000025,
-    FILE_TELL_ERROR = 0x00000026,
-    FILE_READ_ERROR = 0x00000027,
-    FILE_WRITE_ERROR = 0x00000028,
-    FILE_PERMISSION_ERROR = 0x00000029,
-    FILE_DISK_FULL_ERROR = 0x0000002A,
-    FILE_ALREADY_EXISTS = 0x0000002B,
-    FILE_FORMAT_UNRECOGNIZED = 0x0000002C,
-    FILE_DATA_CORRUPT = 0x0000002D,
-    FILE_NAMING_NA = 0x0000002E,
-
-    /* Directory errors */
-    DIR_NOT_FOUND = 0x00000040,
-    DIR_IO_ERROR = 0x00000041,
-    DIR_ENTRY_NOT_FOUND = 0x00000042,
-    DIR_ENTRY_EXISTS = 0x00000043,
-    DIR_NOT_EMPTY = 0x00000044,
-
-    /* Property errors */
-    PROPERTIES_UNAVAILABLE = 0x00000050,
-    PROPERTIES_MISMATCH = 0x00000051,
-    PROPERTIES_NOT_LOADED = 0x00000053,
-
-    /* Function Parameter errors */
-    INVALID_PARAMETER = 0x00000060,
-    INVALID_HANDLE = 0x00000061,
-    INVALID_POINTER = 0x00000062,
-    INVALID_INDEX = 0x00000063,
-    INVALID_LENGTH = 0x00000064,
-    INVALID_FN_POINTER = 0x00000065,
-    INVALID_SORT_FN = 0x00000066,
-
-    /* Device errors */
-    DEVICE_NOT_FOUND = 0x00000080,
-    DEVICE_BUSY = 0x00000081,
-    DEVICE_INVALID = 0x00000082,
-    DEVICE_EMERGENCY = 0x00000083,
-    DEVICE_MEMORY_FULL = 0x00000084,
-    DEVICE_INTERNAL_ERROR = 0x00000085,
-    DEVICE_INVALID_PARAMETER = 0x00000086,
-    DEVICE_NO_DISK = 0x00000087,
-    DEVICE_DISK_ERROR = 0x00000088,
-    DEVICE_CF_GATE_CHANGED = 0x00000089,
-    DEVICE_DIAL_CHANGED = 0x0000008A,
-    DEVICE_NOT_INSTALLED = 0x0000008B,
-    DEVICE_STAY_AWAKE = 0x0000008C,
-    DEVICE_NOT_RELEASED = 0x0000008D,
-
-    /* Stream errors */
-    STREAM_IO_ERROR = 0x000000A0,
-    STREAM_NOT_OPEN = 0x000000A1,
-    STREAM_ALREADY_OPEN = 0x000000A2,
-    STREAM_OPEN_ERROR = 0x000000A3,
-    STREAM_CLOSE_ERROR = 0x000000A4,
-    STREAM_SEEK_ERROR = 0x000000A5,
-    STREAM_TELL_ERROR = 0x000000A6,
-    STREAM_READ_ERROR = 0x000000A7,
-    STREAM_WRITE_ERROR = 0x000000A8,
-    STREAM_PERMISSION_ERROR = 0x000000A9,
-    STREAM_COULDNT_BEGIN_THREAD = 0x000000AA,
-    STREAM_BAD_OPTIONS = 0x000000AB,
-    STREAM_END_OF_STREAM = 0x000000AC,
-
-    /* Communications errors */
-    COMM_PORT_IS_IN_USE = 0x000000C0,
-    COMM_DISCONNECTED = 0x000000C1,
-    COMM_DEVICE_INCOMPATIBLE = 0x000000C2,
-    COMM_BUFFER_FULL = 0x000000C3,
-    COMM_USB_BUS_ERR = 0x000000C4,
-
-    /* Lock/Unlock */
-    USB_DEVICE_LOCK_ERROR = 0x000000D0,
-    USB_DEVICE_UNLOCK_ERROR = 0x000000D1,
-
-    /* STI/WIA */
-    STI_UNKNOWN_ERROR = 0x000000E0,
-    STI_INTERNAL_ERROR = 0x000000E1,
-    STI_DEVICE_CREATE_ERROR = 0x000000E2,
-    STI_DEVICE_RELEASE_ERROR = 0x000000E3,
-    DEVICE_NOT_LAUNCHED = 0x000000E4,
-
-    ENUM_NA = 0x000000F0,
-    INVALID_FN_CALL = 0x000000F1,
-    HANDLE_NOT_FOUND = 0x000000F2,
-    INVALID_ID = 0x000000F3,
-    WAIT_TIMEOUT_ERROR = 0x000000F4,
-
-    /* PTP */
-    SESSION_NOT_OPEN = 0x00002003,
-    INVALID_TRANSACTIONID = 0x00002004,
-    INCOMPLETE_TRANSFER = 0x00002007,
-    INVALID_STRAGEID = 0x00002008,
-    DEVICEPROP_NOT_SUPPORTED = 0x0000200A,
-    INVALID_OBJECTFORMATCODE = 0x0000200B,
-    SELF_TEST_FAILED = 0x00002011,
-    PARTIAL_DELETION = 0x00002012,
-    SPECIFICATION_BY_FORMAT_UNSUPPORTED = 0x00002014,
-    NO_VALID_OBJECTINFO = 0x00002015,
-    INVALID_CODE_FORMAT = 0x00002016,
-    UNKNOWN_VENDER_CODE = 0x00002017,
-    CAPTURE_ALREADY_TERMINATED = 0x00002018,
-    INVALID_PARENTOBJECT = 0x0000201A,
-    INVALID_DEVICEPROP_FORMAT = 0x0000201B,
-    INVALID_DEVICEPROP_VALUE = 0x0000201C,
-    SESSION_ALREADY_OPEN = 0x0000201E,
-    TRANSACTION_CANCELLED = 0x0000201F,
-    SPECIFICATION_OF_DESTINATION_UNSUPPORTED = 0x00002020,
-    UNKNOWN_COMMAND = 0x0000A001,
-    OPERATION_REFUSED = 0x0000A005,
-    LENS_COVER_CLOSE = 0x0000A006,
-    LOW_BATTERY = 0x0000A101,
-    OBJECT_NOTREADY = 0x0000A102,
-
-    /* Capture Error */
-    TAKE_PICTURE_AF_NG = 0x00008D01,
-    TAKE_PICTURE_RESERVED = 0x00008D02,
-    TAKE_PICTURE_MIRROR_UP_NG = 0x00008D03,
-    TAKE_PICTURE_SENSOR_CLEANING_NG = 0x00008D04,
-    TAKE_PICTURE_SILENCE_NG = 0x00008D05,
-    TAKE_PICTURE_NO_CARD_NG = 0x00008D06,
-    TAKE_PICTURE_CARD_NG = 0x00008D07,
-    TAKE_PICTURE_CARD_PROTECT_NG = 0x00008D08,
-
-    LAST_GENERIC_ERROR_PLUS_ONE = 0x000000F5,
 }
