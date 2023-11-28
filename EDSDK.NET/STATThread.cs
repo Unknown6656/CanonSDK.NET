@@ -1,4 +1,3 @@
-using System.Runtime.Versioning;
 using System.Threading;
 using System;
 
@@ -10,6 +9,7 @@ namespace EDSDK.NET;
 /// <summary>
 /// Helper class to create or run code on STA threads
 /// </summary>
+//[SupportedOSPlatform("windows")]
 public static class STAThread
 {
     /// <summary>
@@ -109,8 +109,7 @@ public static class STAThread
     /// </summary>
     /// <param name="a">The command to run on this thread</param>
     /// <returns>An STA thread</returns>
-    [SupportedOSPlatform("windows")]
-    public static Thread Create(Action a) => Create(a, $"STA thread: {Guid.NewGuid()}");
+    public static Thread Create(Action a) => Create(a, $"STA-Thread {Guid.NewGuid()}");
 
     /// <summary>
     /// Creates an STA thread that can safely execute SDK commands
@@ -118,7 +117,6 @@ public static class STAThread
     /// <param name="a">The command to run on this thread</param>
     /// <param name="threadName">The name of this thread</param>
     /// <returns>An STA thread</returns>
-    [SupportedOSPlatform("windows")]
     public static Thread Create(Action a, string threadName)
     {
         Thread thread = new(new ThreadStart(a));
