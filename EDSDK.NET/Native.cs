@@ -1,7 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Reflection;
 using System.Runtime.InteropServices;
+using System;
 
 using EDSDK.NET;
 
@@ -952,128 +950,6 @@ public enum SDKError
 }
 
 
-public readonly partial struct SDKProperty
-{
-    /*----------------------------------
-     Camera Setting Properties
-    ----------------------------------*/
-    public static SDKProperty Unknown { get; } = new(0x0000ffff);
-    public static SDKProperty ProductName { get; } = new(0x00000002);
-    public static SDKProperty BodyIDEx { get; } = new(0x00000015);
-    public static SDKProperty OwnerName { get; } = new(0x00000004);
-    public static SDKProperty MakerName { get; } = new(0x00000005);
-    public static SDKProperty DateTime { get; } = new(0x00000006);
-    public static SDKProperty FirmwareVersion { get; } = new(0x00000007);
-    public static SDKProperty BatteryLevel { get; } = new(0x00000008);
-    public static SDKProperty CFn { get; } = new(0x00000009);
-    public static SDKProperty SaveTo { get; } = new(0x0000000b);
-    public static SDKProperty CurrentStorage { get; } = new(0x0000000c);
-    public static SDKProperty CurrentFolder { get; } = new(0x0000000d);
-    public static SDKProperty BatteryQuality { get; } = new(0x00000010);
-
-    /*----------------------------------
-     Image Properties
-    ----------------------------------*/
-    public static SDKProperty ImageQuality { get; } = new(0x00000100);
-    public static SDKProperty Orientation { get; } = new(0x00000102);
-    public static SDKProperty ICCProfile { get; } = new(0x00000103);
-    public static SDKProperty FocusInfo { get; } = new(0x00000104);
-    public static SDKProperty WhiteBalance { get; } = new(0x00000106);
-    public static SDKProperty ColorTemperature { get; } = new(0x00000107);
-    public static SDKProperty WhiteBalanceShift { get; } = new(0x00000108);
-    public static SDKProperty ColorSpace { get; } = new(0x0000010d);
-    public static SDKProperty PictureStyle { get; } = new(0x00000114);
-    public static SDKProperty PictureStyleDesc { get; } = new(0x00000115);
-    public static SDKProperty PictureStyleCaption { get; } = new(0x00000200);
-
-    /*----------------------------------
-     Capture Properties
-    ----------------------------------*/
-    public static SDKProperty AEMode { get; } = new(0x00000400);
-    public static SDKProperty AEModeSelect { get; } = new(0x00000436);
-    public static SDKProperty DriveMode { get; } = new(0x00000401);
-    public static SDKProperty ISOSpeed { get; } = new(0x00000402);
-    public static SDKProperty MeteringMode { get; } = new(0x00000403);
-    public static SDKProperty AFMode { get; } = new(0x00000404);
-    public static SDKProperty Av { get; } = new(0x00000405);
-    public static SDKProperty Tv { get; } = new(0x00000406);
-    public static SDKProperty ExposureCompensation { get; } = new(0x00000407);
-    public static SDKProperty FocalLength { get; } = new(0x00000409);
-    public static SDKProperty AvailableShots { get; } = new(0x0000040a);
-    public static SDKProperty Bracket { get; } = new(0x0000040b);
-    public static SDKProperty WhiteBalanceBracket { get; } = new(0x0000040c);
-    public static SDKProperty LensName { get; } = new(0x0000040d);
-    public static SDKProperty AEBracket { get; } = new(0x0000040e);
-    public static SDKProperty FEBracket { get; } = new(0x0000040f);
-    public static SDKProperty ISOBracket { get; } = new(0x00000410);
-    public static SDKProperty NoiseReduction { get; } = new(0x00000411);
-    public static SDKProperty FlashOn { get; } = new(0x00000412);
-    public static SDKProperty RedEye { get; } = new(0x00000413);
-    public static SDKProperty FlashMode { get; } = new(0x00000414);
-    public static SDKProperty LensStatus { get; } = new(0x00000416);
-    public static SDKProperty Artist { get; } = new(0x00000418);
-    public static SDKProperty Copyright { get; } = new(0x00000419);
-
-    /*----------------------------------
-         EVF Properties
-        ----------------------------------*/
-    public static SDKProperty Evf_OutputDevice { get; } = new(0x00000500);
-    public static SDKProperty Evf_Mode { get; } = new(0x00000501);
-    public static SDKProperty Evf_WhiteBalance { get; } = new(0x00000502);
-    public static SDKProperty Evf_ColorTemperature { get; } = new(0x00000503);
-    public static SDKProperty Evf_DepthOfFieldPreview { get; } = new(0x00000504);
-
-    // EVF IMAGE DATA Properties
-    public static SDKProperty Evf_Zoom { get; } = new(0x00000507);
-    public static SDKProperty Evf_ZoomPosition { get; } = new(0x00000508);
-    public static SDKProperty Evf_ImagePosition { get; } = new(0x0000050B);
-    public static SDKProperty Evf_HistogramStatus { get; } = new(0x0000050C);
-    public static SDKProperty Evf_AFMode { get; } = new(0x0000050E);
-    public static SDKProperty Evf_HistogramY { get; } = new(0x00000515);
-    public static SDKProperty Evf_HistogramR { get; } = new(0x00000516);
-    public static SDKProperty Evf_HistogramG { get; } = new(0x00000517);
-    public static SDKProperty Evf_HistogramB { get; } = new(0x00000518);
-    public static SDKProperty Evf_CoordinateSystem { get; } = new(0x00000540);
-    public static SDKProperty Evf_ZoomRect { get; } = new(0x00000541);
-
-    public static SDKProperty Record { get; } = new(0x00000510);
-
-    /*----------------------------------
-     Image GPS Properties
-    ----------------------------------*/
-    public static SDKProperty GPSVersionID { get; } = new(0x00000800);
-    public static SDKProperty GPSLatitudeRef { get; } = new(0x00000801);
-    public static SDKProperty GPSLatitude { get; } = new(0x00000802);
-    public static SDKProperty GPSLongitudeRef { get; } = new(0x00000803);
-    public static SDKProperty GPSLongitude { get; } = new(0x00000804);
-    public static SDKProperty GPSAltitudeRef { get; } = new(0x00000805);
-    public static SDKProperty GPSAltitude { get; } = new(0x00000806);
-    public static SDKProperty GPSTimeStamp { get; } = new(0x00000807);
-    public static SDKProperty GPSSatellites { get; } = new(0x00000808);
-    public static SDKProperty GPSStatus { get; } = new(0x00000809);
-    public static SDKProperty GPSMapDatum { get; } = new(0x00000812);
-    public static SDKProperty GPSDateStamp { get; } = new(0x0000081D);
-
-    /*----------------------------------
-    DC Properties
-    ----------------------------------*/
-    public static SDKProperty DC_Zoom { get; } = new(0x00000600);
-    public static SDKProperty DC_Strobe { get; } = new(0x00000601);
-    public static SDKProperty LensBarrelStatus { get; } = new(0x00000605);
-    public static SDKProperty TempStatus { get; } = new(0x01000415);
-    public static SDKProperty Evf_RollingPitching { get; } = new(0x01000544);
-    public static SDKProperty FixedMovie { get; } = new(0x01000422);
-    public static SDKProperty MovieParam { get; } = new(0x01000423);
-    public static SDKProperty Evf_ClickWBCoeffs { get; } = new(0x01000506);
-    public static SDKProperty ManualWhiteBalanceData { get; } = new(0x01000204);
-    public static SDKProperty MirrorUpSetting { get; } = new(0x01000438);
-    public static SDKProperty MirrorLockUpState { get; } = new(0x01000421);
-    public static SDKProperty UTCTime { get; } = new(0x01000016);
-    public static SDKProperty TimeZone { get; } = new(0x01000017);
-    public static SDKProperty SummerTimeSetting { get; } = new(0x01000018);
-    public static SDKProperty AutoPowerOffSetting { get; } = new(0x0100045e);
-}
-
 [StructLayout(LayoutKind.Sequential)]
 public record struct EdsPoint(int X, int Y);
 
@@ -1242,6 +1118,66 @@ public struct EdsManualWBData
 
     [MarshalAs(UnmanagedType.ByValArray)]
     public byte[] data;
+
+
+
+
+
+    public byte[] ConvertMWB()
+    {
+        int headerSize = 40;
+        int MWBHEADERSIZE = sizeof(uint) * 3;
+
+        int datasize = (int)dataSize;
+
+        // Since the pointer is copied by the following StructureToPtr,
+        // if the data size is less than the pointer size, the buffer is enlarged.
+        if (datasize < nint.Size)
+            datasize = nint.Size;
+
+        int size = (int)dataSize + MWBHEADERSIZE + headerSize;
+        nint ptr = Marshal.AllocHGlobal(datasize + headerSize);
+
+        dataSize += (uint)MWBHEADERSIZE;
+
+        Marshal.StructureToPtr(this, ptr, true);
+
+        dataSize -= (uint)MWBHEADERSIZE;
+
+        byte[] buff = new byte[size];
+
+        Marshal.Copy(ptr, buff, 0, headerSize);
+
+
+        int i;
+
+        for (i = 0; i < MWBHEADERSIZE; i++)
+            buff[headerSize + i] = 0;
+
+        for (int j = 0; j < dataSize; j++)
+            buff[headerSize + i + j] = data[j];
+
+        Marshal.FreeHGlobal(ptr);
+
+        return buff;
+    }
+
+    public static EdsManualWBData MarshalPtrToManualWBData(nint ptr)
+    {
+        EdsManualWBData userdata = (EdsManualWBData)Marshal.PtrToStructure(ptr, typeof(EdsManualWBData));
+
+        int headerSize = 40;
+        byte[] tmp = new byte[userdata.dataSize + headerSize];
+
+        userdata.data = new byte[userdata.dataSize];
+
+        Marshal.Copy(ptr, tmp, 0, (int)userdata.dataSize + headerSize);
+
+        for (int i = 0; i < userdata.dataSize; i++)
+            userdata.data[i] = tmp[headerSize + i];
+
+        return userdata;
+    }
 }
 
 public static unsafe class EDSDK_API
@@ -1252,9 +1188,7 @@ public static unsafe class EDSDK_API
     private const string _DLL_PATH = "EDSDK.dll";
 
 
-
     private static nint CheckValidCamera(Camera? camera) => camera?.Handle is 0 or null ? throw new ArgumentNullException(nameof(camera), "Camera or camera reference is null/zero") : camera.Handle;
-
 
     #region BASIC SDK INIT/CTOR & DTOR FUNCTIONS
 
@@ -1409,12 +1343,12 @@ public static unsafe class EDSDK_API
     /// <param name="param"> Additional information of property. We use this parameter in order to specify an index in case there are two or more values over the same ID.</param>
     /// <returns>An SDK error status.</returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public static SDKError GetPropertySize(Camera? camera, SDKProperty property, int param, out EdsDataType type, out int size)
+    public static SDKError GetPropertySize(Camera? camera, SDKProperty property, out EdsDataType type, out int size)
     {
         [DllImport(_DLL_PATH)]
         static extern SDKError EdsGetPropertySize(nint camera, SDKProperty property, int param, out EdsDataType type, out int size);
 
-        return EdsGetPropertySize(CheckValidCamera(camera), property, param, out type, out size);
+        return EdsGetPropertySize(CheckValidCamera(camera), property, 0, out type, out size);
     }
 
     /// <summary>
@@ -1426,40 +1360,40 @@ public static unsafe class EDSDK_API
     /// <param name="inPropertySize">The number of bytes of the prepared buffer for receive property-value.</param>
     /// <param name="outPropertyData">The buffer pointer to receive property-value.</param>
     /// <returns></returns>
-    public static SDKError GetPropertyData(Camera? camera, SDKProperty property, int param, int size, nint buffer)
+    public static SDKError GetPropertyData(Camera? camera, SDKProperty property, int size, nint buffer)
     {
         [DllImport(_DLL_PATH)]
         static extern SDKError EdsGetPropertyData(nint camera, SDKProperty property, int param, int size, nint buffer);
 
-        return EdsGetPropertyData(CheckValidCamera(camera), property, param, size, buffer);
+        return EdsGetPropertyData(CheckValidCamera(camera), property, 0, size, buffer);
     }
 
-    public static SDKError GetPropertyData<T>(Camera? camera, SDKProperty property, int param, out T data)
+    public static SDKError GetPropertyData<T>(Camera? camera, SDKProperty property, out T data)
         where T : unmanaged
     {
         T value = default;
-        SDKError error = GetPropertyData(camera, property, param, sizeof(T), (nint)(void*)&value);
+        SDKError error = GetPropertyData(camera, property, sizeof(T), (nint)(void*)&value);
 
         data = value;
 
         return error;
     }
 
-    public static SDKError GetPropertyData(Camera? camera, SDKProperty property, int param, out EdsFocusInfo data)
+    public static SDKError GetPropertyData(Camera? camera, SDKProperty property, out EdsFocusInfo data)
     {
         int size = Marshal.SizeOf(typeof(EdsFocusInfo));
         nint ptr = Marshal.AllocHGlobal(size);
-        SDKError err = GetPropertyData(camera, property, param, size, ptr);
+        SDKError err = GetPropertyData(camera, property, size, ptr);
 
         data = (EdsFocusInfo)Marshal.PtrToStructure(ptr, typeof(EdsFocusInfo));
         Marshal.FreeHGlobal(ptr);
         return err;
     }
 
-    public static SDKError GetPropertyData(Camera? camera, SDKProperty property, int param, out string data)
+    public static SDKError GetPropertyData(Camera? camera, SDKProperty property, out string data)
     {
         nint ptr = Marshal.AllocHGlobal(256);
-        SDKError err = GetPropertyData(camera, property, param, 256, ptr);
+        SDKError err = GetPropertyData(camera, property, 256, ptr);
 
         data = Marshal.PtrToStringAnsi(ptr);
         Marshal.FreeHGlobal(ptr);
@@ -1467,12 +1401,12 @@ public static unsafe class EDSDK_API
         return err;
     }
 
-    public static SDKError GetPropertyData(Camera? camera, SDKProperty property, int param, out int[] data)
+    public static SDKError GetPropertyData(Camera? camera, SDKProperty property, out int[] data)
     {
-        GetPropertySize(camera, property, 0, out _, out int size);
+        GetPropertySize(camera, property, out _, out int size);
 
         nint ptr = Marshal.AllocHGlobal(size);
-        SDKError err = GetPropertyData(camera, property, param, size, ptr);
+        SDKError err = GetPropertyData(camera, property, size, ptr);
         int len = size / 4;
 
         data = new int[len];
@@ -1483,12 +1417,12 @@ public static unsafe class EDSDK_API
         return err;
     }
 
-    public static SDKError GetPropertyData(Camera? camera, SDKProperty property, int param, out byte[] data)
+    public static SDKError GetPropertyData(Camera? camera, SDKProperty property, out byte[] data)
     {
-        GetPropertySize(camera, property, 0, out _, out int size);
+        GetPropertySize(camera, property, out _, out int size);
 
         nint ptr = Marshal.AllocHGlobal(size);
-        SDKError err = GetPropertyData(camera, property, param, size, ptr);
+        SDKError err = GetPropertyData(camera, property, size, ptr);
 
         int len = size;
         data = new byte[len];
@@ -1526,18 +1460,14 @@ public static unsafe class EDSDK_API
     /// <param name="data">The buffer pointer to set property-value.</param>
     /// <returns>An SDK error status.</returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public static SDKError SetPropertyData(Camera? camera, SDKProperty property, int param, int size, in object data)
+    public static SDKError SetPropertyData(Camera? camera, SDKProperty property, int size, in object data)
     {
         [DllImport(_DLL_PATH)]
         static extern SDKError EdsSetPropertyData(nint camera, SDKProperty property, int param, int size, [MarshalAs(UnmanagedType.AsAny), In] object data);
 
-        return EdsSetPropertyData(CheckValidCamera(camera), property, param, size, data);
+        return EdsSetPropertyData(CheckValidCamera(camera), property, 0, size, data);
     }
 
-
-
-
-
     #endregion
     #region
     #endregion
@@ -1547,54 +1477,6 @@ public static unsafe class EDSDK_API
     #endregion
     #region
     #endregion
-
-    public static byte[] ConvertMWB(EdsManualWBData pcwb)
-    {
-        int headerSize = 40;
-        int MWBHEADERSIZE = (sizeof(uint) * 3);
-
-        int datasize = (int)pcwb.dataSize;
-        // Since the pointer is copied by the following StructureToPtr,
-        // if the data size is less than the pointer size, the buffer is enlarged.
-        if (datasize < nint.Size)
-        {
-            datasize = nint.Size;
-        }
-
-        int size = (int)pcwb.dataSize + MWBHEADERSIZE + headerSize;
-        nint ptr = Marshal.AllocHGlobal(datasize + headerSize);
-        pcwb.dataSize += (uint)MWBHEADERSIZE;
-        Marshal.StructureToPtr(pcwb, ptr, true);
-        pcwb.dataSize -= (uint)MWBHEADERSIZE;
-        byte[] buff = new byte[size];
-        Marshal.Copy(ptr, buff, 0, headerSize);
-        int i = 0;
-        for (i = 0; i < MWBHEADERSIZE; i++)
-        {
-            buff[headerSize + i] = 0;
-        }
-
-        for (int j = 0; j < pcwb.dataSize; j++)
-        {
-            buff[headerSize + i + j] = pcwb.data[j];
-        }
-        Marshal.FreeHGlobal(ptr);
-        return buff;
-    }
-
-    public static EdsManualWBData MarshalPtrToManualWBData(nint ptr)
-    {
-        EdsManualWBData userdata = (EdsManualWBData)Marshal.PtrToStructure(ptr, typeof(EdsManualWBData));
-        int headerSize = 40;
-        byte[] tmp = new byte[userdata.dataSize + headerSize];
-        userdata.data = new byte[userdata.dataSize];
-        Marshal.Copy(ptr, tmp, 0, (int)userdata.dataSize + headerSize);
-        for (int i = 0; i < userdata.dataSize; i++)
-        {
-            userdata.data[i] = tmp[headerSize + i];
-        }
-        return userdata;
-    }
 
 
 
@@ -1640,6 +1522,9 @@ public static unsafe class EDSDK_API
     [DllImport(_DLL_PATH)]
     public static extern SDKError EdsGetDeviceInfo(nint camera, out EdsDeviceInfo outDeviceInfo);
 
+
+
+
     /*-----------------------------------------------------------------------------
     //
     //  Function:   EdsOpenSession
@@ -1654,8 +1539,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsOpenSession(nint camera);
+    public static SDKError OpenSession(Camera? camera)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsOpenSession(nint camera);
+
+        return EdsOpenSession(CheckValidCamera(camera));
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -1670,8 +1560,16 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsCloseSession(nint camera);
+    public static SDKError CloseSession(Camera? camera)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsCloseSession(nint camera);
+
+        return camera is Camera c ? EdsCloseSession(CheckValidCamera(c)) : SDKError.OK;
+    }
+
+
+
 
     /*-----------------------------------------------------------------------------
     //
@@ -2425,8 +2323,13 @@ public static unsafe class EDSDK_API
 		//
 		//  Returns:    Any of the sdk errors.
 		-----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsDownloadEvfImage(nint camera, nint outEvfImageRef);
+    public static SDKError DownloadEvfImage(Camera? camera, nint outEvfImageRef)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsDownloadEvfImage(nint camera, nint outEvfImageRef);
+
+        return EdsDownloadEvfImage(CheckValidCamera(camera), outEvfImageRef);
+    }
 
 
 
