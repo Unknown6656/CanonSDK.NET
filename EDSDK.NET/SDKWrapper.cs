@@ -260,10 +260,10 @@ public sealed class SDKWrapper
         }
         catch (Exception x)
         {
-            _logger.LogError(x, "Error initialising SDK");
+            _logger.LogError(x, "Error Initializing SDK");
 
-            throw new("Error initialising SDK", x);
-            // TODO: Move to Initialise pattern instead of constructor
+            throw new("Error Initializing SDK", x);
+            // TODO: Move to Initialize pattern instead of constructor
         }
 
         STAThread.Init();

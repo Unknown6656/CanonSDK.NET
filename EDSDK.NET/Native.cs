@@ -76,7 +76,7 @@ public enum EdsSeekOrigin
 }
 
 /// <summary>
-/// File and Propaties Access
+/// File and Properties Access
 /// </summary>
 public enum EdsAccess
     : uint
@@ -97,7 +97,7 @@ public enum EdsFileCreateDisposition
     CreateAlways,
     OpenExisting,
     OpenAlways,
-    TruncateExsisting,
+    TruncateExisting,
 }
 
 /// <summary>
@@ -492,7 +492,7 @@ public enum AEMode
     Program = 0,
     Tv = 1,
     Av = 2,
-    Mamual = 3,
+    Manual = 3,
     Bulb = 4,
     A_DEP = 5,
     DEP = 6,
@@ -576,7 +576,7 @@ public enum ColorSpace
     Unknown = 0xffffffff,
 }
 
-public enum WhiteBalanace
+public enum WhiteBalance
     : uint
 {
     Click = 0xFFFFFFFF,
@@ -1441,7 +1441,7 @@ public static unsafe class EDSDK_API
     ///// Sets property data for the object designated in inRef.
     ///// </summary>
     ///// <param name="camera">The reference of the item</param>
-    ///// <param name="property">The ProprtyID</param>
+    ///// <param name="property">The PropertyID</param>
     ///// <param name="param">Additional information of property.</param>
     ///// <param name="size">The number of bytes of the prepared buffer for set property-value.</param>
     ///// <param name="data">The buffer pointer to set property-value.</param>
@@ -1459,7 +1459,7 @@ public static unsafe class EDSDK_API
     /// Sets property data for the object designated in inRef.
     /// </summary>
     /// <param name="camera">The reference of the item</param>
-    /// <param name="property">The ProprtyID</param>
+    /// <param name="property">The PropertyID</param>
     /// <param name="param">Additional information of property.</param>
     /// <param name="size">The number of bytes of the prepared buffer for set property-value.</param>
     /// <param name="data">The buffer pointer to set property-value.</param>
