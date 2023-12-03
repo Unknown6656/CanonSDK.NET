@@ -284,8 +284,6 @@ public sealed class SDKWrapper
     private void STAThread_FatalError(object? sender, EventArgs e) => OnSdkError(new("Execution thread error", LogLevel.Critical));
 
 
-    public void SetSaveToHost() => SetSetting(SDKProperty.SaveTo, (uint)EdsSaveTo.Host);
-
 
 
 
@@ -307,7 +305,7 @@ public sealed class SDKWrapper
         {
             //get pointer to camera at index i
             Error = EDSDK_API.EdsGetChildAtIndex(camlist, i, out nint cptr);
-            camList.Add(new Camera(cptr));
+            camList.Add(new SDKCamera(this, cptr));
         }
 
         LogInfo($"Found {camList.Count} camera(s).");
@@ -333,8 +331,8 @@ public sealed class SDKWrapper
             //open a session
             SendSDKCommand(delegate
             {
-                Error = EDSDK_API.OpenSession(MainCamera.Handle);
-            }, sdkAction: nameof(EDSDK_API.OpenSession));
+                Error = MainCamera.OpenSession();
+            }, sdk_action: nameof(EDSDK_API.OpenSession));
 
             //subscribe to the camera events (for the SDK)
             AddCameraHandler(() => Error = EDSDK_API.EdsSetCameraStateEventHandler(MainCamera.Handle, StateEvent.All, SDKStateEvent, MainCamera.Handle), nameof(EDSDK_API.EdsSetCameraStateEventHandler));
@@ -380,7 +378,7 @@ public sealed class SDKWrapper
             SendSDKCommand(delegate
             {
                 Error = EDSDK_API.CloseSession(MainCamera);
-            }, sdkAction: nameof(EDSDK_API.CloseSession));
+            }, sdk_action: nameof(EDSDK_API.CloseSession));
 
             SDKError c = EDSDK_API.Release(MainCamera);
 
@@ -397,7 +395,7 @@ public sealed class SDKWrapper
         //close session
         CloseSession();
         //terminate SDK
-        Error = EDSDK_API.TerminateSDK();
+        Error = EDSDK_API.EdsTerminateSDK();
         //stop command execution thread
         STAThread.Shutdown();
     }
@@ -430,43 +428,30 @@ public sealed class SDKWrapper
     /// <returns>An EDSDK errorcode</returns>
     private SDKError Camera_SDKObjectEvent(EdsEvent inEvent, nint inRef, nint inContext)
     {
-        SDKProperty eventProperty = SDKObjectEventToProperty(inEvent);
-        //LogInfo("SDK Object Event. Name: {SDKEventName}, Value: {SDKEventHex}", eventProperty.Name, eventProperty.ValueToString());
+        LogInfo($"SDK Object Event. Property: {SDKProperty.FromSDKObjectEvent(inEvent)}");
 
-        //handle object event here
         switch (inEvent)
         {
             case EdsEvent.All:
-                break;
             case EdsEvent.DirItemCancelTransferDT:
-                break;
             case EdsEvent.DirItemContentChanged:
-                break;
-            case EdsEvent.DirItemCreated:
-                if (DownloadVideo)
-                {
-                    DownloadImage(inRef, ImageSaveDirectory, ImageSaveFilename, isVideo: true);
-                    DownloadVideo = false;
-                }
-                break;
             case EdsEvent.DirItemInfoChanged:
-                break;
             case EdsEvent.DirItemRemoved:
+            case EdsEvent.DirItemRequestTransferDT:
+            case EdsEvent.FolderUpdateItems:
+            case EdsEvent.VolumeAdded:
+            case EdsEvent.VolumeInfoChanged:
+            case EdsEvent.VolumeRemoved:
+            case EdsEvent.VolumeUpdateItems:
+                break;
+            case EdsEvent.DirItemCreated when DownloadVideo:
+                DownloadImage(inRef, ImageSaveDirectory, ImageSaveFilename, isVideo: true);
+                DownloadVideo = false;
+
                 break;
             case EdsEvent.DirItemRequestTransfer:
                 DownloadImage(inRef, ImageSaveDirectory, ImageSaveFilename);
-                break;
-            case EdsEvent.DirItemRequestTransferDT:
-                break;
-            case EdsEvent.FolderUpdateItems:
-                break;
-            case EdsEvent.VolumeAdded:
-                break;
-            case EdsEvent.VolumeInfoChanged:
-                break;
-            case EdsEvent.VolumeRemoved:
-                break;
-            case EdsEvent.VolumeUpdateItems:
+
                 break;
         }
 
@@ -501,9 +486,7 @@ public sealed class SDKWrapper
     private SDKError Camera_SDKPropertyEvent(PropertyEvent inEvent, SDKProperty property, uint inParameter, nint inContext)
     {
         if (inEvent is PropertyEvent.PropertyChanged)
-        {
             LogPropertyValue(property, property.Get(this));
-        }
 
         if (property == SDKProperty.Evf_OutputDevice && IsLiveViewOn)
             DownloadEvf();
@@ -520,9 +503,7 @@ public sealed class SDKWrapper
     /// <returns>An EDSDK errorcode</returns>
     private SDKError Camera_SDKStateEvent(StateEvent inEvent, uint inParameter, nint inContext)
     {
-        SDKProperty stateProperty = GetStateEvent(inEvent);
-
-        LogInfo($"SDK State Event. {stateProperty}");
+        LogInfo($"SDK State Event. Property: {SDKProperty.FromSDKStateEvent(inEvent)}");
 
         //Handle state event here
         switch (inEvent)
@@ -555,7 +536,7 @@ public sealed class SDKWrapper
                     {
                         _logger.LogDebug("Extending camera shutdown timer");
 
-                        Error = EDSDK_API.EdsSendCommand(MainCamera.Handle, CameraCommand.ExtendShutDownTimer, 0);
+                        Error = MainCamera.SendCommand(CameraCommand.ExtendShutDownTimer, 0);
                     }, sdk_action: nameof(CameraCommand.ExtendShutDownTimer));
                 break;
         }
@@ -628,13 +609,13 @@ public sealed class SDKWrapper
                 FileInfo downloadFile = new(targetImage);
                 double mB = downloadFile.Length / 1000.0 / 1000;
 
-                LogInfo($"Downloaded data. Filename: {targetImage}, FileLengthMB: {mB.ToString("0.0")}, DurationSeconds: {stopWatch.Elapsed.TotalSeconds.ToString("0.0")}, MBPerSecond: {(mB / stopWatch.Elapsed.TotalSeconds).ToString("0.0")}");
+                LogInfo($"Downloaded data. Filename: {targetImage}, FileLengthMB: {mB:0.0}, DurationSeconds: {stopWatch.Elapsed.TotalSeconds:0.0}, MBPerSecond: {mB / stopWatch.Elapsed.TotalSeconds:0.0}");
 
                 if (isVideo)
                     videoDownloadDone?.TrySetResult(targetImage);
                 else
                     takePhotoCompletionSource?.TrySetResult(new FileInfo(fileName));
-            }, true);
+            }, long_running: true);
         }
         catch (Exception x)
         {
@@ -671,9 +652,8 @@ public sealed class SDKWrapper
 
                 //download data to the stream
                 lock (STAThread.ExecLock)
-                {
                     DownloadData(ObjectPointer, streamRef);
-                }
+
                 Error = EDSDK_API.EdsGetPointer(streamRef, out nint jpgPointer);
                 Error = EDSDK_API.EdsGetLength(streamRef, out ulong length);
 
@@ -689,7 +669,7 @@ public sealed class SDKWrapper
 
                 //Fire the event with the image
                 OnImageDownloaded(bmp);
-            }, true);
+            }, long_running: true);
         else
         {
             //if it's a RAW image, cancel the download and release the image
@@ -710,6 +690,7 @@ public sealed class SDKWrapper
     {
         //create a filestream to given file
         Error = EDSDK_API.EdsCreateFileStream(filepath, EdsFileCreateDisposition.OpenExisting, EdsAccess.Read, out nint stream);
+
         return GetImage(stream, EdsImageSource.Thumbnail);
     }
 
@@ -727,7 +708,6 @@ public sealed class SDKWrapper
         {
             //set progress event
             Error = EDSDK_API.EdsSetProgressCallback(stream, SDKProgressCallbackEvent, EdsProgressOption.Periodically, ObjectPointer);
-            //download the data
             Error = EDSDK_API.EdsDownload(ObjectPointer, dirInfo.Size, stream);
         }
         finally
@@ -780,6 +760,7 @@ public sealed class SDKWrapper
                 BitmapData data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, bmp.PixelFormat);
 
                 byte* outPix = (byte*)data.Scan0;
+
                 fixed (byte* inPix = buffer)
                 {
                     for (int i = 0; i < datalength; i += 3)
@@ -849,14 +830,13 @@ public sealed class SDKWrapper
             int listener_count = LiveViewUpdated?.GetInvocationList()?.Length ?? 0;
 
             LogInfo($"{listener_count} LiveViewUpdated listeners found");
-            LogPropertyValue(nameof(SDKProperty.Evf_OutputDevice), SDKProperty.Evf_DepthOfFieldPreview.Get<uint>(this));
+            LogPropertyValue(nameof(SDKProperty.Evf_OutputDevice), SDKProperty.Evf_DepthOfFieldPreview.Get<uint>(MainCamera));
 
-
-            SDKProperty.Evf_OutputDevice.SetSetting(this, EvfOutputDevice.PC);
+            MainCamera.StartLiveView();
 
             IsLiveViewOn = true;
 
-            LogPropertyValue(nameof(SDKProperty.Evf_OutputDevice), GetSettingU32<uint>(SDKProperty.Evf_OutputDevice));
+            LogPropertyValue(nameof(SDKProperty.Evf_OutputDevice), MainCamera.Get(SDKProperty.Evf_OutputDevice));
         }
     }
 
@@ -874,7 +854,7 @@ public sealed class SDKWrapper
 
             //Wait 5 seconds for evf thread to finish, otherwise manually stop
             if (!cancelLiveViewWait.WaitOne(TimeSpan.FromSeconds(5)))
-                KillLiveView();
+                MainCamera.StopLiveView(LVoff);
             else
                 _logger.LogDebug("LiveView stopped cleanly");
         }
@@ -923,13 +903,13 @@ public sealed class SDKWrapper
                     //get some live view image metadata
                     if (!IsCoordSystemSet)
                     {
-                        Evf_CoordinateSystem = GetEvfCoord(efv_image);
+                        Evf_CoordinateSystem = efv_image.EVFCoordinateSystem;
                         IsCoordSystemSet = true;
                     }
 
-                    Evf_ZoomRect = GetEvfZoomRect(efv_image);
-                    Evf_ZoomPosition = GetEvfPoints(efv_image, SDKProperty.Evf_ZoomPosition);
-                    Evf_ImagePosition = GetEvfPoints(efv_image, SDKProperty.Evf_ImagePosition);
+                    Evf_ZoomRect = efv_image.ZoomPosition;
+                    Evf_ZoomPosition = efv_image.GetEVFPoint(SDKProperty.Evf_ZoomPosition);
+                    Evf_ImagePosition = efv_image.GetEVFPoint(SDKProperty.Evf_ImagePosition);
 
                     //release current evf image
                     Error = EDSDK_API.Release(efv_image);
@@ -944,7 +924,7 @@ public sealed class SDKWrapper
 
                 Error = EDSDK_API.Release(stream);
 
-                KillLiveView();
+                MainCamera.StopLiveView();
 
                 cancelLiveViewWait.Set();
             }
@@ -954,14 +934,6 @@ public sealed class SDKWrapper
             }
         });
         LVThread.Start();
-    }
-
-    private void KillLiveView()
-    {
-        LogInfo("Stopping Live view");
-
-        // stop the live view
-        MainCamera.Set(SDKProperty.Evf_OutputDevice, LVoff ? EvfOutputDevice.Off : EvfOutputDevice.TFT);
     }
 
     /// <summary>
@@ -988,8 +960,6 @@ public sealed class SDKWrapper
         }
     }
 
-    public void SetTFTEvf() => MainCamera.Set(SDKProperty.Evf_OutputDevice, EvfOutputDevice.TFT);
-
     /// <summary>
     /// Starts recording a video
     /// NOTE: Will throw an ArgumentException if the camera is not in the correct mode
@@ -1012,7 +982,7 @@ public sealed class SDKWrapper
             MainCamera.Set(SDKProperty.Evf_OutputDevice, 3);
 
             //Check if the camera is ready to film
-            VideoRecordStatus recordStatus = MainCamera.Get(SDKProperty.Record);
+            VideoRecordStatus recordStatus = MainCamera.Get<VideoRecordStatus>(SDKProperty.Record);
 
             if (recordStatus != VideoRecordStatus.Movie_shooting_ready)
             {
@@ -1028,9 +998,9 @@ public sealed class SDKWrapper
             }
 
             IsFilming = true;
-            PrevSaveTo = GetSetting(SDKProperty.SaveTo); // to restore the current setting after recording
+            PrevSaveTo = MainCamera.Get(SDKProperty.SaveTo); // to restore the current setting after recording
 
-            SetSetting(SDKProperty.SaveTo, (uint)EdsSaveTo.Camera); // when recording videos, it has to be saved on the camera internal memory
+            MainCamera.Set(SDKProperty.SaveTo, (uint)EdsSaveTo.Camera); // when recording videos, it has to be saved on the camera internal memory
 
             DownloadVideo = false; // start the video recording
 
@@ -1128,7 +1098,7 @@ public sealed class SDKWrapper
 
     public void SetSaveToLocation(DirectoryInfo directory)
     {
-        SetSaveToHost();
+        MainCamera.SetSaveToHost();
         ImageSaveDirectory = directory.FullName;
     }
 
@@ -1178,15 +1148,17 @@ public sealed class SDKWrapper
     public float GetMinVolumeSpacePercent()
     {
         float minPercent = 1f;
+
         RunForEachVolume((childReference, volumeInfo) =>
         {
-            var freePc = volumeInfo.FreeSpaceInBytes / (float)volumeInfo.MaxCapacity;
+            float freePc = volumeInfo.FreeSpaceInBytes / (float)volumeInfo.MaxCapacity;
+
             _logger.LogDebug("Camera volume free space. volume: {volume}, freeSpaceBytes: {freeSpaceBytes}, maxCapacity: {maxCapacity}, freePercent: {freePercent}", volumeInfo.szVolumeLabel, volumeInfo.FreeSpaceInBytes, volumeInfo.MaxCapacity, freePc);
+
             if (freePc < minPercent)
-            {
                 minPercent = freePc;
-            }
         });
+
         return minPercent;
     }
 
@@ -1203,9 +1175,8 @@ public sealed class SDKWrapper
             SendSDKCommand(delegate { Error = EDSDK_API.EdsGetVolumeInfo(childReference, out volumeInfo); });
 
             if (volumeInfo.StorageType != (uint)EdsStorageType.Non && volumeInfo.Access == (uint)EdsAccess.ReadWrite)
-            {
                 action(childReference, volumeInfo);
-            }
+
             Error = EDSDK_API.Release(childReference);
         }
     }

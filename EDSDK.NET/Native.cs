@@ -1264,7 +1264,6 @@ public static unsafe class EDSDK_API
         [DllImport(_DLL_PATH)]
         static extern SDKError EdsRelease(nint inRef);
 
-
         return reference != 0 ? EdsRelease(reference) : SDKError.OK;
     }
 

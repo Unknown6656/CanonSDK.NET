@@ -10,7 +10,6 @@ using System.Text;
 using System;
 
 using EDSDK.Native;
-using Unknown6656;
 
 namespace EDSDK.NET;
 
@@ -286,6 +285,8 @@ public abstract class SDKObject
     //        throw new InvalidOperationException("Settings lists are not supported for this property.");
     //}
 
+    public SDKError Release() => EDSDK_API.Release(this);
+
     public uint Get(SDKProperty property) => Get<uint>(property);
 
     public unsafe T Get<T>(SDKProperty property)
@@ -430,19 +431,16 @@ public sealed class SDKCamera
     /// </summary>
     public EdsDeviceInfo Info { get; }
 
-    /// <summary>
-    /// Handles errors that happen with the SDK
-    /// </summary>
-#pragma warning disable CA1822 // Mark members as static
-    public SDKError Error
-#pragma warning restore CA1822
+    public EvfOutputDevice ViewfinderOutputDevice
     {
-     // get => EdsError.OK;
-        set
-        {
-            if (value != SDKError.OK)
-                throw new Exception("SDK Error: " + value);
-        }
+        set => Set(SDKProperty.Evf_OutputDevice, value);
+        get => Get<EvfOutputDevice>(SDKProperty.Evf_OutputDevice);
+    }
+
+    public EdsSaveTo ImageSaveTarget
+    {
+        set => Set(SDKProperty.SaveTo, value);
+        get => Get<EdsSaveTo>(SDKProperty.SaveTo);
     }
 
 
@@ -453,9 +451,21 @@ public sealed class SDKCamera
     public SDKCamera(SDKWrapper sdk, nint handle)
         : base(sdk, handle)
     {
-        Error = EDSDK_API.EdsGetDeviceInfo(handle, out EdsDeviceInfo dinfo);
-        Info = dinfo;
+        sdk.Error = EDSDK_API.EdsGetDeviceInfo(handle, out EdsDeviceInfo info);
+        Info = info;
     }
+
+
+
+
+    public void StartLiveView() => ViewfinderOutputDevice = EvfOutputDevice.PC;
+
+    public void StopLiveView(bool LVoff) => ViewfinderOutputDevice = LVoff ? EvfOutputDevice.Off : EvfOutputDevice.TFT;
+
+    public void SetTFTEvf() => ViewfinderOutputDevice = EvfOutputDevice.TFT;
+
+    public void SetSaveToHost() => ImageSaveTarget = EdsSaveTo.Host;
+
 
     public SDKError OpenSession() => EDSDK_API.OpenSession(this);
 
