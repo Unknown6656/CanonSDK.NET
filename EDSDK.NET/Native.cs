@@ -1188,7 +1188,7 @@ public static unsafe class EDSDK_API
     private const string _DLL_PATH = "EDSDK.dll";
 
 
-    private static nint CheckValidCamera(Camera? camera) => camera?.Handle is 0 or null ? throw new ArgumentNullException(nameof(camera), "Camera or camera reference is null/zero") : camera.Handle;
+    private static nint CheckValidObject(SDKObject? @object) => @object?.Handle is 0 or null ? throw new ArgumentNullException(nameof(@object), "SDKObject reference is null.") : @object.Handle;
 
     #region BASIC SDK INIT/CTOR & DTOR FUNCTIONS
 
@@ -1246,6 +1246,13 @@ public static unsafe class EDSDK_API
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
     public static extern SDKError EdsRetain(nint inRef);
+
+    /// <summary>
+    /// Decrements the reference counter to an object. When the reference counter reaches 0, the object is released.
+    /// </summary>
+    /// <param name="reference">The reference of the item.</param>
+    /// <returns>Any of the SDK errors.</returns>
+    public static SDKError Release(SDKObject? @object) => Release(@object?.Handle ?? 0);
 
     /// <summary>
     /// Decrements the reference counter to an object. When the reference counter reaches 0, the object is released.
@@ -1327,12 +1334,12 @@ public static unsafe class EDSDK_API
     /// <param name="outPropertyDesc">Array of the value which can be set up</param>
     /// <returns>An SDK error status.</returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public static SDKError GetPropertyDesc(Camera? camera, SDKProperty property, out EdsPropertyDesc outPropertyDesc)
+    public static SDKError GetPropertyDesc(SDKObject? @object, SDKProperty property, out EdsPropertyDesc outPropertyDesc)
     {
         [DllImport(_DLL_PATH)]
-        static extern SDKError EdsGetPropertyDesc(nint camera, SDKProperty property, out EdsPropertyDesc outPropertyDesc);
+        static extern SDKError EdsGetPropertyDesc(nint handle, SDKProperty property, out EdsPropertyDesc outPropertyDesc);
 
-        return EdsGetPropertyDesc(CheckValidCamera(camera), property, out outPropertyDesc);
+        return EdsGetPropertyDesc(CheckValidObject(@object), property, out outPropertyDesc);
     }
 
     /// <summary>
@@ -1343,12 +1350,12 @@ public static unsafe class EDSDK_API
     /// <param name="param"> Additional information of property. We use this parameter in order to specify an index in case there are two or more values over the same ID.</param>
     /// <returns>An SDK error status.</returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public static SDKError GetPropertySize(Camera? camera, SDKProperty property, out EdsDataType type, out int size)
+    public static SDKError GetPropertySize(SDKObject? @object, SDKProperty property, out EdsDataType type, out int size)
     {
         [DllImport(_DLL_PATH)]
-        static extern SDKError EdsGetPropertySize(nint camera, SDKProperty property, int param, out EdsDataType type, out int size);
+        static extern SDKError EdsGetPropertySize(nint handle, SDKProperty property, int param, out EdsDataType type, out int size);
 
-        return EdsGetPropertySize(CheckValidCamera(camera), property, 0, out type, out size);
+        return EdsGetPropertySize(CheckValidObject(@object), property, 0, out type, out size);
     }
 
     /// <summary>
@@ -1360,40 +1367,39 @@ public static unsafe class EDSDK_API
     /// <param name="inPropertySize">The number of bytes of the prepared buffer for receive property-value.</param>
     /// <param name="outPropertyData">The buffer pointer to receive property-value.</param>
     /// <returns></returns>
-    public static SDKError GetPropertyData(Camera? camera, SDKProperty property, int size, nint buffer)
+    public static SDKError GetPropertyData(SDKObject? @object, SDKProperty property, int size, nint buffer)
     {
         [DllImport(_DLL_PATH)]
-        static extern SDKError EdsGetPropertyData(nint camera, SDKProperty property, int param, int size, nint buffer);
+        static extern SDKError EdsGetPropertyData(nint handle, SDKProperty property, int param, int size, nint buffer);
 
-        return EdsGetPropertyData(CheckValidCamera(camera), property, 0, size, buffer);
+        return EdsGetPropertyData(CheckValidObject(@object), property, 0, size, buffer);
     }
 
-    public static SDKError GetPropertyData<T>(Camera? camera, SDKProperty property, out T data)
-        where T : unmanaged
+    public static SDKError GetPropertyData<T>(SDKObject? @object, SDKProperty property, out T? data)
     {
-        T value = default;
-        SDKError error = GetPropertyData(camera, property, sizeof(T), (nint)(void*)&value);
+        T? value = default;
+        SDKError error = GetPropertyData(@object, property, sizeof(T), (nint)(void*)&value);
 
         data = value;
 
         return error;
     }
 
-    public static SDKError GetPropertyData(Camera? camera, SDKProperty property, out EdsFocusInfo data)
-    {
-        int size = Marshal.SizeOf(typeof(EdsFocusInfo));
-        nint ptr = Marshal.AllocHGlobal(size);
-        SDKError err = GetPropertyData(camera, property, size, ptr);
+    //public static SDKError GetPropertyData(SDKObject? @object, SDKProperty property, out EdsFocusInfo data)
+    //{
+    //    int size = Marshal.SizeOf(typeof(EdsFocusInfo));
+    //    nint ptr = Marshal.AllocHGlobal(size);
+    //    SDKError err = GetPropertyData(@object, property, size, ptr);
+    //
+    //    data = (EdsFocusInfo)Marshal.PtrToStructure(ptr, typeof(EdsFocusInfo));
+    //    Marshal.FreeHGlobal(ptr);
+    //    return err;
+    //}
 
-        data = (EdsFocusInfo)Marshal.PtrToStructure(ptr, typeof(EdsFocusInfo));
-        Marshal.FreeHGlobal(ptr);
-        return err;
-    }
-
-    public static SDKError GetPropertyData(Camera? camera, SDKProperty property, out string data)
+    public static SDKError GetPropertyData(SDKObject? @object, SDKProperty property, out string? data)
     {
         nint ptr = Marshal.AllocHGlobal(256);
-        SDKError err = GetPropertyData(camera, property, 256, ptr);
+        SDKError err = GetPropertyData(@object, property, 256, ptr);
 
         data = Marshal.PtrToStringAnsi(ptr);
         Marshal.FreeHGlobal(ptr);
@@ -1401,12 +1407,12 @@ public static unsafe class EDSDK_API
         return err;
     }
 
-    public static SDKError GetPropertyData(Camera? camera, SDKProperty property, out int[] data)
+    public static SDKError GetPropertyData(SDKObject? @object, SDKProperty property, out int[] data)
     {
-        GetPropertySize(camera, property, out _, out int size);
+        GetPropertySize(@object, property, out _, out int size);
 
         nint ptr = Marshal.AllocHGlobal(size);
-        SDKError err = GetPropertyData(camera, property, size, ptr);
+        SDKError err = GetPropertyData(@object, property, size, ptr);
         int len = size / 4;
 
         data = new int[len];
@@ -1417,12 +1423,12 @@ public static unsafe class EDSDK_API
         return err;
     }
 
-    public static SDKError GetPropertyData(Camera? camera, SDKProperty property, out byte[] data)
+    public static SDKError GetPropertyData(SDKObject? @object, SDKProperty property, out byte[] data)
     {
-        GetPropertySize(camera, property, out _, out int size);
+        GetPropertySize(@object, property, out _, out int size);
 
         nint ptr = Marshal.AllocHGlobal(size);
-        SDKError err = GetPropertyData(camera, property, size, ptr);
+        SDKError err = GetPropertyData(@object, property, size, ptr);
 
         int len = size;
         data = new byte[len];
@@ -1460,12 +1466,12 @@ public static unsafe class EDSDK_API
     /// <param name="data">The buffer pointer to set property-value.</param>
     /// <returns>An SDK error status.</returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public static SDKError SetPropertyData(Camera? camera, SDKProperty property, int size, in object data)
+    public static SDKError SetPropertyData(SDKObject? @object, SDKProperty property, int size, in object? data)
     {
         [DllImport(_DLL_PATH)]
-        static extern SDKError EdsSetPropertyData(nint camera, SDKProperty property, int param, int size, [MarshalAs(UnmanagedType.AsAny), In] object data);
+        static extern SDKError EdsSetPropertyData(nint handle, SDKProperty property, int param, int size, [MarshalAs(UnmanagedType.AsAny), In] object? data);
 
-        return EdsSetPropertyData(CheckValidCamera(camera), property, 0, size, data);
+        return EdsSetPropertyData(CheckValidObject(@object), property, 0, size, data);
     }
 
     #endregion
@@ -1539,12 +1545,12 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    public static SDKError OpenSession(Camera? camera)
+    public static SDKError OpenSession(SDKCamera? camera)
     {
         [DllImport(_DLL_PATH)]
         static extern SDKError EdsOpenSession(nint camera);
 
-        return EdsOpenSession(CheckValidCamera(camera));
+        return EdsOpenSession(CheckValidObject(camera));
     }
 
     /*-----------------------------------------------------------------------------
@@ -1560,16 +1566,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    public static SDKError CloseSession(Camera? camera)
+    public static SDKError CloseSession(SDKCamera? camera)
     {
         [DllImport(_DLL_PATH)]
         static extern SDKError EdsCloseSession(nint camera);
 
-        return camera is Camera c ? EdsCloseSession(CheckValidCamera(c)) : SDKError.OK;
+        return camera is SDKCamera c ? EdsCloseSession(CheckValidObject(c)) : SDKError.OK;
     }
-
-
-
 
     /*-----------------------------------------------------------------------------
     //
@@ -1587,8 +1590,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSendCommand(nint camera, CameraCommand inCommand, int param);
+    public static SDKError SendCommand(SDKCamera? camera, CameraCommand command, int param)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsSendCommand(nint camera, CameraCommand inCommand, int param);
+
+        return EdsSendCommand(CheckValidObject(camera), command, param);
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -1606,8 +1614,15 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSendStatusCommand(nint camera, CameraState cameraState, int param);
+    public static SDKError SendStatusCommand(SDKCamera? camera, CameraState cameraState, int param)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsSendStatusCommand(nint camera, CameraState cameraState, int param);
+
+        return EdsSendStatusCommand(CheckValidObject(camera), cameraState, param);
+    }
+
+
 
     /*-----------------------------------------------------------------------------
     //
@@ -1671,6 +1686,7 @@ public static unsafe class EDSDK_API
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
     public static extern SDKError EdsFormatVolume(nint inVolumeRef);
+
 
 
     /*--------------------------------------------
@@ -2195,6 +2211,7 @@ public static unsafe class EDSDK_API
     [DllImport(_DLL_PATH)]
     public static extern SDKError EdsGetImage(nint inImageRef, EdsImageSource inImageSource, EdsTargetImageType inImageType, EdsRect inSrcRect, EdsSize inDstSize, nint outStreamRef);
 
+
     //----------------------------------------------
     //   Event handler registering functions
     //----------------------------------------------            
@@ -2289,6 +2306,7 @@ public static unsafe class EDSDK_API
     [DllImport(_DLL_PATH)]
     public static extern SDKError EdsSetCameraStateEventHandler(nint camera, StateEvent @event, EdsStateEventHandler? inStateEventHandler, nint inContext);
 
+
     /*-----------------------------------------------------------------------------
 		//
 		//  Function:   EdsCreateEvfImageRef         
@@ -2301,8 +2319,17 @@ public static unsafe class EDSDK_API
 		//
 		//  Returns:    Any of the sdk errors.
 		-----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsCreateEvfImageRef(nint inStreamRef, out nint outEvfImageRef);
+    public static SDKError CreateEvfImageRef(nint inStreamRef, SDKWrapper sdk, out SDKElectronicViewfinderImage viewfinderImage)
+    {
+
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsCreateEvfImageRef(nint inStreamRef, out nint outEvfImageRef);
+
+        SDKError error = EdsCreateEvfImageRef(inStreamRef, out nint outEvfImageRef);
+        viewfinderImage = new(sdk, outEvfImageRef);
+
+        return error;
+    }
 
     /*-----------------------------------------------------------------------------
 		//
@@ -2323,14 +2350,13 @@ public static unsafe class EDSDK_API
 		//
 		//  Returns:    Any of the sdk errors.
 		-----------------------------------------------------------------------------*/
-    public static SDKError DownloadEvfImage(Camera? camera, nint outEvfImageRef)
+    public static SDKError DownloadEvfImage(SDKCamera? camera, SDKElectronicViewfinderImage target_image)
     {
         [DllImport(_DLL_PATH)]
         static extern SDKError EdsDownloadEvfImage(nint camera, nint outEvfImageRef);
 
-        return EdsDownloadEvfImage(CheckValidCamera(camera), outEvfImageRef);
+        return EdsDownloadEvfImage(CheckValidObject(camera), CheckValidObject(target_image));
     }
-
 
 
 

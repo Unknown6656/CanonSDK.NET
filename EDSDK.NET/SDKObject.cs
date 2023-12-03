@@ -1,12 +1,16 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+﻿// #define STRICT_SETGET_4_BYTES_ONLY
+
 using System.Runtime.InteropServices;
+using System.Diagnostics.CodeAnalysis;
+using System.Collections.Generic;
+using System.Collections;
 using System.Reflection;
 using System.Linq;
 using System.Text;
 using System;
 
 using EDSDK.Native;
+using Unknown6656;
 
 namespace EDSDK.NET;
 
@@ -18,7 +22,6 @@ public readonly partial struct SDKProperty(uint id)
     private static readonly SDKProperty[] _settingslist_supported = [AEModeSelect, ISOSpeed, Av, Tv, MeteringMode, ExposureCompensation];
 
     private readonly uint _id = id;
-
 
     #region KNOWN PROPERTIES
 
@@ -152,7 +155,6 @@ public readonly partial struct SDKProperty(uint id)
     public readonly string Name => (_names.TryGetValue(this, out string? name) ? name : null) ?? "[UNKNOWN]";
 
 
-
     static SDKProperty()
     {
         foreach (PropertyInfo prop in typeof(SDKProperty).GetProperties(BindingFlags.Public | BindingFlags.Static))
@@ -177,16 +179,12 @@ public readonly partial struct SDKProperty(uint id)
 
     public readonly bool Equals(SDKProperty other) => _id == other._id;
 
-    /// <summary>
-    /// Gets the list of possible values for the current camera to set.
-    /// Only the PropertyIDs "AEModeSelect", "ISO", "Av", "Tv", "MeteringMode" and "ExposureCompensation" are allowed.
-    /// </summary>
-    /// <returns>A list of available values for the given property ID</returns>
-    public readonly List<int> GetAsList(SDKWrapper wrapper)
+
+    public readonly List<int> GetAsList(SDKObject @object)
     {
         if (_settingslist_supported.Contains(this))
         {
-            wrapper.Error = EDSDK_API.GetPropertyDesc(wrapper.MainCamera, this, out EdsPropertyDesc des);
+            @object.SDK.Error = EDSDK_API.GetPropertyDesc(@object, this, out EdsPropertyDesc des);
 
             return des.PropDesc.Take(des.NumElements).ToList();
         }
@@ -194,172 +192,24 @@ public readonly partial struct SDKProperty(uint id)
             throw new InvalidOperationException("Settings lists are not supported for this property.");
     }
 
-    /// <summary>
-    /// Gets the current setting of given property ID as an uint
-    /// </summary>
-    /// <returns>The current setting of the camera</returns>
-    public readonly uint Get(SDKWrapper wrapper) => Get<uint>(wrapper);
+    public readonly uint Get(SDKObject @object) => @object.Get(this);
 
-    /// <summary>
-    /// Gets the current setting of given property ID as an uint
-    /// </summary>
-    /// <returns>The current setting of the camera</returns>
-    public readonly unsafe T Get<T>(SDKWrapper wrapper)
-        where T : unmanaged
-    {
-        if (sizeof(T) != sizeof(uint))
-            throw new ArgumentException($"The type {typeof(T)} must have a size of {sizeof(uint)} bytes - not {sizeof(T)} bytes.", nameof(T));
+    public readonly T Get<T>(SDKObject @object) where T : unmanaged => @object.Get<T>(this);
 
-        wrapper.Error = EDSDK_API.GetPropertyData(wrapper.MainCamera, this, out uint value);
+    public readonly string GetAsString(SDKObject @object) => @object.GetAsString(this);
 
-        return *(T*)&value;
-    }
+    public readonly T GetAsStruct<T>(SDKObject @object) where T : struct => @object.GetAsStruct<T>(this);
 
-    /// <summary>
-    /// Gets the current setting of given property ID as a string
-    /// </summary>
-    /// <param name="property">The property ID</param>
-    /// <returns>The current setting of the camera</returns>
-    public readonly string GetAsString(SDKWrapper wrapper)
-    {
-        wrapper.Error = EDSDK_API.GetPropertyData(wrapper.MainCamera, this, out string value);
+    public readonly unsafe void Set<T>(SDKObject @object, T value) where T : unmanaged => @object.Set(this, value);
 
-        return value;
-    }
+    public readonly void Set(SDKObject @object, uint value) => @object.Set(this, value);
 
-    /// <summary>
-    /// Gets the current setting of given property ID as a struct
-    /// </summary>
-    /// <param name="property">The property ID</param>
-    /// <typeparam name="T">One of the EDSDK structs</typeparam>
-    /// <returns>The current setting of the camera</returns>
-    public readonly T GetAsStruct<T>(SDKWrapper wrapper)
-        where T : struct
-    {
-        //get type and size of struct
-        Type structureType = typeof(T);
-        int bufferSize = Marshal.SizeOf(structureType);
+    public readonly void Set(SDKObject @object, DateTime value) => @object.Set(this, value);
 
-        //allocate memory
-        nint ptr = Marshal.AllocHGlobal(bufferSize);
-        //retrieve value
-        wrapper.Error = EDSDK_API.GetPropertyData(wrapper.MainCamera, this, bufferSize, ptr);
+    public readonly void Set(SDKObject @object, string value) => @object.Set(this, value);
 
-        try
-        {
-            //convert pointer to managed structure
-            T data = (T)Marshal.PtrToStructure(ptr, structureType);
-            return data;
-        }
-        finally
-        {
-            if (ptr != 0)
-            {
-                //free the allocated memory
-                Marshal.FreeHGlobal(ptr);
-                ptr = 0;
-            }
-        }
-    }
+    public readonly void SetAsStruct<T>(SDKObject @object, T value) where T : struct => @object.SetAsStruct(this, value);
 
-    /// <summary>
-    /// Sets an uint value for the given property ID
-    /// </summary>
-    /// <param name="property">The property ID</param>
-    /// <param name="value">The value which will be set</param>
-    public readonly unsafe void Set<T>(SDKWrapper wrapper, T value)
-        where T : unmanaged
-    {
-        if (sizeof(T) != sizeof(uint))
-            throw new ArgumentException($"The type {typeof(T)} must have a size of {sizeof(uint)} bytes - not {sizeof(T)} bytes.", nameof(T));
-
-        Set<uint>(wrapper, *(uint*)&value);
-    }
-
-    /// <summary>
-    /// Sets an uint value for the given property ID
-    /// </summary>
-    /// <param name="property">The property ID</param>
-    /// <param name="value">The value which will be set</param>
-    public readonly void Set(SDKWrapper wrapper, uint value)
-    {
-        LogSetProperty(wrapper, value);
-
-        wrapper.SendSDKCommand(delegate
-        {
-            Error = EDSDK_API.GetPropertySize(wrapper.MainCamera, this, out EdsDataType type, out int size);
-            Error = EDSDK_API.SetPropertyData(wrapper.MainCamera, this, size, value);
-        }, sdk_action: nameof(EDSDK_API.SetPropertyData));
-    }
-
-    /// <summary>
-    /// Sets a DateTime value for the current property.
-    /// </summary>
-    /// <param name="Value">The value which will be set</param>
-    public readonly void Set(SDKWrapper wrapper, DateTime value) =>
-        SetAsStruct(wrapper, new EdsTime(value.Year, value.Month, value.Day, value.Hour, value.Minute, value.Second, value.Millisecond));
-
-    /// <summary>
-    /// Sets a string value for the given property ID
-    /// </summary>
-    /// <param name="value">The value which will be set</param>
-    public readonly void Set(SDKWrapper wrapper, string value)
-    {
-        LogSetProperty(wrapper, value);
-
-        if (value is null)
-            throw new ArgumentNullException(nameof(value));
-
-        //convert string to byte array
-        byte[] propertyValueBytes = Encoding.ASCII.GetBytes(value + '\0');
-        int propertySize = propertyValueBytes.Length;
-
-        //check size of string
-        if (propertySize > 32)
-            throw new ArgumentOutOfRangeException("Value must be smaller than 32 bytes");
-
-        //set value
-        wrapper.SendSDKCommand(() => Error = EDSDK_API.SetPropertyData(MainCamera.Handle, property, 32, propertyValueBytes), sdk_action: nameof(EDSDK_API.SetPropertyData));
-    }
-
-    /// <summary>
-    /// Sets a struct value for the given property ID
-    /// </summary>
-    /// <param name="value">The value which will be set</param>
-    public readonly void SetAsStruct<T>(SDKWrapper wrapper, T value)
-        where T : struct
-    {
-        LogSetProperty(wrapper, value);
-
-        wrapper.SendSDKCommand(delegate
-        {
-            Error = EDSDK_API.SetPropertyData(wrapper.MainCamera, this, Marshal.SizeOf(typeof(T)), value);
-        }, sdk_action: nameof(EDSDK_API.SetPropertyData));
-    }
-
-    private readonly void LogSetProperty(SDKWrapper wrapper, object? value)
-    {
-        string repr = value switch
-        {
-            string s => $"\"{s}\"",
-            char c => $"'{c}' ({(int)c}, 0x{(int)c:x4})",
-            byte or sbyte => $"0x{value:x2} ({value})",
-            short or ushort => $"0x{value:x4} ({value})",
-            int or uint => $"0x{value:x8} ({value})",
-            nint or nuint or long or ulong => $"0x{value:x16} ({value})",
-            IEnumerable collection => new Func<string>(delegate
-            {
-                string[] array = collection.Cast<object?>().Select(o => o?.ToString() ?? "(null)").ToArray();
-
-                return $"{array.Length}: [{string.Join(", ", array)}]";
-            })(),
-            float or double or decimal or bool or null or _ => value?.ToString() ?? "(null)",
-        };
-
-        wrapper.LogInfo($"Setting property: {this} ==> {repr}");
-    }
-
-    //public readonly void LogPropertyValue(SDKWrapper wrapper, uint value) => LogInfo($"Camera_SDKPropertyEvent. Property {propertyName} changed to 0x{propertyValue:X}");
 
     public static SDKProperty FromID(uint id) => Find(id, _names.Keys) ?? new(id);
 
@@ -406,20 +256,173 @@ public abstract class SDKObject
     /// </summary>
     public nint Handle { get; }
 
+    public SDKWrapper SDK { get; }
 
-    public SDKObject(nint handle)
+    public uint this[SDKProperty property]
+    {
+        get => Get(property);
+        set => Set(property, value);
+    }
+
+
+    public SDKObject(SDKWrapper sdk, nint handle)
     {
         if (handle == 0)
             throw new ArgumentNullException(nameof(handle));
 
+        SDK = sdk;
         Handle = handle;
     }
+
+    //public List<int> GetAsList(SDKProperty property)
+    //{
+    //    if (_settingslist_supported.Contains(this))
+    //    {
+    //        @object.SDK.Error = EDSDK_API.GetPropertyDesc(@object, this, out EdsPropertyDesc des);
+    //
+    //        return des.PropDesc.Take(des.NumElements).ToList();
+    //    }
+    //    else
+    //        throw new InvalidOperationException("Settings lists are not supported for this property.");
+    //}
+
+    public uint Get(SDKProperty property) => Get<uint>(property);
+
+    public unsafe T Get<T>(SDKProperty property)
+#if STRICT_SETGET_4_BYTES_ONLY
+        where T : struct
+#endif
+    {
+#if STRICT_SETGET_4_BYTES_ONLY
+        if (sizeof(T) != sizeof(uint))
+            throw new ArgumentException($"The type {typeof(T)} must have a size of {sizeof(uint)} bytes - not {sizeof(T)} bytes.", nameof(T));
+#else
+        SDK.Error = EDSDK_API.GetPropertyData(this, property, out T? value);
+        value ??= default;
+#endif
+
+        return value;
+    }
+
+    public string? GetAsString(SDKProperty property)
+    {
+        SDK.Error = EDSDK_API.GetPropertyData(this, property, out string? value);
+
+        return value;
+    }
+
+    public T GetAsStruct<T>(SDKProperty property)
+        where T : struct
+    {
+        //get type and size of struct
+        Type structureType = typeof(T);
+        int bufferSize = Marshal.SizeOf(structureType);
+        nint ptr = Marshal.AllocHGlobal(bufferSize);
+
+        SDK.Error = EDSDK_API.GetPropertyData(this, property, bufferSize, ptr);
+
+        try
+        {
+            //convert pointer to managed structure
+            T data = (T)Marshal.PtrToStructure(ptr, structureType);
+            return data;
+        }
+        finally
+        {
+            if (ptr != 0)
+            {
+                //free the allocated memory
+                Marshal.FreeHGlobal(ptr);
+                ptr = 0;
+            }
+        }
+    }
+
+    public unsafe void Set<T>(SDKProperty property, T value)
+#if STRICT_SETGET_4_BYTES_ONLY
+        where T : struct
+#endif
+    {
+#if STRICT_SETGET_4_BYTES_ONLY
+        if (sizeof(T) != sizeof(uint))
+            throw new ArgumentException($"The type {typeof(T)} must have a size of {sizeof(uint)} bytes - not {sizeof(T)} bytes.", nameof(T));
+
+        Set(property, *(uint*)&value);
+#else
+        EDSDK_API.SetPropertyData(this, property, sizeof(T), value);
+#endif
+    }
+
+    public void Set(SDKProperty property, uint value)
+    {
+        LogSetProperty(property, value);
+
+        SDK.SendSDKCommand(delegate
+        {
+            SDK.Error = EDSDK_API.GetPropertySize(this, property, out EdsDataType type, out int size);
+            SDK.Error = EDSDK_API.SetPropertyData(this, property, size, value);
+        }, sdk_action: nameof(EDSDK_API.SetPropertyData));
+    }
+
+    public void Set(SDKProperty property, DateTime value) =>
+        SetAsStruct(property, new EdsTime(value.Year, value.Month, value.Day, value.Hour, value.Minute, value.Second, value.Millisecond));
+
+    public void Set(SDKProperty property, string value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+
+        if (value is not [.., '\0'])
+            value += '\0';
+
+        LogSetProperty(property, value);
+
+        //convert string to byte array
+        byte[] buffer = Encoding.ASCII.GetBytes(value);
+
+        if (buffer.Length > 32)
+            throw new ArgumentOutOfRangeException(nameof(value), "The provided value must be shorter than 32 bytes (including the zero-terminator).");
+
+        //set value
+        SDK.SendSDKCommand(() => EDSDK_API.SetPropertyData(this, property, 32, buffer), sdk_action: nameof(EDSDK_API.SetPropertyData));
+    }
+
+    public void SetAsStruct<T>(SDKProperty property, T value)
+        where T : struct
+    {
+        LogSetProperty(property, value);
+
+        SDK.SendSDKCommand(() => EDSDK_API.SetPropertyData(this, property, Marshal.SizeOf(typeof(T)), value), sdk_action: nameof(EDSDK_API.SetPropertyData));
+    }
+
+    private void LogSetProperty(SDKProperty property, object? value)
+    {
+        string repr = value switch
+        {
+            string s => $"\"{s}\"",
+            char c => $"'{c}' ({(int)c}, 0x{(int)c:x4})",
+            byte or sbyte => $"0x{value:x2} ({value})",
+            short or ushort => $"0x{value:x4} ({value})",
+            int or uint => $"0x{value:x8} ({value})",
+            nint or nuint or long or ulong => $"0x{value:x16} ({value})",
+            IEnumerable collection => new Func<string>(delegate
+            {
+                string[] array = collection.Cast<object?>().Select(o => o?.ToString() ?? "(null)").ToArray();
+
+                return $"{array.Length}: [{string.Join(", ", array)}]";
+            })(),
+            float or double or decimal or bool or null or _ => value?.ToString() ?? "(null)",
+        };
+
+        SDK.LogInfo($"Setting property: {this}.{property} = {repr}");
+    }
+
+    //public readonly void LogPropertyValue(SDKObject @object, uint value) => LogInfo($"Camera_SDKPropertyEvent. Property {propertyName} changed to 0x{propertyValue:X}");
 }
 
 /// <summary>
 /// A container for camera related information
 /// </summary>
-public sealed class Camera
+public sealed class SDKCamera
     : SDKObject
 {
     /// <summary>
@@ -447,10 +450,23 @@ public sealed class Camera
     /// Creates a new instance of the Camera class
     /// </summary>
     /// <param name="handle">Pointer to the SDK camera object</param>
-    public Camera(nint handle)
-        : base(handle)
+    public SDKCamera(SDKWrapper sdk, nint handle)
+        : base(sdk, handle)
     {
         Error = EDSDK_API.EdsGetDeviceInfo(handle, out EdsDeviceInfo dinfo);
         Info = dinfo;
     }
+
+    public SDKError OpenSession() => EDSDK_API.OpenSession(this);
+
+    public SDKError CloseSession() => EDSDK_API.CloseSession(this);
+
+    public SDKError SendCommand(CameraCommand command, int param) => EDSDK_API.SendCommand(this, command, param);
+
+    public SDKError SendStatusCommand(CameraState state, int param) => EDSDK_API.SendStatusCommand(this, state, param);
 }
+
+public sealed class SDKImage(SDKWrapper sdk, nint handle) : SDKObject(sdk, handle);
+
+public sealed class SDKElectronicViewfinderImage(SDKWrapper sdk, nint handle) : SDKObject(sdk, handle);
+
