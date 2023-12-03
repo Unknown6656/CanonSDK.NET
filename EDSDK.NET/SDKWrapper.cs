@@ -104,7 +104,7 @@ public sealed class SDKWrapper
     /// <summary>
     /// The used camera
     /// </summary>
-    public Camera? MainCamera { get; private set; }
+    public SDKCamera? MainCamera { get; private set; }
 
     /// <summary>
     /// States if a session with the MainCamera is opened
@@ -302,19 +302,19 @@ public sealed class SDKWrapper
     /// Get a list of all connected cameras
     /// </summary>
     /// <returns>The camera list</returns>
-    public List<Camera> GetCameraList()
+    public List<SDKCamera> GetCameraList()
     {
         //get list of cameras
-        Error = EDSDK_API.GetCameraList(out nint camlist);
+        Error = EDSDK_API.EdsGetCameraList(out nint camlist);
 
         //get each camera from camlist
         //get amount of connected cameras
-        Error = EDSDK_API.GetChildCount(camlist, out int c);
-        List<Camera> camList = [];
+        Error = EDSDK_API.EdsGetChildCount(camlist, out int c);
+        List<SDKCamera> camList = [];
         for (int i = 0; i < c; i++)
         {
             //get pointer to camera at index i
-            Error = EDSDK_API.GetChildAtIndex(camlist, i, out nint cptr);
+            Error = EDSDK_API.EdsGetChildAtIndex(camlist, i, out nint cptr);
             camList.Add(new Camera(cptr));
         }
 
@@ -327,7 +327,7 @@ public sealed class SDKWrapper
     /// Opens a session with given camera
     /// </summary>
     /// <param name="newCamera">The camera which will be used</param>
-    public void OpenSession(Camera newCamera)
+    public void OpenSession(SDKCamera newCamera)
     {
         _logger?.LogDebug("Opening session");
 
@@ -345,9 +345,9 @@ public sealed class SDKWrapper
             }, sdkAction: nameof(EDSDK_API.OpenSession));
 
             //subscribe to the camera events (for the SDK)
-            AddCameraHandler(() => Error = EDSDK_API.SetCameraStateEventHandler(MainCamera.Handle, StateEvent.All, SDKStateEvent, MainCamera.Handle), nameof(EDSDK_API.SetCameraStateEventHandler));
-            AddCameraHandler(() => Error = EDSDK_API.SetObjectEventHandler(MainCamera.Handle, EdsEvent.All, SDKObjectEvent, MainCamera.Handle), nameof(EDSDK_API.SetObjectEventHandler));
-            AddCameraHandler(() => Error = EDSDK_API.SetPropertyEventHandler(MainCamera.Handle, PropertyEvent.All, SDKPropertyEvent, MainCamera.Handle), nameof(EDSDK_API.SetPropertyEventHandler));
+            AddCameraHandler(() => Error = EDSDK_API.EdsSetCameraStateEventHandler(MainCamera.Handle, StateEvent.All, SDKStateEvent, MainCamera.Handle), nameof(EDSDK_API.EdsSetCameraStateEventHandler));
+            AddCameraHandler(() => Error = EDSDK_API.EdsSetObjectEventHandler(MainCamera.Handle, EdsEvent.All, SDKObjectEvent, MainCamera.Handle), nameof(EDSDK_API.EdsSetObjectEventHandler));
+            AddCameraHandler(() => Error = EDSDK_API.EdsSetPropertyEventHandler(MainCamera.Handle, PropertyEvent.All, SDKPropertyEvent, MainCamera.Handle), nameof(EDSDK_API.EdsSetPropertyEventHandler));
 
             CameraSessionOpen = true;
 
@@ -380,17 +380,17 @@ public sealed class SDKWrapper
             }
 
             //Remove the event handler
-            Error = EDSDK_API.SetCameraStateEventHandler(MainCamera.Handle, StateEvent.All, null, MainCamera.Handle);
-            Error = EDSDK_API.SetObjectEventHandler(MainCamera.Handle, EdsEvent.All, null, MainCamera.Handle);
-            Error = EDSDK_API.SetPropertyEventHandler(MainCamera.Handle, PropertyEvent.All, null, MainCamera.Handle);
+            Error = EDSDK_API.EdsSetCameraStateEventHandler(MainCamera, StateEvent.All, null, MainCamera.Handle);
+            Error = EDSDK_API.EdsSetObjectEventHandler(MainCamera, EdsEvent.All, null, MainCamera.Handle);
+            Error = EDSDK_API.EdsSetPropertyEventHandler(MainCamera, PropertyEvent.All, null, MainCamera.Handle);
 
             //close session and release camera
             SendSDKCommand(delegate
             {
-                Error = EDSDK_API.CloseSession(MainCamera.Handle);
+                Error = EDSDK_API.CloseSession(MainCamera);
             }, sdkAction: nameof(EDSDK_API.CloseSession));
 
-            SDKError c = EDSDK_API.Release(MainCamera.Handle);
+            SDKError c = EDSDK_API.Release(MainCamera);
 
             CameraSessionOpen = false;
             MainCamera = null;
@@ -589,7 +589,7 @@ public sealed class SDKWrapper
         try
         {
             //get information about object
-            Error = EDSDK_API.GetDirectoryItemInfo(ObjectPointer, out EdsDirectoryItemInfo dirInfo);
+            Error = EDSDK_API.EdsGetDirectoryItemInfo(ObjectPointer, out EdsDirectoryItemInfo dirInfo);
             if (string.IsNullOrEmpty(fileName))
             {
                 fileName = dirInfo.szFileName;
@@ -625,7 +625,7 @@ public sealed class SDKWrapper
                 Stopwatch stopWatch = Stopwatch.StartNew();
 
                 //create filestream to data
-                Error = EDSDK_API.CreateFileStream(targetImage, EdsFileCreateDisposition.CreateAlways, EdsAccess.ReadWrite, out nint streamRef);
+                Error = EDSDK_API.EdsCreateFileStream(targetImage, EdsFileCreateDisposition.CreateAlways, EdsAccess.ReadWrite, out nint streamRef);
                 //download file
                 STAThread.TryLockAndExecute(STAThread.ExecLock, nameof(STAThread.ExecLock), TimeSpan.FromSeconds(30), () => DownloadData(ObjectPointer, streamRef));
                 //release stream
@@ -662,7 +662,7 @@ public sealed class SDKWrapper
     {
         //get information about image
         EdsDirectoryItemInfo dirInfo = new();
-        Error = EDSDK_API.GetDirectoryItemInfo(ObjectPointer, out dirInfo);
+        Error = EDSDK_API.EdsGetDirectoryItemInfo(ObjectPointer, out dirInfo);
 
         //check the extension. Raw data cannot be read by the bitmap class
         string ext = Path.GetExtension(dirInfo.szFileName).ToLower();
@@ -675,15 +675,15 @@ public sealed class SDKWrapper
                 Bitmap bmp;
 
                 //create memory stream
-                Error = EDSDK_API.CreateMemoryStream(dirInfo.Size, out nint streamRef);
+                Error = EDSDK_API.EdsCreateMemoryStream(dirInfo.Size, out nint streamRef);
 
                 //download data to the stream
                 lock (STAThread.ExecLock)
                 {
                     DownloadData(ObjectPointer, streamRef);
                 }
-                Error = EDSDK_API.GetPointer(streamRef, out nint jpgPointer);
-                Error = EDSDK_API.GetLength(streamRef, out ulong length);
+                Error = EDSDK_API.EdsGetPointer(streamRef, out nint jpgPointer);
+                Error = EDSDK_API.EdsGetLength(streamRef, out ulong length);
 
                 unsafe
                 {
@@ -701,7 +701,7 @@ public sealed class SDKWrapper
         else
         {
             //if it's a RAW image, cancel the download and release the image
-            SendSDKCommand(delegate { Error = EDSDK_API.DownloadCancel(ObjectPointer); });
+            SendSDKCommand(delegate { Error = EDSDK_API.EdsDownloadCancel(ObjectPointer); });
 
             Error = EDSDK_API.Release(ObjectPointer);
         }
@@ -717,7 +717,7 @@ public sealed class SDKWrapper
     public Bitmap GetFileThumb(string filepath)
     {
         //create a filestream to given file
-        Error = EDSDK_API.CreateFileStream(filepath, EdsFileCreateDisposition.OpenExisting, EdsAccess.Read, out nint stream);
+        Error = EDSDK_API.EdsCreateFileStream(filepath, EdsFileCreateDisposition.OpenExisting, EdsAccess.Read, out nint stream);
         return GetImage(stream, EdsImageSource.Thumbnail);
     }
 
@@ -729,19 +729,19 @@ public sealed class SDKWrapper
     private void DownloadData(nint ObjectPointer, nint stream)
     {
         //get information about the object
-        Error = EDSDK_API.GetDirectoryItemInfo(ObjectPointer, out EdsDirectoryItemInfo dirInfo);
+        Error = EDSDK_API.EdsGetDirectoryItemInfo(ObjectPointer, out EdsDirectoryItemInfo dirInfo);
 
         try
         {
             //set progress event
-            Error = EDSDK_API.SetProgressCallback(stream, SDKProgressCallbackEvent, EdsProgressOption.Periodically, ObjectPointer);
+            Error = EDSDK_API.EdsSetProgressCallback(stream, SDKProgressCallbackEvent, EdsProgressOption.Periodically, ObjectPointer);
             //download the data
-            Error = EDSDK_API.Download(ObjectPointer, dirInfo.Size, stream);
+            Error = EDSDK_API.EdsDownload(ObjectPointer, dirInfo.Size, stream);
         }
         finally
         {
             //set the download as complete
-            Error = EDSDK_API.DownloadComplete(ObjectPointer);
+            Error = EDSDK_API.EdsDownloadComplete(ObjectPointer);
             Error = EDSDK_API.Release(ObjectPointer);
         }
     }
@@ -761,8 +761,8 @@ public sealed class SDKWrapper
         try
         {
             //create reference and get image info
-            Error = EDSDK_API.CreateImageRef(img_stream, out img_ref);
-            Error = EDSDK_API.GetImageInfo(img_ref, imageSource, out EdsImageInfo imageInfo);
+            Error = EDSDK_API.EdsCreateImageRef(img_stream, out img_ref);
+            Error = EDSDK_API.EdsGetImageInfo(img_ref, imageSource, out EdsImageInfo imageInfo);
 
             EdsSize outputSize = new(imageInfo.EffectiveRect.Width, imageInfo.EffectiveRect.Height);
             //calculate amount of data
@@ -775,9 +775,9 @@ public sealed class SDKWrapper
             Marshal.StructureToPtr(buffer, ptr, false);
 
 
-            Error = EDSDK_API.CreateMemoryStreamFromPointer(ptr, (uint)datalength, out stream);
+            Error = EDSDK_API.EdsCreateMemoryStreamFromPointer(ptr, (uint)datalength, out stream);
             //load image into the buffer
-            Error = EDSDK_API.GetImage(img_ref, imageSource, EdsTargetImageType.RGB, imageInfo.EffectiveRect, outputSize, stream);
+            Error = EDSDK_API.EdsGetImage(img_ref, imageSource, EdsTargetImageType.RGB, imageInfo.EffectiveRect, outputSize, stream);
 
             //create output bitmap
             Bitmap bmp = new(outputSize.width, outputSize.height, PixelFormat.Format24bppRgb);
@@ -831,8 +831,8 @@ public sealed class SDKWrapper
 
                 LogInfo($"Executing SDK command. ThreadName: {cThread.Name}, ApartmentState: {cThread.GetApartmentState()}");
 
-                Error = EDSDK_API.SendCommand(MainCamera.Handle, command, value);
-            }, sdkAction: nameof(EDSDK_API.SetPropertyData));
+                Error = MainCamera.SendCommand(command, value);
+            }, sdk_action: nameof(EDSDK_API.SetPropertyData));
         else
             throw new InvalidOperationException("Camera or camera reference is null/zero");
     }
@@ -934,22 +934,22 @@ public sealed class SDKWrapper
                     //get some live view image metadata
                     if (!IsCoordSystemSet)
                     {
-                        Evf_CoordinateSystem = GetEvfCoord(EvfImageRef);
+                        Evf_CoordinateSystem = GetEvfCoord(efv_image);
                         IsCoordSystemSet = true;
                     }
 
-                    Evf_ZoomRect = GetEvfZoomRect(EvfImageRef);
-                    Evf_ZoomPosition = GetEvfPoints(SDKProperty.Evf_ZoomPosition, EvfImageRef);
-                    Evf_ImagePosition = GetEvfPoints(SDKProperty.Evf_ImagePosition, EvfImageRef);
+                    Evf_ZoomRect = GetEvfZoomRect(efv_image);
+                    Evf_ZoomPosition = GetEvfPoints(efv_image, SDKProperty.Evf_ZoomPosition);
+                    Evf_ImagePosition = GetEvfPoints(efv_image, SDKProperty.Evf_ImagePosition);
 
                     //release current evf image
-                    Error = EDSDK_API.Release(EvfImageRef);
+                    Error = EDSDK_API.Release(efv_image);
 
-                    //create stream to image
-                    ums = new UnmanagedMemoryStream((byte*)jpgPointer, (long)length, (long)length, FileAccess.Read);
+                    using UnmanagedMemoryStream ums = new((byte*)jpgPointer, (long)length, (long)length, FileAccess.Read);
 
-                    //fire the LiveViewUpdated event with the live view image stream
+                    // fire the LiveViewUpdated event with the live view image stream
                     OnLiveViewUpdated(ums);
+
                     ums.Close();
                 }
 
@@ -1248,14 +1248,14 @@ public sealed class SDKWrapper
     private void RunForEachVolume(Action<nint, EdsVolumeInfo> action)
     {
         //get the number of volumes currently installed in the camera
-        Error = EDSDK_API.GetChildCount(GetCamera().Handle, out int VolumeCount);
+        Error = EDSDK_API.EdsGetChildCount(GetCamera().Handle, out int VolumeCount);
 
         for (int i = 0; i < VolumeCount; i++)
         {
             //get information about volume
-            Error = EDSDK_API.GetChildAtIndex(MainCamera.Handle, i, out nint childReference);
+            Error = EDSDK_API.EdsGetChildAtIndex(MainCamera.Handle, i, out nint childReference);
             EdsVolumeInfo volumeInfo = new();
-            SendSDKCommand(delegate { Error = EDSDK_API.GetVolumeInfo(childReference, out volumeInfo); });
+            SendSDKCommand(delegate { Error = EDSDK_API.EdsGetVolumeInfo(childReference, out volumeInfo); });
 
             if (volumeInfo.StorageType != (uint)EdsStorageType.Non && volumeInfo.Access == (uint)EdsAccess.ReadWrite)
             {
@@ -1277,15 +1277,14 @@ public sealed class SDKWrapper
             try
             {
                 Marshal.StructureToPtr(volume.Volume, ptr, false);
-                Error = EDSDK_API.FormatVolume(ptr);
+                Error = EDSDK_API.EdsFormatVolume(ptr);
 
             }
             finally
             {
                 Marshal.FreeHGlobal(ptr);
             }
-        }, sdkAction: nameof(EDSDK_API.FormatVolume)
-        );
+        }, sdk_action: nameof(EDSDK_API.EdsFormatVolume));
     }
 
 
@@ -1293,10 +1292,13 @@ public sealed class SDKWrapper
 
     #region Other
 
+    internal void SendSDKCommand(Func<SDKError> command, string? sdk_action = null, bool long_running = false) =>
+        SendSDKCommand(new Action(() => Error = command()), sdk_action, long_running);
+
     /// <summary>
     /// Sends a command to the camera safely
     /// </summary>
-    private void SendSDKCommand(Action command, string? sdk_action = null, bool long_running = false)
+    internal void SendSDKCommand(Action command, string? sdk_action = null, bool long_running = false)
     {
         LogInfo($"Sending SDK command: {sdk_action ?? "(unknown)"}");
 
@@ -1341,7 +1343,8 @@ public sealed class SDKWrapper
     private void SetCapacity(EdsCapacity capacity)
     {
         PrevCapacity = capacity;
-        SendSDKCommand(() => Error = EDSDK_API.SetCapacity(MainCamera.Handle, capacity));
+
+        SendSDKCommand(() => Error = EDSDK_API.EdsSetCapacity(MainCamera.Handle, capacity));
     }
 
 
@@ -1382,16 +1385,16 @@ public sealed class SDKWrapper
     public List<CameraFileEntry> GetVolumes(CameraFileEntry camera)
     {
         //get the number of volumes currently installed in the camera
-        Error = EDSDK_API.GetChildCount(camera.Handle, out int VolumeCount);
+        Error = EDSDK_API.EdsGetChildCount(camera.Handle, out int VolumeCount);
         List<CameraFileEntry> volumes = [];
 
         //iterate through all of them
         for (int i = 0; i < VolumeCount; i++)
         {
             //get information about volume
-            Error = EDSDK_API.GetChildAtIndex(MainCamera.Handle, i, out nint childReference);
+            Error = EDSDK_API.EdsGetChildAtIndex(MainCamera.Handle, i, out nint childReference);
             EdsVolumeInfo volumeInfo = new();
-            SendSDKCommand(delegate { Error = EDSDK_API.GetVolumeInfo(childReference, out volumeInfo); });
+            SendSDKCommand(delegate { Error = EDSDK_API.EdsGetVolumeInfo(childReference, out volumeInfo); });
             //ignore the HDD
             if (volumeInfo.szVolumeLabel != "HDD")
             {
@@ -1416,7 +1419,7 @@ public sealed class SDKWrapper
             try
             {
                 Marshal.StructureToPtr(fileItem, ptr, false);
-                Error = EDSDK_API.DeleteDirectoryItem(ptr);
+                Error = EDSDK_API.EdsDeleteDirectoryItem(ptr);
 
             }
             finally
@@ -1467,10 +1470,10 @@ public sealed class SDKWrapper
             for (int i = 0; i < childCount; i++)
             {
                 //get children of children
-                Error = EDSDK_API.GetChildAtIndex(ptr, i, out nint childReference);
+                Error = EDSDK_API.EdsGetChildAtIndex(ptr, i, out nint childReference);
                 //get the information about this children
                 EdsDirectoryItemInfo child = new();
-                SendSDKCommand(delegate { Error = EDSDK_API.GetDirectoryItemInfo(childReference, out child); });
+                SendSDKCommand(delegate { Error = EDSDK_API.EdsGetDirectoryItemInfo(childReference, out child); });
                 //create entry from information
                 children[i] = new CameraFileEntry(child.szFileName, child.isFolder != 0 ? CameraFileEntryTypes.Folder : CameraFileEntryTypes.File, childReference);
                 if (children[i].Type == CameraFileEntryTypes.File)
@@ -1478,8 +1481,8 @@ public sealed class SDKWrapper
                     if (false)
                     {
                         //if it's not a folder, create thumbnail and save it to the entry                       
-                        Error = EDSDK_API.CreateMemoryStream(0, out nint stream);
-                        SendSDKCommand(delegate { Error = EDSDK_API.DownloadThumbnail(childReference, stream); });
+                        Error = EDSDK_API.EdsCreateMemoryStream(0, out nint stream);
+                        SendSDKCommand(delegate { Error = EDSDK_API.EdsDownloadThumbnail(childReference, stream); });
                         children[i].AddThumb(GetImage(stream, EdsImageSource.Thumbnail));
                     }
                 }
