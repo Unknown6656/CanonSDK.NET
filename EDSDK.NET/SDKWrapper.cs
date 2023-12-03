@@ -981,42 +981,6 @@ public sealed class SDKWrapper
     /// <param name="stream"></param>
     private void OnLiveViewUpdated(UnmanagedMemoryStream stream) => LiveViewUpdated?.Invoke(stream);
 
-    /// <summary>
-    /// Get the live view ZoomRect value
-    /// </summary>
-    /// <param name="camera">The live view reference</param>
-    /// <returns>ZoomRect value</returns>
-    private EdsRect GetEvfZoomRect(Camera? camera)
-    {
-        EDSDK_API.GetPropertyData(camera, SDKProperty.Evf_ZoomPosition, out EdsRect rect);
-
-        return rect;
-    }
-
-    /// <summary>
-    /// Get the live view coordinate system
-    /// </summary>
-    /// <param name="camera">The live view reference</param>
-    /// <returns>the live view coordinate system</returns>
-    private static EdsSize GetEvfCoord(Camera? camera)
-    {
-        EDSDK_API.GetPropertyData(camera, SDKProperty.Evf_CoordinateSystem, out EdsSize size);
-
-        return size;
-    }
-
-    /// <summary>
-    /// Get a live view EdsPoint value
-    /// </summary>
-    /// <param name="camera">The live view reference</param>
-    /// <returns>a live view EdsPoint value</returns>
-    private static EdsPoint GetEvfPoints(SDKProperty property, Camera? camera)
-    {
-        EDSDK_API.GetPropertyData(camera, property, out EdsPoint point);
-
-        return point;
-    }
-
     #endregion
     #region Filming
 

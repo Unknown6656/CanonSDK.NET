@@ -468,5 +468,16 @@ public sealed class SDKCamera
 
 public sealed class SDKImage(SDKWrapper sdk, nint handle) : SDKObject(sdk, handle);
 
-public sealed class SDKElectronicViewfinderImage(SDKWrapper sdk, nint handle) : SDKObject(sdk, handle);
+public sealed class SDKElectronicViewfinderImage(SDKWrapper sdk, nint handle)
+    : SDKObject(sdk, handle)
+{
+    public EdsRect ZoomPosition => GetAsStruct<EdsRect>(SDKProperty.Evf_ZoomPosition);
+    // EDSDK_API.GetPropertyData(this, SDKProperty.Evf_ZoomPosition, out EdsRect rect);
+
+    public EdsSize EVFCoordinateSystem => GetAsStruct<EdsSize>(SDKProperty.Evf_CoordinateSystem);
+    // EDSDK_API.GetPropertyData(this, SDKProperty.Evf_CoordinateSystem, out EdsSize size);
+
+
+    public EdsPoint GetEVFPoint(SDKProperty property) => GetAsStruct<EdsPoint>(property);
+}
 
