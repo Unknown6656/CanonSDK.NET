@@ -180,16 +180,12 @@ public sealed class SDKWrapper
         {
             if (value != SDKError.OK)
             {
-                SDKProperty property = SDKErrorToProperty(value);
+                SDKProperty property = SDKProperty.FromSDKError(value) ?? SDKProperty.Unknown;
 
                 LogError($"SDK Error. {property}");
 
                 if (value is SDKError.COMM_DISCONNECTED or SDKError.DEVICE_INVALID or SDKError.DEVICE_NOT_FOUND)
-                {
-                    string name = FindProperty(SDKErrors, value).Name;
-
-                    OnSdkError(new SDKErrorEventArgs(name, LogLevel.Critical));
-                }
+                    OnSdkError(new SDKErrorEventArgs(property.Name, LogLevel.Critical));
             }
         }
     }
@@ -213,10 +209,10 @@ public sealed class SDKWrapper
         if (!string.IsNullOrEmpty(propertyName) && propertyName.StartsWith("kEds"))
             propertyName = propertyName[4..];
 
-        if (GetSDKProperty(propertyName) is SDKProperty prop)
+        if (SDKProperty.FromName(propertyName) is SDKProperty prop)
         {
             if (!error)
-                prop.Set(this, value);
+                MainCamera?.Set(prop, value);
         }
         else
             LogWarning($"Could not find property named {propertyName}");
@@ -227,7 +223,7 @@ public sealed class SDKWrapper
         LogInfo("=========Dumping properties=========");
 
         foreach (SDKProperty prop in SDKProperties)
-            LogInfo($"Property: {prop.Name}, Value: 0x{prop.Get(this):X}");
+            LogInfo($"Property: {prop.Name}, Value: 0x{MainCamera?.Get(prop) ?? 0:X}");
     }
 
     #region Basic SDK and Session handling
@@ -285,11 +281,7 @@ public sealed class SDKWrapper
 
     }
 
-    private void STAThread_FatalError(object sender, EventArgs e)
-    {
-        OnSdkError(new("Execution thread error", LogLevel.Critical));
-    }
-
+    private void STAThread_FatalError(object? sender, EventArgs e) => OnSdkError(new("Execution thread error", LogLevel.Critical));
 
 
     public void SetSaveToHost() => SetSetting(SDKProperty.SaveTo, (uint)EdsSaveTo.Host);
@@ -899,10 +891,8 @@ public sealed class SDKWrapper
         {
             try
             {
-                nint EvfImageRef = 0;
-                UnmanagedMemoryStream ums;
+                SDKElectronicViewfinderImage efv_image;
 
-                SDKError err;
                 //create stream
                 Error = EDSDK_API.EdsCreateMemoryStream(0, out nint stream);
 
@@ -911,20 +901,19 @@ public sealed class SDKWrapper
                 {
                     lock (STAThread.ExecLock)
                     {
-                        //download current live view image
-                        err = EDSDK_API.EdsCreateEvfImageRef(stream, out EvfImageRef);
+                        SDKError error = EDSDK_API.CreateEvfImageRef(stream, this, out efv_image);
 
-                        if (err == SDKError.OK)
-                            err = EDSDK_API.DownloadEvfImage(MainCamera, EvfImageRef);
+                        if (error is SDKError.OK)
+                            error = EDSDK_API.DownloadEvfImage(MainCamera, efv_image);
 
-                        if (err == SDKError.OBJECT_NOTREADY)
+                        if (error is SDKError.OBJECT_NOTREADY)
                         {
-                            Thread.Sleep(4);
+                            Thread.Sleep(10);
 
                             continue;
                         }
                         else
-                            Error = err;
+                            Error = error;
                     }
 
                     //get pointer
@@ -971,8 +960,8 @@ public sealed class SDKWrapper
     {
         LogInfo("Stopping Live view");
 
-        //stop the live view
-        SetSetting(SDKProperty.Evf_OutputDevice, LVoff ? EvfOutputDevice.Off : EvfOutputDevice.TFT);
+        // stop the live view
+        MainCamera.Set(SDKProperty.Evf_OutputDevice, LVoff ? EvfOutputDevice.Off : EvfOutputDevice.TFT);
     }
 
     /// <summary>
@@ -993,12 +982,13 @@ public sealed class SDKWrapper
         if (!IsFilming)
         {
             StartFilming();
+
             DownloadVideo = true;
             ImageSaveDirectory = FilePath;
         }
     }
 
-    public static void SetTFTEvf() => SetSetting(SDKProperty.Evf_OutputDevice, EvfOutputDevice.TFT);
+    public void SetTFTEvf() => MainCamera.Set(SDKProperty.Evf_OutputDevice, EvfOutputDevice.TFT);
 
     /// <summary>
     /// Starts recording a video
@@ -1009,7 +999,7 @@ public sealed class SDKWrapper
         if (!IsFilming)
         {
             //Snapshot setting for restoration after filming completes
-            PrevEVFSetting = GetSetting(SDKProperty.Evf_OutputDevice);
+            PrevEVFSetting = MainCamera.Get(SDKProperty.Evf_OutputDevice);
 
 
             //Set EVF output to TFT to enable film, otherwise
@@ -1019,10 +1009,10 @@ public sealed class SDKWrapper
 
             //LogPropertyValue(nameof(SDKProperty.Record), GetSetting(SDKProperty.Record));
 
-            SetSetting(SDKProperty.Evf_OutputDevice, 3);
+            MainCamera.Set(SDKProperty.Evf_OutputDevice, 3);
 
             //Check if the camera is ready to film
-            VideoRecordStatus recordStatus = GetSetting(SDKProperty.Record);
+            VideoRecordStatus recordStatus = MainCamera.Get(SDKProperty.Record);
 
             if (recordStatus != VideoRecordStatus.Movie_shooting_ready)
             {
@@ -1046,10 +1036,7 @@ public sealed class SDKWrapper
 
             LogInfo("Start filming");
 
-            SendSDKCommand(delegate
-            {
-                Error = EDSDK_API.SetPropertyData(MainCamera.Handle, SDKProperty.Record, sizeof(VideoRecordStatus), (uint)VideoRecordStatus.Begin_movie_shooting);
-            });
+            SendSDKCommand(() => MainCamera.Set(SDKProperty.Record, VideoRecordStatus.Begin_movie_shooting));
         }
     }
 
@@ -1069,16 +1056,17 @@ public sealed class SDKWrapper
                 //Shut off live view (it will hang otherwise)
                 //StopLiveView(false);
                 //stop video recording
-                Error = EDSDK_API.SetPropertyData(MainCamera.Handle, SDKProperty.Record, sizeof(VideoRecordStatus), VideoRecordStatus.End_movie_shooting);
+                MainCamera.Set(SDKProperty.Record, VideoRecordStatus.End_movie_shooting);
                 stopMs = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                 //set back to previous state
             });
-            SetSetting(SDKProperty.SaveTo, PrevSaveTo);
-            SetSetting(SDKProperty.Evf_OutputDevice, PrevEVFSetting);
+
+            MainCamera.Set(SDKProperty.SaveTo, PrevSaveTo);
+            MainCamera.Set(SDKProperty.Evf_OutputDevice, PrevEVFSetting);
+
             if (PrevCapacity.NumberOfFreeClusters != 0)
-            {
                 SetCapacity(PrevCapacity);
-            }
+
             IsFilming = false;
             unixTimeMs = stopMs;
         }
@@ -1087,6 +1075,7 @@ public sealed class SDKWrapper
             videoDownloadDone.SetResult(null);
             unixTimeMs = 0;
         }
+
         return videoDownloadDone;
     }
 
@@ -1103,10 +1092,8 @@ public sealed class SDKWrapper
         {
             //send command to camera
             lock (STAThread.ExecLock)
-            {
-                Error = EDSDK_API.SendCommand(MainCamera.Handle, CameraCommand.PressShutterButton, (int)state);
-            };
-        }, true);
+                MainCamera.SendCommand(CameraCommand.PressShutterButton, (int)state);
+        }, long_running: true);
 
     /// <summary>
     /// Takes a photo and returns the file info
@@ -1148,16 +1135,11 @@ public sealed class SDKWrapper
     /// <summary>
     /// Takes a photo with the current camera settings
     /// </summary>
-    public void TakePhoto() =>
-        //start thread to not block everything
-        SendSDKCommand(delegate
-        {
-            //send command to camera
-            lock (STAThread.ExecLock)
-            {
-                Error = EDSDK_API.SendCommand(MainCamera.Handle, CameraCommand.TakePicture, 0);
-            };
-        }, true);
+    public void TakePhoto() => SendSDKCommand(delegate
+    {
+        lock (STAThread.ExecLock)
+            Error = MainCamera.SendCommand(CameraCommand.TakePicture, 0);
+    }, long_running: true);
 
     /// <summary>
     /// Takes a photo in bulb mode with the current camera settings
@@ -1167,32 +1149,31 @@ public sealed class SDKWrapper
     {
         //bulbtime has to be at least a second
         if (bulbTime < 1000)
-        {
             throw new ArgumentException("Bulbtime has to be bigger than 1000ms");
-        }
 
         //start thread to not block everything
         SendSDKCommand(delegate
         {
             //open the shutter
             lock (STAThread.ExecLock)
-                Error = EDSDK_API.SendCommand(MainCamera.Handle, CameraCommand.BulbStart, 0);
+                Error = MainCamera.SendCommand(CameraCommand.BulbStart, 0);
 
             //wait for the specified time
             Thread.Sleep((int)bulbTime);
 
             //close shutter
             lock (STAThread.ExecLock)
-                Error = EDSDK_API.SendCommand(MainCamera.Handle, CameraCommand.BulbEnd, 0);
+                Error = MainCamera.SendCommand(CameraCommand.BulbEnd, 0);
         }, true);
     }
 
 
     public void FormatAllVolumes() => RunForEachVolume((childReference, volumeInfo) =>
-                                                                              {
-                                                                                  _logger.LogInformation("Formatting volume. Volume: {Volume}", volumeInfo.szVolumeLabel);
-                                                                                  SendSDKCommand(() => Error = EDSDK_API.FormatVolume(childReference));
-                                                                              });
+    {
+        _logger.LogInformation("Formatting volume. Volume: {Volume}", volumeInfo.szVolumeLabel);
+
+        SendSDKCommand(() => Error = EDSDK_API.EdsFormatVolume(childReference));
+    });
 
     public float GetMinVolumeSpacePercent()
     {
@@ -1321,9 +1302,7 @@ public sealed class SDKWrapper
     public void SetFocus(uint speed)
     {
         if (IsLiveViewOn)
-        {
-            SendSDKCommand(() => Error = EDSDK_API.SendCommand(MainCamera.Handle, CameraCommand.DriveLensEvf, (int)speed));
-        }
+            SendSDKCommand(() => Error = MainCamera.SendCommand(CameraCommand.DriveLensEvf, (int)speed));
     }
 
     /// <summary>
@@ -1340,7 +1319,7 @@ public sealed class SDKWrapper
             byte[] ya = BitConverter.GetBytes(y);
             uint coord = BitConverter.ToUInt32([xa[0], xa[1], ya[0], ya[1]], 0);
             //send command to camera
-            SendSDKCommand(() => Error = EDSDK_API.SendCommand(MainCamera.Handle, CameraCommand.DoClickWBEvf, (int)coord));
+            SendSDKCommand(() => Error = MainCamera.SendCommand(CameraCommand.DoClickWBEvf, (int)coord));
         }
     }
 
@@ -1416,7 +1395,7 @@ public sealed class SDKWrapper
     /// Locks or unlocks the cameras UI
     /// </summary>
     /// <param name="lockState">True for locked, false to unlock</param>
-    public void UILock(bool lockState) => SendSDKCommand(() => Error = EDSDK_API.SendStatusCommand(MainCamera.Handle, lockState ? CameraState.UILock : CameraState.UIUnLock, 0));
+    public void UILock(bool lockState) => SendSDKCommand(() => Error = MainCamera.SendStatusCommand(lockState ? CameraState.UILock : CameraState.UIUnLock, 0));
 
     /// <summary>
     /// Gets the children of a camera folder/volume. Recursive method.
@@ -1426,7 +1405,7 @@ public sealed class SDKWrapper
     private CameraFileEntry[] GetChildren(nint ptr)
     {
         //get children of first pointer
-        Error = EDSDK_API.GetChildCount(ptr, out int childCount);
+        Error = EDSDK_API.EdsGetChildCount(ptr, out int childCount);
         if (childCount > 0)
         {
             //if it has children, create an array of entries
@@ -1481,8 +1460,7 @@ public sealed class SDKWrapper
         {
             Action<string, object?[]> handler = level switch
             {
-                LogLevel.None => delegate { }
-                ,
+                LogLevel.None => delegate { },
                 LogLevel.Trace => _logger.LogTrace,
                 LogLevel.Debug => _logger.LogDebug,
                 LogLevel.Information => _logger.LogInformation,
