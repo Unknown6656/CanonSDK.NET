@@ -2,8 +2,6 @@ using System.Runtime.InteropServices;
 using System;
 
 using EDSDK.NET;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using Microsoft.Extensions.Logging;
 
 namespace EDSDK.Native;
 

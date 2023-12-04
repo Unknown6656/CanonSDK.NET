@@ -1,10 +1,7 @@
 using System.Runtime.InteropServices;
-using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics;
 using System.Collections.Generic;
-using System.Collections;
 using System.Globalization;
-using System.Reflection;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Drawing.Imaging;
@@ -15,12 +12,9 @@ using System.IO;
 using System;
 
 using EDSDK.Native;
-using EDSDK.NET;
 
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
-using System.Security.Cryptography.X509Certificates;
 
 
 namespace EDSDK.NET;
