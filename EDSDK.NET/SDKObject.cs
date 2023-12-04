@@ -466,7 +466,6 @@ public sealed class SDKCamera
 
     public void SetSaveToHost() => ImageSaveTarget = EdsSaveTo.Host;
 
-
     public SDKError OpenSession() => EDSDK_API.OpenSession(this);
 
     public SDKError CloseSession() => EDSDK_API.CloseSession(this);
@@ -474,6 +473,40 @@ public sealed class SDKCamera
     public SDKError SendCommand(CameraCommand command, int param) => EDSDK_API.SendCommand(this, command, param);
 
     public SDKError SendStatusCommand(CameraState state, int param) => EDSDK_API.SendStatusCommand(this, state, param);
+
+
+    public EdsStateEventHandler? StateEventHandler
+    {
+        set
+        {
+            SDK.LogInfo($"");
+            SDK.Error = EDSDK_API.SetCameraStateEventHandler(this, StateEvent.All, value);
+        }
+    }
+
+    public EdsObjectEventHandler? ObjectEventHandler
+    {
+        set
+        {
+            SDK.Error = EDSDK_API.SetObjectEventHandler(this, EdsEvent.All, value);
+        }
+    }
+
+    public EdsPropertyEventHandler? PropertyEventHandler
+    {
+        set
+        {
+            SDK.Error = EDSDK_API.SetPropertyEventHandler(this, PropertyEvent.All, value);
+        }
+    }
+
+
+
+
+
+    //AddCameraHandler(() => Error = EDSDK_API.SetCameraStateEventHandler(MainCamera, StateEvent.All, SDKStateEvent), nameof(EDSDK_API.SetCameraStateEventHandler));
+    //AddCameraHandler(() => Error = EDSDK_API.SetObjectEventHandler(MainCamera, EdsEvent.All, SDKObjectEvent), nameof(EDSDK_API.SetObjectEventHandler));
+    //AddCameraHandler(() => Error = EDSDK_API.SetPropertyEventHandler(MainCamera, PropertyEvent.All, SDKPropertyEvent), nameof(EDSDK_API.SetPropertyEventHandler));
 }
 
 public sealed class SDKImage(SDKWrapper sdk, nint handle) : SDKObject(sdk, handle);
