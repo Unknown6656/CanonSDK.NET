@@ -18,6 +18,9 @@ using EDSDK.Native;
 using EDSDK.NET;
 
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 
 
 namespace EDSDK.NET;
@@ -39,7 +42,6 @@ public sealed class SDKWrapper
     private TaskCompletionSource<FileInfo> takePhotoCompletionSource;
     private string _imageSaveFilename;
 
-    private readonly ILogger _logger;
 
     /// <summary>
     /// States if a finished video should be downloaded from the camera
@@ -49,7 +51,7 @@ public sealed class SDKWrapper
     /// <summary>
     /// For video recording, SaveTo has to be set to Camera. This is to store the previous setting until after the filming.
     /// </summary>
-    private uint PrevSaveTo;
+    private EdsSaveTo PrevSaveTo;
 
     private EdsCapacity PrevCapacity;
 
@@ -134,7 +136,7 @@ public sealed class SDKWrapper
         get => _imageSaveFilename;
         set
         {
-            LogInfo($"Setting ImageSaveFilename. ImageSaveFilename: {value}");
+            Logger.LogInfo($"Setting ImageSaveFilename to '{value}'.");
 
             _imageSaveFilename = value;
         }
@@ -182,7 +184,7 @@ public sealed class SDKWrapper
             {
                 SDKProperty property = SDKProperty.FromSDKError(value) ?? SDKProperty.Unknown;
 
-                LogError($"SDK Error. {property}");
+                Logger.LogError($"SDK Error set to {value} ({property}).");
 
                 if (value is SDKError.COMM_DISCONNECTED or SDKError.DEVICE_INVALID or SDKError.DEVICE_NOT_FOUND)
                     OnSdkError(new SDKErrorEventArgs(property.Name, LogLevel.Critical));
@@ -192,42 +194,45 @@ public sealed class SDKWrapper
 
 
 
-    public void SetUintSetting(string propertyName, string propertyValue)
+    public void SetUintSetting(string name, string propertyValue)
     {
         bool error = false;
-
+        _..;
         if (!string.IsNullOrEmpty(propertyValue))
             propertyValue = propertyValue.Replace("0x", "");
 
         if (!uint.TryParse(propertyValue, NumberStyles.HexNumber, CultureInfo.CurrentCulture, out uint value))
         {
-            LogError($"Could not convert value {propertyValue} to uint");
+            Logger.LogError($"Could not convert value {propertyValue} to uint");
 
             error = true;
         }
 
-        if (!string.IsNullOrEmpty(propertyName) && propertyName.StartsWith("kEds"))
-            propertyName = propertyName[4..];
+        if (!string.IsNullOrEmpty(name) && name.StartsWith("kEds"))
+            name = name[4..];
 
-        if (SDKProperty.FromName(propertyName) is SDKProperty prop)
+        if (SDKProperty.FromName(name) is SDKProperty prop)
         {
             if (!error)
                 MainCamera?.Set(prop, value);
         }
         else
-            LogWarning($"Could not find property named {propertyName}");
+            Logger.LogWarning($"Could not find property named {name}");
     }
 
     public void DumpAllProperties()
     {
-        LogInfo("=========Dumping properties=========");
+        string dump = $"========= SDK Properties ({SDKProperties.Length}) =========";
 
         foreach (SDKProperty prop in SDKProperties)
-            LogInfo($"Property: {prop.Name}, Value: 0x{MainCamera?.Get(prop) ?? 0:X}");
+        {
+            uint value = MainCamera?[prop] ?? 0;
+
+            dump += $"\n{prop.Name,50} = 0x{value:x8} ({value})";
+        }
+
+        Logger.LogInfo(dump);
     }
-
-    #region Basic SDK and Session handling
-
 
 
 
@@ -241,31 +246,29 @@ public sealed class SDKWrapper
     public bool KeepAlive { get; set; }
 
 
-    /// <summary>
-    /// Initializes the SDK and adds events
-    /// </summary>
-    public SDKWrapper(ILoggerFactory loggerFactory)
-    {
-        _logger = loggerFactory.CreateLogger<SDKWrapper>();
 
-        STAThread.SetLogAction(loggerFactory.CreateLogger(nameof(STAThread)));
+
+
+    ////////////////////////////////////////////////////// TODO : clean everything above this line //////////////////////////////////////////////////////
+
+
+    public SDKLogger Logger { get; }
+
+
+
+
+
+    public SDKWrapper(SDKLogger logger)
+    {
+        Logger = logger;
+
+        STAThread.SetLogAction(logger);
         STAThread.FatalError += STAThread_FatalError;
 
         if (Thread.CurrentThread.GetApartmentState() != ApartmentState.STA)
-            LogWarning("SDKHandler created on a non-STA thread");
+            logger.LogWarning($"{nameof(SDKWrapper)} created on a non-STA thread.");
 
-        try
-        {
-            Error = EDSDK_API.EdsInitializeSDK();
-        }
-        catch (Exception x)
-        {
-            _logger.LogError(x, "Error Initializing SDK");
-
-            throw new("Error Initializing SDK", x);
-            // TODO: Move to Initialize pattern instead of constructor
-        }
-
+        EDSDK_API.InitializeSDK(this);
         STAThread.Init();
 
         //subscribe to camera added event (the C# event and the SDK event)
@@ -278,7 +281,6 @@ public sealed class SDKWrapper
         SDKPropertyEvent += new EdsPropertyEventHandler(Camera_SDKPropertyEvent);
         SDKProgressCallbackEvent += new EdsProgressCallback(Camera_SDKProgressCallbackEvent);
         SDKObjectEvent += new EdsObjectEventHandler(Camera_SDKObjectEvent);
-
     }
 
     private void STAThread_FatalError(object? sender, EventArgs e) => OnSdkError(new("Execution thread error", LogLevel.Critical));
@@ -319,7 +321,7 @@ public sealed class SDKWrapper
     /// <param name="newCamera">The camera which will be used</param>
     public void OpenSession(SDKCamera newCamera)
     {
-        _logger?.LogDebug("Opening session");
+        Logger.LogInfo("Opening session");
 
         if (CameraSessionOpen)
             CloseSession();
@@ -335,19 +337,19 @@ public sealed class SDKWrapper
             }, sdk_action: nameof(EDSDK_API.OpenSession));
 
             //subscribe to the camera events (for the SDK)
-            AddCameraHandler(() => Error = EDSDK_API.EdsSetCameraStateEventHandler(MainCamera.Handle, StateEvent.All, SDKStateEvent, MainCamera.Handle), nameof(EDSDK_API.EdsSetCameraStateEventHandler));
-            AddCameraHandler(() => Error = EDSDK_API.EdsSetObjectEventHandler(MainCamera.Handle, EdsEvent.All, SDKObjectEvent, MainCamera.Handle), nameof(EDSDK_API.EdsSetObjectEventHandler));
-            AddCameraHandler(() => Error = EDSDK_API.EdsSetPropertyEventHandler(MainCamera.Handle, PropertyEvent.All, SDKPropertyEvent, MainCamera.Handle), nameof(EDSDK_API.EdsSetPropertyEventHandler));
+            AddCameraHandler(() => Error = EDSDK_API.SetCameraStateEventHandler(MainCamera, StateEvent.All, SDKStateEvent), nameof(EDSDK_API.SetCameraStateEventHandler));
+            AddCameraHandler(() => Error = EDSDK_API.SetObjectEventHandler(MainCamera, EdsEvent.All, SDKObjectEvent), nameof(EDSDK_API.SetObjectEventHandler));
+            AddCameraHandler(() => Error = EDSDK_API.SetPropertyEventHandler(MainCamera, PropertyEvent.All, SDKPropertyEvent), nameof(EDSDK_API.SetPropertyEventHandler));
 
             CameraSessionOpen = true;
 
-            LogInfo($"Connected to Camera: {newCamera.Info.szDeviceDescription}");
+            Logger.LogInfo($"Connected to Camera: {newCamera.Info.szDeviceDescription}");
         }
     }
 
     private void AddCameraHandler(Func<SDKError> action, string handlerName)
     {
-        LogInfo($"Adding handler: {handlerName}");
+        Logger.LogInfo($"Adding handler: {handlerName}");
 
         Error = action();
     }
@@ -358,7 +360,7 @@ public sealed class SDKWrapper
     /// </summary>
     public void CloseSession()
     {
-        _logger?.LogDebug("Closing session");
+        Logger.LogInfo("Closing session");
 
         if (CameraSessionOpen)
         {
@@ -370,9 +372,9 @@ public sealed class SDKWrapper
             }
 
             //Remove the event handler
-            Error = EDSDK_API.EdsSetCameraStateEventHandler(MainCamera, StateEvent.All, null, MainCamera.Handle);
-            Error = EDSDK_API.EdsSetObjectEventHandler(MainCamera, EdsEvent.All, null, MainCamera.Handle);
-            Error = EDSDK_API.EdsSetPropertyEventHandler(MainCamera, PropertyEvent.All, null, MainCamera.Handle);
+            Error = EDSDK_API.SetCameraStateEventHandler(MainCamera, StateEvent.All, null);
+            Error = EDSDK_API.SetObjectEventHandler(MainCamera, EdsEvent.All, null);
+            Error = EDSDK_API.SetPropertyEventHandler(MainCamera, PropertyEvent.All, null);
 
             //close session and release camera
             SendSDKCommand(delegate
@@ -486,7 +488,7 @@ public sealed class SDKWrapper
     private SDKError Camera_SDKPropertyEvent(PropertyEvent inEvent, SDKProperty property, uint inParameter, nint inContext)
     {
         if (inEvent is PropertyEvent.PropertyChanged)
-            LogPropertyValue(property, property.Get(this));
+            Logger.LogPropertyValue(property, property.Get(this));
 
         if (property == SDKProperty.Evf_OutputDevice && IsLiveViewOn)
             DownloadEvf();
@@ -503,7 +505,7 @@ public sealed class SDKWrapper
     /// <returns>An EDSDK errorcode</returns>
     private SDKError Camera_SDKStateEvent(StateEvent inEvent, uint inParameter, nint inContext)
     {
-        LogInfo($"SDK State Event. Property: {SDKProperty.FromSDKStateEvent(inEvent)}");
+        Logger.LogInfo($"SDK State Event. Property: {SDKProperty.FromSDKStateEvent(inEvent)}");
 
         //Handle state event here
         switch (inEvent)
@@ -514,7 +516,7 @@ public sealed class SDKWrapper
                 break;
             case StateEvent.CaptureError:
             case StateEvent.InternalError:
-                LogError($"Error event. error: {inEvent}");
+                Logger.LogError($"Error event. error: {inEvent}");
 
                 break;
             case StateEvent.Shutdown:
@@ -534,7 +536,7 @@ public sealed class SDKWrapper
                 if (KeepAlive)
                     SendSDKCommand(() =>
                     {
-                        _logger.LogDebug("Extending camera shutdown timer");
+                        Logger.LogInfo("Extending camera shutdown timer");
 
                         Error = MainCamera.SendCommand(CameraCommand.ExtendShutDownTimer, 0);
                     }, sdk_action: nameof(CameraCommand.ExtendShutDownTimer));
@@ -578,7 +580,7 @@ public sealed class SDKWrapper
                 }
             }
 
-            LogInfo("Downloading data. Filename: {fileName}");
+            Logger.LogInfo("Downloading data. Filename: {fileName}");
 
             string targetImage = Path.Combine(directory, fileName);
             if (File.Exists(targetImage))
@@ -591,7 +593,7 @@ public sealed class SDKWrapper
                 Directory.CreateDirectory(directory);
             }
 
-            LogInfo("Downloading data {fileName} to {directory}");
+            Logger.LogInfo("Downloading data {fileName} to {directory}");
 
             SendSDKCommand(delegate
             {
@@ -619,7 +621,8 @@ public sealed class SDKWrapper
         }
         catch (Exception x)
         {
-            _logger.LogError(x, "Error downloading data");
+            Logger.LogError(x, "Error downloading data");
+
             takePhotoCompletionSource.TrySetException(x);
             videoDownloadDone?.TrySetException(x);
         }
@@ -631,7 +634,7 @@ public sealed class SDKWrapper
     /// Downloads a jpg image from the camera into a Bitmap. Fires the ImageDownloaded event when done.
     /// </summary>
     /// <param name="ObjectPointer">Pointer to the object. Get it from the SDKObjectEvent.</param>
-    public void DownloadImage(nint ObjectPointer)
+    public unsafe void DownloadImage(nint ObjectPointer)
     {
         //get information about image
         EdsDirectoryItemInfo dirInfo = new();
@@ -640,7 +643,7 @@ public sealed class SDKWrapper
         //check the extension. Raw data cannot be read by the bitmap class
         string ext = Path.GetExtension(dirInfo.szFileName).ToLower();
 
-        LogInfo($"Downloading image {dirInfo.szFileName}");
+        Logger.LogInfo($"Downloading image {dirInfo.szFileName}");
 
         if (ext is ".jpg" or ".jpeg")
             SendSDKCommand(delegate
@@ -657,13 +660,8 @@ public sealed class SDKWrapper
                 Error = EDSDK_API.EdsGetPointer(streamRef, out nint jpgPointer);
                 Error = EDSDK_API.EdsGetLength(streamRef, out ulong length);
 
-                unsafe
-                {
-                    //create a System.IO.Stream from the pointer
-                    using UnmanagedMemoryStream ums = new((byte*)jpgPointer.ToPointer(), (long)length, (long)length, FileAccess.Read);
-                    //create bitmap from stream (it's a normal jpeg image)
+                using (UnmanagedMemoryStream ums = new((byte*)jpgPointer.ToPointer(), (long)length, (long)length, FileAccess.Read))
                     bmp = new Bitmap(ums);
-                }
 
                 Error = EDSDK_API.Release(streamRef);
 
@@ -785,7 +783,6 @@ public sealed class SDKWrapper
     }
 
     #endregion
-
     #region Set Settings
 
     /// <summary>
@@ -795,14 +792,14 @@ public sealed class SDKWrapper
     /// <param name="value">The value which will be set</param>
     public void SendCommand(CameraCommand command, int value)
     {
-        Log(LogLevel.Debug, $"Sending command. Command: {command}, Value: 0x{value:X}");
+        Logger.LogInfo($"Sending command. Command: {command}, Value: 0x{value:X}");
 
         if (MainCamera.Handle != 0)
             SendSDKCommand(delegate
             {
                 Thread cThread = Thread.CurrentThread;
 
-                LogInfo($"Executing SDK command. ThreadName: {cThread.Name}, ApartmentState: {cThread.GetApartmentState()}");
+                Logger.LogInfo($"Executing SDK command. ThreadName: {cThread.Name}, ApartmentState: {cThread.GetApartmentState()}");
 
                 Error = MainCamera.SendCommand(command, value);
             }, sdk_action: nameof(EDSDK_API.SetPropertyData));
@@ -825,18 +822,18 @@ public sealed class SDKWrapper
     {
         if (!IsLiveViewOn)
         {
-            LogInfo("Starting Liveview");
+            Logger.LogInfo("Starting Liveview");
 
             int listener_count = LiveViewUpdated?.GetInvocationList()?.Length ?? 0;
 
-            LogInfo($"{listener_count} LiveViewUpdated listeners found");
-            LogPropertyValue(nameof(SDKProperty.Evf_OutputDevice), SDKProperty.Evf_DepthOfFieldPreview.Get<uint>(MainCamera));
+            Logger.LogInfo($"{listener_count} LiveViewUpdated listeners found");
+            Logger.LogPropertyValue(nameof(SDKProperty.Evf_OutputDevice), SDKProperty.Evf_DepthOfFieldPreview.Get<uint>(MainCamera));
 
             MainCamera.StartLiveView();
 
             IsLiveViewOn = true;
 
-            LogPropertyValue(nameof(SDKProperty.Evf_OutputDevice), MainCamera.Get(SDKProperty.Evf_OutputDevice));
+            Logger.LogPropertyValue(nameof(SDKProperty.Evf_OutputDevice), MainCamera.Get(SDKProperty.Evf_OutputDevice));
         }
     }
 
@@ -847,7 +844,7 @@ public sealed class SDKWrapper
     {
         if (IsLiveViewOn)
         {
-            LogInfo("Stopping liveview");
+            Logger.LogInfo("Stopping liveview");
 
             LVoff = true;
             IsLiveViewOn = false;
@@ -856,7 +853,7 @@ public sealed class SDKWrapper
             if (!cancelLiveViewWait.WaitOne(TimeSpan.FromSeconds(5)))
                 MainCamera.StopLiveView(LVoff);
             else
-                _logger.LogDebug("LiveView stopped cleanly");
+                Logger.LogInfo("LiveView stopped cleanly");
         }
     }
 
@@ -924,7 +921,7 @@ public sealed class SDKWrapper
 
                 Error = EDSDK_API.Release(stream);
 
-                MainCamera.StopLiveView();
+                MainCamera.StopLiveView(LVoff);
 
                 cancelLiveViewWait.Set();
             }
@@ -991,20 +988,20 @@ public sealed class SDKWrapper
                 //SetSetting(SDKProperty.Record, EdsDriveMode.Video);
                 //SetSetting(SDKProperty.Record, VideoRecordStatus.Movie_shooting_ready);
 
-                LogPropertyValue(SDKProperty.Record, recordStatus);
-                LogInfo($"Camera reporting incorrect mode. expected. Continue. {VideoRecordStatus.Movie_shooting_ready}, was: {recordStatus}");
-                LogInfo("Camera physical switch must be in movie record mode. Leave in this mode permanently!");
+                Logger.LogPropertyValue(SDKProperty.Record, recordStatus);
+                Logger.LogInfo($"Camera reporting incorrect mode. expected. Continue. {VideoRecordStatus.Movie_shooting_ready}, was: {recordStatus}");
+                Logger.LogInfo("Camera physical switch must be in movie record mode. Leave in this mode permanently!");
                 //throw new ArgumentException("Camera in invalid mode", nameof(SDKProperty.Record));
             }
 
             IsFilming = true;
-            PrevSaveTo = MainCamera.Get(SDKProperty.SaveTo); // to restore the current setting after recording
+            PrevSaveTo = MainCamera.ImageSaveTarget; // to restore the current setting after recording
 
-            MainCamera.Set(SDKProperty.SaveTo, (uint)EdsSaveTo.Camera); // when recording videos, it has to be saved on the camera internal memory
+            MainCamera.ImageSaveTarget = EdsSaveTo.Camera; // when recording videos, it has to be saved on the camera internal memory
 
             DownloadVideo = false; // start the video recording
 
-            LogInfo("Start filming");
+            Logger.LogInfo("Start filming");
 
             SendSDKCommand(() => MainCamera.Set(SDKProperty.Record, VideoRecordStatus.Begin_movie_shooting));
         }
@@ -1073,7 +1070,7 @@ public sealed class SDKWrapper
     {
         if (IsFilming || IsLiveViewOn)
         {
-            LogWarning($"Ignoring attempt to take photo whilst filming or in live-view mode. Filming: {IsFilming}, LiveView: {IsLiveViewOn}");
+            Logger.LogWarning($"Ignoring attempt to take photo whilst filming or in live-view mode. Filming: {IsFilming}, LiveView: {IsLiveViewOn}");
 
             return null;
         }
@@ -1089,7 +1086,7 @@ public sealed class SDKWrapper
         if (takePhotoCompletionSource.Task.Status == TaskStatus.RanToCompletion)
             return takePhotoCompletionSource.Task.Result;
 
-        LogError("Error taking photo, check previous messages");
+        Logger.LogError("Error taking photo, check previous messages");
 
         return null;
     }
@@ -1134,13 +1131,13 @@ public sealed class SDKWrapper
             //close shutter
             lock (STAThread.ExecLock)
                 Error = MainCamera.SendCommand(CameraCommand.BulbEnd, 0);
-        }, true);
+        }, long_running: true);
     }
 
 
     public void FormatAllVolumes() => RunForEachVolume((childReference, volumeInfo) =>
     {
-        _logger.LogInformation("Formatting volume. Volume: {Volume}", volumeInfo.szVolumeLabel);
+        Logger.LogInformation("Formatting volume. Volume: {Volume}", volumeInfo.szVolumeLabel);
 
         SendSDKCommand(() => Error = EDSDK_API.EdsFormatVolume(childReference));
     });
@@ -1153,7 +1150,7 @@ public sealed class SDKWrapper
         {
             float freePc = volumeInfo.FreeSpaceInBytes / (float)volumeInfo.MaxCapacity;
 
-            _logger.LogDebug("Camera volume free space. volume: {volume}, freeSpaceBytes: {freeSpaceBytes}, maxCapacity: {maxCapacity}, freePercent: {freePercent}", volumeInfo.szVolumeLabel, volumeInfo.FreeSpaceInBytes, volumeInfo.MaxCapacity, freePc);
+            Logger.LogInfo("Camera volume free space. volume: {volume}, freeSpaceBytes: {freeSpaceBytes}, maxCapacity: {maxCapacity}, freePercent: {freePercent}", volumeInfo.szVolumeLabel, volumeInfo.FreeSpaceInBytes, volumeInfo.MaxCapacity, freePc);
 
             if (freePc < minPercent)
                 minPercent = freePc;
@@ -1186,7 +1183,7 @@ public sealed class SDKWrapper
     {
         throw new NotImplementedException();
         // NOTE: Need to marry up obj ref to camera entry then delete based on camera entry / ref
-        _logger.LogDebug("Formatting volume. Volume: {Volume}", volume.Name);
+        Logger.LogInfo("Formatting volume. Volume: {Volume}", volume.Name);
         SendSDKCommand(() =>
         {
             nint ptr = Marshal.AllocHGlobal(Marshal.SizeOf(volume.Volume));
@@ -1205,7 +1202,6 @@ public sealed class SDKWrapper
 
 
     #endregion
-
     #region Other
 
     internal void SendSDKCommand(Func<SDKError> command, string? sdk_action = null, bool long_running = false) =>
@@ -1216,7 +1212,7 @@ public sealed class SDKWrapper
     /// </summary>
     internal void SendSDKCommand(Action command, string? sdk_action = null, bool long_running = false)
     {
-        LogInfo($"Sending SDK command: {sdk_action ?? "(unknown)"}");
+        Logger.LogInfo($"Sending SDK command: {sdk_action ?? "(unknown)"}");
 
         try
         {
