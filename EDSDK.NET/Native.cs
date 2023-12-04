@@ -2,6 +2,8 @@ using System.Runtime.InteropServices;
 using System;
 
 using EDSDK.NET;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using Microsoft.Extensions.Logging;
 
 namespace EDSDK.Native;
 
@@ -1207,8 +1209,22 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsInitializeSDK();
+    public static SDKError InitializeSDK(SDKWrapper wrapper)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsInitializeSDK();
+
+        try
+        {
+            return wrapper.Error = EdsInitializeSDK();
+        }
+        catch (Exception ex)
+        {
+            wrapper.Logger.LogError(ex, "Error initializing SDK");
+
+            throw;
+        }
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -2233,6 +2249,7 @@ public static unsafe class EDSDK_API
     [DllImport(_DLL_PATH)]
     public static extern SDKError EdsSetCameraAddedHandler(EdsCameraAddedHandler cameraAddedHandler, nint inContext);
 
+
     /*-----------------------------------------------------------------------------
     //
     //  Function:   EdsSetPropertyEventHandler
@@ -2253,8 +2270,15 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSetPropertyEventHandler(nint camera, PropertyEvent @event, EdsPropertyEventHandler? inPropertyEventHandler, nint inContext);
+    public static SDKError SetPropertyEventHandler(SDKCamera? camera, PropertyEvent @event, EdsPropertyEventHandler? callback)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsSetPropertyEventHandler(nint camera, PropertyEvent @event, EdsPropertyEventHandler? inPropertyEventHandler, nint inContext);
+
+        nint handle = CheckValidObject(camera);
+
+        return EdsSetPropertyEventHandler(handle, @event, callback, handle);
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -2278,8 +2302,15 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSetObjectEventHandler(nint camera, EdsEvent @event, EdsObjectEventHandler? inObjectEventHandler, nint inContext);
+    public static SDKError SetObjectEventHandler(SDKCamera? camera, EdsEvent @event, EdsObjectEventHandler? callback)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsSetObjectEventHandler(nint camera, EdsEvent @event, EdsObjectEventHandler? inObjectEventHandler, nint inContext);
+
+        nint handle = CheckValidObject(camera);
+
+        return EdsSetObjectEventHandler(handle, @event, callback, handle);
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -2302,8 +2333,15 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSetCameraStateEventHandler(nint camera, StateEvent @event, EdsStateEventHandler? inStateEventHandler, nint inContext);
+    public static SDKError SetCameraStateEventHandler(SDKCamera? camera, StateEvent @event, EdsStateEventHandler? callback)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsSetCameraStateEventHandler(nint camera, StateEvent @event, EdsStateEventHandler? inStateEventHandler, nint inContext);
+
+        nint handle = CheckValidObject(camera);
+
+        return EdsSetCameraStateEventHandler(handle, @event, callback, handle);
+    }
 
 
     /*-----------------------------------------------------------------------------
