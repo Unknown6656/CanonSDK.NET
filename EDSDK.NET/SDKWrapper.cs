@@ -1421,38 +1421,132 @@ public sealed class SDKWrapper
     }
 
     #endregion
+}
 
+public class SDKLogger
+    : ILogger
+    , IAsyncDisposable
+{
+    private sealed record SDKLoggerMessage(DateTime Timestamp, LogLevel Level, Exception? Exception, object? State, EventId Event, string Message);
 
-    private void HandleException(Exception ex, string message) => _logger?.LogError(ex, message);
-
-    private void Log(LogLevel level, string message) => Task.Factory.StartNew(delegate
+    private readonly struct __empty
     {
-        if (_logger != null)
+    }
+
+
+    public static SDKLogger ConsoleOutput => new(Console.OpenStandardOutput(), true);
+
+    public static SDKLogger ConsoleError => new(Console.OpenStandardOutput(), true);
+
+    private readonly ConcurrentQueue<SDKLoggerMessage> _messages;
+    private readonly ConcurrentDictionary<LogLevel, __empty> _enabled;
+    private readonly bool _use_vt100_sequence;
+    private readonly Stream _output_stream;
+    private volatile bool _is_logging;
+    private Task? _logger_task;
+
+
+    public SDKLogger(Stream stream, bool useVT100 = true)
+    {
+        _output_stream = stream;
+        _use_vt100_sequence = useVT100;
+        _messages = new();
+        _enabled = new(Enum.GetValues<LogLevel>().Select(v => new KeyValuePair<LogLevel, __empty>(v, default)));
+    }
+
+    public async Task StartAsync()
+    {
+        await StopAsync();
+
+        while (_logger_task is { })
+            await Task.Delay(20);
+
+        _is_logging = true;
+        _logger_task = Task.Factory.StartNew(async delegate
         {
-            Action<string, object?[]> handler = level switch
-            {
-                LogLevel.None => delegate { },
-                LogLevel.Trace => _logger.LogTrace,
-                LogLevel.Debug => _logger.LogDebug,
-                LogLevel.Information => _logger.LogInformation,
-                LogLevel.Warning => _logger.LogWarning,
-                LogLevel.Critical => _logger.LogCritical,
-                LogLevel.Error => _logger.LogError,
-                _ => new((m, _) => _logger.LogError($"Unknown level: {level}\nMessage: {m}"))
-            };
+            bool flushed = true;
 
-            handler(message, []);
+            while (_is_logging)
+                if (_messages.TryDequeue(out SDKLoggerMessage? message))
+                {
+                    await PrintAsync(message);
+
+                    flushed = false;
+                }
+                else if (flushed)
+                    await Task.Delay(200);
+                else
+                {
+                    await FlushAsync();
+
+                    flushed = true;
+                }
+        });
+    }
+
+    public async Task StopAsync()
+    {
+        if (_logger_task is { })
+        {
+            _is_logging = false;
+
+            await _logger_task;
+
+            while (_messages.TryDequeue(out SDKLoggerMessage? message))
+                await PrintAsync(message);
+
+            await FlushAsync();
+
+            _logger_task.Dispose();
+            _logger_task = null;
         }
+    }
 
-#if DEBUG
-        if (level >= LogLevel.Error)
-            throw new(message);
-#endif
-    });
+    public async ValueTask DisposeAsync()
+    {
+        await StopAsync();
+        await _output_stream.DisposeAsync();
+    }
 
-    internal void LogInfo(string message) => Log(LogLevel.Information, message);
+    private Task PrintAsync(SDKLoggerMessage message)
+    {
+        // TODO : vt100 formatting
+        string repr = $"[{message.Timestamp:yyyy-MM-dd HH:mm:ss.ffffff}][{message.Level switch
+        {
+            LogLevel.Trace => "TRACE",
+            LogLevel.Debug => "DEBUG",
+            LogLevel.Information => "INFO.",
+            LogLevel.Warning => "WARN.",
+            LogLevel.Error => "ERROR",
+            LogLevel.Critical => "CRIT.",
+            LogLevel.None => "      ",
+            _ => " ??? "
+        }}][{message.Event}] {message.Message} {message.Exception}\n";
+        byte[] bytes = Encoding.UTF8.GetBytes(repr);
 
-    internal void LogWarning(string message) => Log(LogLevel.Warning, message);
+        return _output_stream.WriteAsync(bytes, 0, bytes.Length);
+    }
 
-    internal void LogError(string message) => Log(LogLevel.Error, message);
+    private Task FlushAsync() => _output_stream.FlushAsync();
+
+    public void Enable(LogLevel level) => _enabled[level] = default;
+
+    public void Disable(LogLevel level) => _enabled.TryRemove(level, out _);
+
+    public bool IsEnabled(LogLevel level) => _enabled.ContainsKey(level);
+
+    public void LogInfo(string message) => this.LogInformation(message, []);
+
+    public void LogWarning(string message) => this.LogWarning(message, []);
+
+    public void LogError(string message) => this.LogError(message, []);
+
+    public void LogError(Exception exception, string message) => this.LogError(exception, message, []);
+
+    public void LogError(Exception exception) => this.LogError(exception, exception.Message, []);
+
+    void ILogger.Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+        _messages.Enqueue(new(DateTime.Now, logLevel, exception, state, eventId, formatter(state, exception)));
+
+    IDisposable? ILogger.BeginScope<TState>(TState state) => throw new NotImplementedException();
 }
