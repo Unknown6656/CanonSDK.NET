@@ -27,6 +27,7 @@ public static class STAThread
     /// </summary>
     private static readonly object _thread_lock = new();
 
+
     /// <summary>
     /// The main thread where everything will be executed on
     /// </summary>
@@ -42,9 +43,12 @@ public static class STAThread
     /// </summary>
     private static Exception _run_exception;
 
+
     private static ILogger _logger;
 
-    public static event EventHandler<EventArgs> FatalError;
+
+
+    public static event EventHandler<EventArgs>? FatalError = null;
 
 
     private static void OnFatalError() => FatalError?.Invoke(null, EventArgs.Empty);
