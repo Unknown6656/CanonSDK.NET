@@ -1886,8 +1886,17 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsCreateFileStream(string inFileName, EdsFileCreateDisposition inCreateDisposition, EdsAccess inDesiredAccess, out nint outStream);
+    public static SDKError CreateFileStreamA(SDKWrapper sdk, string filename, EdsFileCreateDisposition disposition, EdsAccess acccess, out SDKStream stream)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsCreateFileStream(string inFileName, EdsFileCreateDisposition inCreateDisposition, EdsAccess inDesiredAccess, out nint outStream);
+
+        SDKError error = EdsCreateFileStream(filename, disposition, acccess, out nint handle);
+
+        stream = new(sdk, handle);
+
+        return error;
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -1904,8 +1913,17 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsCreateMemoryStream(ulong inBufferSize, out nint outStream);
+    public static SDKError CreateMemoryStream(SDKWrapper sdk, ulong size, out SDKStream stream)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsCreateMemoryStream(ulong inBufferSize, out nint outStream);
+
+        SDKError error = EdsCreateMemoryStream(size, out nint handle);
+
+        stream = new(sdk, handle);
+
+        return error;
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -1925,8 +1943,17 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsCreateStreamEx(string inFileName, EdsFileCreateDisposition inCreateDisposition, EdsAccess inDesiredAccess, out nint outStream);
+    public static SDKError CreateFileStreamW(SDKWrapper sdk, string filename, EdsFileCreateDisposition disposition, EdsAccess acccess, out SDKStream stream)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsCreateStreamEx(string inFileName, EdsFileCreateDisposition inCreateDisposition, EdsAccess inDesiredAccess, out nint outStream);
+
+        SDKError error = EdsCreateStreamEx(filename, disposition, acccess, out nint handle);
+
+        stream = new(sdk, handle);
+
+        return error;
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -1943,8 +1970,38 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsCreateMemoryStreamFromPointer(nint inUserBuffer, ulong inBufferSize, out nint outStream);
+    public static SDKError CreateMemoryStreamFromPointer(SDKWrapper sdk, nint buffer, ulong size, out SDKStream stream)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsCreateMemoryStreamFromPointer(nint inUserBuffer, ulong inBufferSize, out nint outStream);
+
+        SDKError error = EdsCreateMemoryStreamFromPointer(buffer, size, out nint handle);
+
+        stream = new(sdk, handle);
+
+        return error;
+    }
+
+    /*-----------------------------------------------------------------------------
+    //
+    //  Function:   EdsGetLength
+    //
+    //  Description:
+    //      Gets the stream size.
+    //
+    //  Parameters:
+    //       In:    inStreamRef - The reference of the stream or image.
+    //      Out:    outLength - The length of the stream.
+    //
+    //  Returns:    Any of the sdk errors.
+    -----------------------------------------------------------------------------*/
+    public static SDKError GetLength(SDKStream? stream, out ulong length)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsGetLength(nint inStreamRef, out ulong outLength);
+
+        return EdsGetLength(CheckValidObject(stream), out length);
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -1967,8 +2024,35 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetPointer(nint inStreamRef, out nint outPointer);
+    public static SDKError GetPointer(SDKStream? stream, out nint pointer)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsGetPointer(nint inStreamRef, out nint outPointer);
+
+        return EdsGetPointer(CheckValidObject(stream), out pointer);
+    }
+
+    /*-----------------------------------------------------------------------------
+    //
+    //  Function:   EdsGetPosition
+    //
+    //  Description:
+    //       Gets the current read or write position of the stream
+    //          (that is, the file position indicator).
+    //
+    //  Parameters:
+    //       In:    inStreamRef - The reference of the stream or image.
+    //      Out:    outPosition - The current stream pointer.
+    //
+    //  Returns:    Any of the sdk errors.
+    -----------------------------------------------------------------------------*/
+    public static SDKError GetPosition(SDKStream? stream, out ulong position)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsGetPosition(nint inStreamRef, out ulong outPosition);
+
+        return EdsGetPosition(CheckValidObject(stream), out position);
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -2009,7 +2093,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsWrite(nint inStreamRef, ulong inWriteSize, nint inBuffer, out uint outWrittenSize);
+    public static extern SDKError EdsWrite(nint inStreamRef, ulong inWriteSize, nint inBuffer, out uint outWrittenSize);
 
     /*-----------------------------------------------------------------------------
     //
@@ -2034,40 +2118,7 @@ public static unsafe class EDSDK_API
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
     [DllImport(_DLL_PATH)]
-    public static extern uint EdsSeek(nint inStreamRef, long inSeekOffset, EdsSeekOrigin inSeekOrigin);
-
-    /*-----------------------------------------------------------------------------
-    //
-    //  Function:   EdsGetPosition
-    //
-    //  Description:
-    //       Gets the current read or write position of the stream
-    //          (that is, the file position indicator).
-    //
-    //  Parameters:
-    //       In:    inStreamRef - The reference of the stream or image.
-    //      Out:    outPosition - The current stream pointer.
-    //
-    //  Returns:    Any of the sdk errors.
-    -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern uint EdsGetPosition(nint inStreamRef, out ulong outPosition);
-
-    /*-----------------------------------------------------------------------------
-    //
-    //  Function:   EdsGetLength
-    //
-    //  Description:
-    //      Gets the stream size.
-    //
-    //  Parameters:
-    //       In:    inStreamRef - The reference of the stream or image.
-    //      Out:    outLength - The length of the stream.
-    //
-    //  Returns:    Any of the sdk errors.
-    -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetLength(nint inStreamRef, out ulong outLength);
+    public static extern SDKError EdsSeek(nint inStreamRef, long inSeekOffset, EdsSeekOrigin inSeekOrigin);
 
     /*-----------------------------------------------------------------------------
     //

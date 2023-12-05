@@ -290,24 +290,23 @@ public sealed class SDKWrapper
     /// <returns>The camera list</returns>
     public List<SDKCamera> GetCameraList()
     {
-        //get list of cameras
         Error = EDSDK_API.EdsGetCameraList(out nint camlist);
+        Error = EDSDK_API.EdsGetChildCount(camlist, out int count);
 
-        //get each camera from camlist
-        //get amount of connected cameras
-        Error = EDSDK_API.EdsGetChildCount(camlist, out int c);
-        List<SDKCamera> camList = [];
-        for (int i = 0; i < c; i++)
+        List<SDKCamera> list = [];
+
+        for (int i = 0; i < count; i++)
         {
-            //get pointer to camera at index i
-            Error = EDSDK_API.EdsGetChildAtIndex(camlist, i, out nint cptr);
-            camList.Add(new SDKCamera(this, cptr));
+            Error = EDSDK_API.EdsGetChildAtIndex(camlist, i, out nint handle);
+
+            list.Add(new SDKCamera(this, handle));
         }
-
-        LogInfo($"Found {camList.Count} camera(s).");
-
-        return camList;
+#error todo
+        return list;
     }
+
+
+
 
     /// <summary>
     /// Opens a session with given camera
@@ -481,8 +480,8 @@ public sealed class SDKWrapper
     /// <returns>An EDSDK errorcode</returns>
     private SDKError Camera_SDKPropertyEvent(PropertyEvent inEvent, SDKProperty property, uint inParameter, nint inContext)
     {
-        if (inEvent is PropertyEvent.PropertyChanged)
-            Logger.LogPropertyValue(property, property.Get(this));
+        //if (inEvent is PropertyEvent.PropertyChanged)
+        //    Logger.LogPropertyValue(property, property.Get(this));
 
         if (property == SDKProperty.Evf_OutputDevice && IsLiveViewOn)
             DownloadEvf();
@@ -559,6 +558,7 @@ public sealed class SDKWrapper
         {
             //get information about object
             Error = EDSDK_API.EdsGetDirectoryItemInfo(ObjectPointer, out EdsDirectoryItemInfo dirInfo);
+
             if (string.IsNullOrEmpty(fileName))
             {
                 fileName = dirInfo.szFileName;
@@ -574,9 +574,10 @@ public sealed class SDKWrapper
                 }
             }
 
-            Logger.LogInfo("Downloading data. Filename: {fileName}");
+            Logger.LogInfo($"Downloading data. Filename: {fileName}");
 
             string targetImage = Path.Combine(directory, fileName);
+
             if (File.Exists(targetImage))
             {
                 throw new NotImplementedException("Renaming files not permitted");
@@ -587,19 +588,19 @@ public sealed class SDKWrapper
                 Directory.CreateDirectory(directory);
             }
 
-            Logger.LogInfo("Downloading data {fileName} to {directory}");
+            Logger.LogInfo($"Downloading data {fileName} to {directory}");
 
             SendSDKCommand(delegate
             {
                 Stopwatch stopWatch = Stopwatch.StartNew();
 
                 //create filestream to data
-                Error = EDSDK_API.EdsCreateFileStream(targetImage, EdsFileCreateDisposition.CreateAlways, EdsAccess.ReadWrite, out nint streamRef);
+                SDKStream streamRef = SDKStream.CreateFileStream(this, targetImage, EdsFileCreateDisposition.CreateAlways, EdsAccess.ReadWrite);
+
                 //download file
                 STAThread.TryLockAndExecute(STAThread.ExecLock, nameof(STAThread.ExecLock), TimeSpan.FromSeconds(30), () => DownloadData(ObjectPointer, streamRef));
-                //release stream
-                Error = EDSDK_API.Release(streamRef);
 
+                streamRef.Release();
                 stopWatch.Stop();
 
                 FileInfo downloadFile = new(targetImage);
@@ -620,9 +621,7 @@ public sealed class SDKWrapper
             takePhotoCompletionSource.TrySetException(x);
             videoDownloadDone?.TrySetException(x);
         }
-
     }
-
 
     /// <summary>
     /// Downloads a jpg image from the camera into a Bitmap. Fires the ImageDownloaded event when done.
@@ -632,6 +631,7 @@ public sealed class SDKWrapper
     {
         //get information about image
         EdsDirectoryItemInfo dirInfo = new();
+
         Error = EDSDK_API.EdsGetDirectoryItemInfo(ObjectPointer, out dirInfo);
 
         //check the extension. Raw data cannot be read by the bitmap class
@@ -643,21 +643,19 @@ public sealed class SDKWrapper
             SendSDKCommand(delegate
             {
                 Bitmap bmp;
-
-                //create memory stream
-                Error = EDSDK_API.EdsCreateMemoryStream(dirInfo.Size, out nint streamRef);
+                SDKStream stream = SDKStream.CreateMemoryStream(this, dirInfo.Size);
 
                 //download data to the stream
                 lock (STAThread.ExecLock)
-                    DownloadData(ObjectPointer, streamRef);
+                    DownloadData(ObjectPointer, stream);
 
-                Error = EDSDK_API.EdsGetPointer(streamRef, out nint jpgPointer);
-                Error = EDSDK_API.EdsGetLength(streamRef, out ulong length);
+                nint jpgPointer = stream.Pointer;
+                ulong length = stream.Length;
 
-                using (UnmanagedMemoryStream ums = new((byte*)jpgPointer.ToPointer(), (long)length, (long)length, FileAccess.Read))
+                using (UnmanagedMemoryStream ums = new((byte*)jpgPointer, (long)length, (long)length, FileAccess.Read))
                     bmp = new Bitmap(ums);
 
-                Error = EDSDK_API.Release(streamRef);
+                stream.Release();
 
                 //Fire the event with the image
                 OnImageDownloaded(bmp);
@@ -680,8 +678,7 @@ public sealed class SDKWrapper
     /// <returns>The thumbnail of the image</returns>
     public Bitmap GetFileThumb(string filepath)
     {
-        //create a filestream to given file
-        Error = EDSDK_API.EdsCreateFileStream(filepath, EdsFileCreateDisposition.OpenExisting, EdsAccess.Read, out nint stream);
+        SDKStream stream = SDKStream.CreateFileStream(this, filepath, EdsFileCreateDisposition.OpenExisting, EdsAccess.Read);
 
         return GetImage(stream, EdsImageSource.Thumbnail);
     }
@@ -691,7 +688,7 @@ public sealed class SDKWrapper
     /// </summary>
     /// <param name="ObjectPointer">Pointer to the object</param>
     /// <param name="stream">Pointer to the stream created in advance</param>
-    private void DownloadData(nint ObjectPointer, nint stream)
+    private void DownloadData(nint ObjectPointer, SDKStream stream)
     {
         //get information about the object
         Error = EDSDK_API.EdsGetDirectoryItemInfo(ObjectPointer, out EdsDirectoryItemInfo dirInfo);
@@ -716,11 +713,11 @@ public sealed class SDKWrapper
     /// <param name="img_stream">Image stream</param>
     /// <param name="imageSource">Type of image</param>
     /// <returns>The bitmap from the stream</returns>
-    private Bitmap GetImage(nint img_stream, EdsImageSource imageSource)
+    private Bitmap GetImage(SDKStream img_stream, EdsImageSource imageSource)
     {
-        nint stream = 0;
-        nint img_ref = 0;
-        nint streamPointer = 0;
+        SDKStream stream;
+        nint img_ref;
+        nint streamPointer;
 
         try
         {
@@ -739,7 +736,8 @@ public sealed class SDKWrapper
             Marshal.StructureToPtr(buffer, ptr, false);
 
 
-            Error = EDSDK_API.EdsCreateMemoryStreamFromPointer(ptr, (uint)datalength, out stream);
+            stream = SDKStream.CreateMemoryStream(this, ptr, (uint)datalength);
+
             //load image into the buffer
             Error = EDSDK_API.EdsGetImage(img_ref, imageSource, EdsTargetImageType.RGB, imageInfo.EffectiveRect, outputSize, stream);
 
@@ -770,9 +768,9 @@ public sealed class SDKWrapper
         }
         finally
         {
-            EDSDK_API.Release(img_stream);
-            EDSDK_API.Release(img_ref);
-            EDSDK_API.Release(stream);
+            img_stream.Release();
+            img_ref.Release();
+            stream.Release();
         }
     }
 
@@ -821,13 +819,13 @@ public sealed class SDKWrapper
             int listener_count = LiveViewUpdated?.GetInvocationList()?.Length ?? 0;
 
             Logger.LogInfo($"{listener_count} LiveViewUpdated listeners found");
-            Logger.LogPropertyValue(nameof(SDKProperty.Evf_OutputDevice), SDKProperty.Evf_DepthOfFieldPreview.Get<uint>(MainCamera));
+            //Logger.LogPropertyValue(nameof(SDKProperty.Evf_OutputDevice), SDKProperty.Evf_DepthOfFieldPreview.Get<uint>(MainCamera));
 
             MainCamera.StartLiveView();
 
             IsLiveViewOn = true;
 
-            Logger.LogPropertyValue(nameof(SDKProperty.Evf_OutputDevice), MainCamera.Get(SDKProperty.Evf_OutputDevice));
+            //Logger.LogPropertyValue(nameof(SDKProperty.Evf_OutputDevice), MainCamera.Get(SDKProperty.Evf_OutputDevice));
         }
     }
 
@@ -864,8 +862,7 @@ public sealed class SDKWrapper
             {
                 SDKElectronicViewfinderImage efv_image;
 
-                //create stream
-                Error = EDSDK_API.EdsCreateMemoryStream(0, out nint stream);
+                var stream = SDKStream.CreateMemoryStream(this, 0);
 
                 //run live view
                 while (IsLiveViewOn)
@@ -888,8 +885,8 @@ public sealed class SDKWrapper
                     }
 
                     //get pointer
-                    Error = EDSDK_API.EdsGetPointer(stream, out nint jpgPointer);
-                    Error = EDSDK_API.EdsGetLength(stream, out ulong length);
+                    nint jpgPointer = stream.Pointer;
+                    ulong length = stream.Length;
 
                     //get some live view image metadata
                     if (!IsCoordSystemSet)
@@ -902,8 +899,7 @@ public sealed class SDKWrapper
                     Evf_ZoomPosition = efv_image.GetEVFPoint(SDKProperty.Evf_ZoomPosition);
                     Evf_ImagePosition = efv_image.GetEVFPoint(SDKProperty.Evf_ImagePosition);
 
-                    //release current evf image
-                    Error = EDSDK_API.Release(efv_image);
+                    efv_image.Release();
 
                     using UnmanagedMemoryStream ums = new((byte*)jpgPointer, (long)length, (long)length, FileAccess.Read);
 
@@ -913,7 +909,7 @@ public sealed class SDKWrapper
                     ums.Close();
                 }
 
-                Error = EDSDK_API.Release(stream);
+                stream.Release();
 
                 MainCamera.StopLiveView(LVoff);
 
@@ -968,22 +964,21 @@ public sealed class SDKWrapper
             //SetSetting(SDKProperty.Evf_OutputDevice, EvfOutputDevice_TFT);
             //SetTFTEvf();
 
-            //LogPropertyValue(nameof(SDKProperty.Record), GetSetting(SDKProperty.Record));
+            //Logger.LogPropertyValue(nameof(SDKProperty.Record), GetSetting(SDKProperty.Record));
 
             MainCamera.Set(SDKProperty.Evf_OutputDevice, 3);
 
             //Check if the camera is ready to film
-            VideoRecordStatus recordStatus = MainCamera.Get<VideoRecordStatus>(SDKProperty.Record);
+            VideoRecordStatus record_status = MainCamera.Get<VideoRecordStatus>(SDKProperty.Record);
 
-            if (recordStatus != VideoRecordStatus.Movie_shooting_ready)
+            if (record_status != VideoRecordStatus.Movie_shooting_ready)
             {
                 //DOES NOT WORK, readonly setting?
                 //DOES NOT THROW AN ERROR
                 //SetSetting(SDKProperty.Record, EdsDriveMode.Video);
                 //SetSetting(SDKProperty.Record, VideoRecordStatus.Movie_shooting_ready);
 
-                Logger.LogPropertyValue(SDKProperty.Record, recordStatus);
-                Logger.LogInfo($"Camera reporting incorrect mode. expected. Continue. {VideoRecordStatus.Movie_shooting_ready}, was: {recordStatus}");
+                Logger.LogInfo($"Camera reporting incorrect mode. expected. Continue. {VideoRecordStatus.Movie_shooting_ready}, was: {record_status}");
                 Logger.LogInfo("Camera physical switch must be in movie record mode. Leave in this mode permanently!");
                 //throw new ArgumentException("Camera in invalid mode", nameof(SDKProperty.Record));
             }
@@ -1177,7 +1172,6 @@ public sealed class SDKWrapper
     {
         throw new NotImplementedException();
         // NOTE: Need to marry up obj ref to camera entry then delete based on camera entry / ref
-        Logger.LogInfo("Formatting volume. Volume: {Volume}", volume.Name);
         SendSDKCommand(() =>
         {
             nint ptr = Marshal.AllocHGlobal(Marshal.SizeOf(volume.Volume));
@@ -1185,7 +1179,6 @@ public sealed class SDKWrapper
             {
                 Marshal.StructureToPtr(volume.Volume, ptr, false);
                 Error = EDSDK_API.EdsFormatVolume(ptr);
-
             }
             finally
             {
@@ -1367,10 +1360,12 @@ public sealed class SDKWrapper
     {
         //get children of first pointer
         Error = EDSDK_API.EdsGetChildCount(ptr, out int childCount);
+
         if (childCount > 0)
         {
             //if it has children, create an array of entries
             CameraFileEntry[] children = new CameraFileEntry[childCount];
+
             for (int i = 0; i < childCount; i++)
             {
                 //get children of children
@@ -1380,33 +1375,34 @@ public sealed class SDKWrapper
                 SendSDKCommand(delegate { Error = EDSDK_API.EdsGetDirectoryItemInfo(childReference, out child); });
                 //create entry from information
                 children[i] = new CameraFileEntry(child.szFileName, child.isFolder != 0 ? CameraFileEntryTypes.Folder : CameraFileEntryTypes.File, childReference);
+
                 if (children[i].Type == CameraFileEntryTypes.File)
                 {
-                    if (false)
+                    if (false) // TODO
                     {
                         //if it's not a folder, create thumbnail and save it to the entry                       
-                        Error = EDSDK_API.EdsCreateMemoryStream(0, out nint stream);
-                        SendSDKCommand(delegate { Error = EDSDK_API.EdsDownloadThumbnail(childReference, stream); });
+                        SDKStream stream = SDKStream.CreateMemoryStream(this, 0);
+                        SendSDKCommand(() => Error = EDSDK_API.EdsDownloadThumbnail(childReference, stream));
                         children[i].AddThumb(GetImage(stream, EdsImageSource.Thumbnail));
                     }
                 }
                 else
                 {
-                    //if it's a folder, check for children with recursion
+                    // if it's a folder, check for children with recursion
                     CameraFileEntry[] retval = GetChildren(childReference);
+
                     if (retval != null)
-                    {
                         children[i].AddSubEntries(retval);
-                    }
                 }
 
-                EDSDK_API.Release(childReference);
+                childReference.Release();
             }
+
             return children;
         }
         else
         {
-            return new CameraFileEntry[0];
+            return [];
         }
     }
 

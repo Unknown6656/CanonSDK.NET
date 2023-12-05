@@ -285,11 +285,13 @@ public abstract class SDKObject
     //        throw new InvalidOperationException("Settings lists are not supported for this property.");
     //}
 
-    public SDKError Release() => EDSDK_API.Release(this);
+    public override string ToString() => $"{GetType().Name}:0x{Handle:x8}";
+
+    public void Release() => SDK.Error = EDSDK_API.Release(this);
 
     public uint Get(SDKProperty property) => Get<uint>(property);
 
-    public unsafe T Get<T>(SDKProperty property)
+    public unsafe T? Get<T>(SDKProperty property)
 #if STRICT_SETGET_4_BYTES_ONLY
         where T : struct
 #endif
@@ -301,6 +303,7 @@ public abstract class SDKObject
         SDK.Error = EDSDK_API.GetPropertyData(this, property, out T? value);
         value ??= default;
 #endif
+        LogProperty(property, false, value);
 
         return value;
     }
@@ -308,6 +311,7 @@ public abstract class SDKObject
     public string? GetAsString(SDKProperty property)
     {
         SDK.Error = EDSDK_API.GetPropertyData(this, property, out string? value);
+        LogProperty(property, false, value);
 
         return value;
     }
@@ -326,6 +330,9 @@ public abstract class SDKObject
         {
             //convert pointer to managed structure
             T data = (T)Marshal.PtrToStructure(ptr, structureType);
+
+            LogProperty(property, false, data);
+
             return data;
         }
         finally
@@ -344,19 +351,21 @@ public abstract class SDKObject
         where T : struct
 #endif
     {
+        LogProperty(property, true, value);
+
 #if STRICT_SETGET_4_BYTES_ONLY
         if (sizeof(T) != sizeof(uint))
             throw new ArgumentException($"The type {typeof(T)} must have a size of {sizeof(uint)} bytes - not {sizeof(T)} bytes.", nameof(T));
 
         Set(property, *(uint*)&value);
 #else
-        EDSDK_API.SetPropertyData(this, property, sizeof(T), value);
+        SDK.Error = EDSDK_API.SetPropertyData(this, property, sizeof(T), value);
 #endif
     }
 
     public void Set(SDKProperty property, uint value)
     {
-        LogSetProperty(property, value);
+        LogProperty(property, true, value);
 
         SDK.SendSDKCommand(delegate
         {
@@ -375,7 +384,7 @@ public abstract class SDKObject
         if (value is not [.., '\0'])
             value += '\0';
 
-        LogSetProperty(property, value);
+        LogProperty(property, true, value);
 
         //convert string to byte array
         byte[] buffer = Encoding.ASCII.GetBytes(value);
@@ -383,41 +392,44 @@ public abstract class SDKObject
         if (buffer.Length > 32)
             throw new ArgumentOutOfRangeException(nameof(value), "The provided value must be shorter than 32 bytes (including the zero-terminator).");
 
-        //set value
-        SDK.SendSDKCommand(() => EDSDK_API.SetPropertyData(this, property, 32, buffer), sdk_action: nameof(EDSDK_API.SetPropertyData));
+        SDK.SendSDKCommand(() => SDK.Error = EDSDK_API.SetPropertyData(this, property, 32, buffer), sdk_action: nameof(EDSDK_API.SetPropertyData));
     }
 
     public void SetAsStruct<T>(SDKProperty property, T value)
         where T : struct
     {
-        LogSetProperty(property, value);
+        LogProperty(property, true, value);
 
-        SDK.SendSDKCommand(() => EDSDK_API.SetPropertyData(this, property, Marshal.SizeOf(typeof(T)), value), sdk_action: nameof(EDSDK_API.SetPropertyData));
+        SDK.SendSDKCommand(() => SDK.Error = EDSDK_API.SetPropertyData(this, property, Marshal.SizeOf(typeof(T)), value), sdk_action: nameof(EDSDK_API.SetPropertyData));
     }
 
-    private void LogSetProperty(SDKProperty property, object? value)
+    private void LogProperty(SDKProperty property, bool set, object? value)
     {
         string repr = value switch
         {
-            string s => $"\"{s}\"",
+            null => "(null)",
+            string s => $"\"{s}\" ({s.Length})",
             char c => $"'{c}' ({(int)c}, 0x{(int)c:x4})",
             byte or sbyte => $"0x{value:x2} ({value})",
             short or ushort => $"0x{value:x4} ({value})",
             int or uint => $"0x{value:x8} ({value})",
             nint or nuint or long or ulong => $"0x{value:x16} ({value})",
+            DateTime or TimeSpan => $"{value:yyyy-MM-dd HH:mm:ss.ffffff}",
             IEnumerable collection => new Func<string>(delegate
             {
                 string[] array = collection.Cast<object?>().Select(o => o?.ToString() ?? "(null)").ToArray();
 
                 return $"{array.Length}: [{string.Join(", ", array)}]";
             })(),
-            float or double or decimal or bool or null or _ => value?.ToString() ?? "(null)",
+            float or double or decimal or bool => value?.ToString() ?? "(null)",
+            _ when value.ToString() is string tostr &&
+                   value.GetType() is Type type &&
+                   tostr != type.ToString() => $"{tostr} ({type.Name})",
+            _ => value.ToString() ?? "(null)",
         };
 
-        SDK.LogInfo($"Setting property: {this}.{property} = {repr}");
+        SDK.Logger.LogInfo($"{(set ? "SET" : "GET")} {this}.{property} {(set ? "<-" : "->")} {repr}");
     }
-
-    //public readonly void LogPropertyValue(SDKObject @object, uint value) => LogInfo($"Camera_SDKPropertyEvent. Property {propertyName} changed to 0x{propertyValue:X}");
 }
 
 /// <summary>
@@ -524,3 +536,62 @@ public sealed class SDKElectronicViewfinderImage(SDKWrapper sdk, nint handle)
     public EdsPoint GetEVFPoint(SDKProperty property) => GetAsStruct<EdsPoint>(property);
 }
 
+public sealed class SDKStream(SDKWrapper sdk, nint handle)
+    : SDKObject(sdk, handle)
+{
+    public nint Pointer
+    {
+        get
+        {
+            SDK.Error = EDSDK_API.GetPointer(this, out nint pointer);
+
+            return pointer;
+        }
+    }
+
+    public ulong Length
+    {
+        get
+        {
+            SDK.Error = EDSDK_API.GetLength(this, out ulong length);
+
+            return length;
+        }
+    }
+
+    public ulong Position
+    {
+        get
+        {
+            SDK.Error = EDSDK_API.GetPosition(this, out ulong position);
+
+            return position;
+        }
+    }
+
+
+
+
+    public static SDKStream CreateFileStream(SDKWrapper sdk, string filename, EdsFileCreateDisposition disposition, EdsAccess access)
+    {
+        sdk.Error = filename.Any(c => c <= 0xff)
+                  ? EDSDK_API.CreateFileStreamA(sdk, filename, disposition, access, out SDKStream stream)
+                  : EDSDK_API.CreateFileStreamW(sdk, filename, disposition, access, out stream);
+
+        return stream;
+    }
+
+    public static SDKStream CreateMemoryStream(SDKWrapper sdk, ulong size)
+    {
+        sdk.Error = EDSDK_API.CreateMemoryStream(sdk, size, out SDKStream stream);
+
+        return stream;
+    }
+
+    public static SDKStream CreateMemoryStream(SDKWrapper sdk, nint buffer, ulong size)
+    {
+        sdk.Error = EDSDK_API.CreateMemoryStreamFromPointer(sdk, buffer, size, out SDKStream stream);
+
+        return stream;
+    }
+}
