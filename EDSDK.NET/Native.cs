@@ -2,15 +2,17 @@ using System.Runtime.InteropServices;
 using System;
 
 using EDSDK.NET;
+using System.IO;
 
 namespace EDSDK.Native;
 
 
-public delegate SDKError EdsProgressCallback(uint inPercent, nint inContext, ref bool outCancel);
-public delegate SDKError EdsCameraAddedHandler(nint inContext);
-public delegate SDKError EdsPropertyEventHandler(PropertyEvent @event, SDKProperty property, uint param, nint inContext);
-public delegate SDKError EdsObjectEventHandler(EdsEvent @event, nint inRef, nint inContext);
-public delegate SDKError EdsStateEventHandler(StateEvent @event, uint inParameter, nint inContext);
+public delegate SDKError EdsProgressCallback(uint inPercent, SDKObject? context, ref bool outCancel);
+public delegate SDKError EdsCameraAddedHandler(SDKObject? context);
+public delegate SDKError EdsPropertyEventHandler(PropertyEvent @event, SDKProperty property, uint param, SDKObject? context);
+public delegate SDKError EdsObjectEventHandler(EdsEvent @event, SDKObject? @object, SDKObject? context);
+public delegate SDKError EdsStateEventHandler(StateEvent @event, uint param, SDKObject? context);
+
 
 public enum EdsDataType
     : uint
@@ -1207,18 +1209,18 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    public static SDKError InitializeSDK(SDKWrapper wrapper)
+    public static void InitializeSDK(SDKWrapper sdk)
     {
         [DllImport(_DLL_PATH)]
         static extern SDKError EdsInitializeSDK();
 
         try
         {
-            return wrapper.Error = EdsInitializeSDK();
+            sdk.Error = EdsInitializeSDK();
         }
         catch (Exception ex)
         {
-            wrapper.Logger.LogError(ex, "Error initializing SDK");
+            sdk.Logger.LogError(ex, "Error initializing SDK");
 
             throw;
         }
@@ -1239,8 +1241,22 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsTerminateSDK();
+    public static void TerminateSDK(SDKWrapper sdk)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsTerminateSDK();
+
+        try
+        {
+            sdk.Error = EdsTerminateSDK();
+        }
+        catch (Exception ex)
+        {
+            sdk.Logger.LogError(ex, "Error terminating SDK");
+
+            throw;
+        }
+    }
 
     #endregion
     #region REFERENCE-COUNTER OPERATING FUNCTIONS
@@ -1258,8 +1274,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsRetain(nint inRef);
+    public static SDKError Retain(SDKObject? @object)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsRetain(nint inRef);
+
+        return @object is { } o ? EdsRetain(o.Handle) : SDKError.OK;
+    }
 
     /// <summary>
     /// Decrements the reference counter to an object. When the reference counter reaches 0, the object is released.
@@ -1298,8 +1319,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetChildCount(nint inRef, out int outCount);
+    public static SDKError GetChildCount(SDKList? iterator, out int count)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsGetChildCount(nint inRef, out int outCount);
+
+        return EdsGetChildCount(CheckValidObject(iterator), out count);
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -1316,8 +1342,17 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetChildAtIndex(nint inRef, int inIndex, out nint outRef);
+    public static SDKError GetChildAtIndex(SDKList iterator, int index, out SDKObject? @object)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsGetChildAtIndex(nint inRef, int inIndex, out nint outRef);
+
+        SDKError error = EdsGetChildAtIndex(CheckValidObject(iterator), index, out nint reference);
+
+        @object = SDKObject.FromHandle(iterator.SDK, reference);
+
+        return error;
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -1332,8 +1367,17 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern uint EdsGetParent(nint inRef, out nint outParentRef);
+    public static SDKError GetParent(SDKList iterator, out SDKList? parent)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsGetParent(nint inRef, out nint outParentRef);
+
+        SDKError error = EdsGetParent(CheckValidObject(iterator), out nint reference);
+
+        parent = SDKList.FromHandle(iterator.SDK, reference);
+
+        return error;
+    }
 
     #endregion
     #region PROPERTY OPERATING FUNCTIONS
@@ -1502,6 +1546,8 @@ public static unsafe class EDSDK_API
     /*--------------------------------------------
       Device-list and device operating functions
     ---------------------------------------------*/
+
+
     /*-----------------------------------------------------------------------------
     //
     //  Function:   EdsGetCameraList
@@ -1515,8 +1561,19 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetCameraList(out nint outCameraListRef);
+    public static SDKError GetCameraList(SDKWrapper sdk, out SDKList<SDKCamera> list)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsGetCameraList(out nint outCameraListRef);
+
+        SDKError error = EdsGetCameraList(out nint handle);
+
+        list = new(sdk, handle);
+
+        return error;
+    }
+
+
 
     /*--------------------------------------------
       Camera operating functions
@@ -1762,8 +1819,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsDownload(nint inDirItemRef, ulong inReadSize, nint outStream);
+    public static SDKError Download(SDKObject? @object, ulong size, SDKStream stream)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsDownload(nint inDirItemRef, ulong inReadSize, nint outStream);
+
+        return EdsDownload(CheckValidObject(@object), size, stream.Handle);
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -1780,8 +1842,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsDownloadCancel(nint inDirItemRef);
+    public static SDKError DownloadCancel(SDKObject? @object)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsDownloadCancel(nint inDirItemRef);
+
+        return EdsDownloadCancel(CheckValidObject(@object));
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -1800,8 +1867,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsDownloadComplete(nint inDirItemRef);
+    public static SDKError DownloadComplete(SDKObject? @object)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsDownloadComplete(nint inDirItemRef);
+
+        return EdsDownloadComplete(CheckValidObject(@object));
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -1862,9 +1934,9 @@ public static unsafe class EDSDK_API
     [DllImport(_DLL_PATH)]
     public static extern uint EdsSetAttribute(nint inDirItemRef, EdsFileAttribute inFileAttribute);
 
-    /*--------------------------------------------
-      Stream operating functions
-    ---------------------------------------------*/
+
+    #region STREAM OPERATING FUNCTIONS
+
     /*-----------------------------------------------------------------------------
     //
     //  Function:   EdsCreateFileStream
@@ -2072,8 +2144,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsRead(nint inStreamRef, ulong inReadSize, nint outBuffer, out ulong outReadSize);
+    public static SDKError Read(SDKStream? stream, ulong size, nint buffer, out ulong count)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsRead(nint inStreamRef, ulong inReadSize, nint outBuffer, out ulong outReadSize);
+
+        return EdsRead(CheckValidObject(stream), size, buffer, out count);
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -2092,8 +2169,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsWrite(nint inStreamRef, ulong inWriteSize, nint inBuffer, out uint outWrittenSize);
+    public static SDKError Write(SDKStream? stream, ulong size, nint buffer, out uint count)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsWrite(nint inStreamRef, ulong inWriteSize, nint inBuffer, out uint outWrittenSize);
+
+        return EdsWrite(CheckValidObject(stream), size, buffer, out count);
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -2117,8 +2199,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSeek(nint inStreamRef, long inSeekOffset, EdsSeekOrigin inSeekOrigin);
+    public static SDKError Seek(SDKStream? stream, long offset, EdsSeekOrigin orgin)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsSeek(nint inStreamRef, long inSeekOffset, EdsSeekOrigin inSeekOrigin);
+
+        return EdsSeek(CheckValidObject(stream), offset, orgin);
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -2139,42 +2226,15 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern uint EdsCopyData(nint inStreamRef, ulong inWriteSize, nint outStreamRef);
+    public static SDKError CopyData(SDKStream? source, ulong size, SDKStream? destination)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsCopyData(nint inStreamRef, ulong inWriteSize, nint outStreamRef);
 
-    /*-----------------------------------------------------------------------------
-    //
-    //  Function:   EdsSetProgressCallback
-    //
-    //  Description:
-    //      Register a progress callback function. 
-    //      An event is received as notification of progress during processing that 
-    //          takes a relatively long time, such as downloading files from a
-    //          remote camera. 
-    //      If you register the callback function, the EDSDK calls the callback
-    //          function during execution or on completion of the following APIs. 
-    //      This timing can be used in updating on-screen progress bars, for example.
-    //
-    //  Parameters:
-    //       In:    inRef - The reference of the stream or image.
-    //              inProgressCallback - Pointer to a progress callback function.
-    //              inProgressOption - The option about progress is specified.
-    //                              Must be one of the following values.
-    //                         kEdsProgressOption_Done 
-    //                             When processing is completed,a callback function
-    //                             is called only at once.
-    //                         kEdsProgressOption_Periodically
-    //                             A callback function is performed periodically.
-    //              inContext - Application information, passed in the argument 
-    //                      when the callback function is called. Any information 
-    //                      required for your program may be added. 
-    //      Out:    None
-    //
-    //  Returns:    Any of the sdk errors.
-    -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSetProgressCallback(nint inRef, EdsProgressCallback inProgressFunc, EdsProgressOption inProgressOption, nint inContext);
+        return EdsCopyData(CheckValidObject(source), size, CheckValidObject(destination));
+    }
 
+    #endregion
 
     /*--------------------------------------------
       Image operating functions
@@ -2199,8 +2259,17 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsCreateImageRef(nint inStreamRef, out nint outImageRef);
+    public static SDKError CreateImageRef(SDKStream stream, out SDKImage image)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsCreateImageRef(nint inStreamRef, out nint outImageRef);
+
+        SDKError error = EdsCreateImageRef(CheckValidObject(stream), out nint imgref);
+
+        image = new(stream.SDK, imgref);
+
+        return error;
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -2229,8 +2298,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetImageInfo(nint inImageRef, EdsImageSource inImageSource, out EdsImageInfo outImageInfo);
+    public static SDKError GetImageInfo(SDKImage? image, EdsImageSource source, out EdsImageInfo info)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsGetImageInfo(nint inImageRef, EdsImageSource inImageSource, out EdsImageInfo outImageInfo);
+
+        return EdsGetImageInfo(CheckValidObject(image), source, out info);
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -2272,32 +2346,82 @@ public static unsafe class EDSDK_API
     //                      the image.
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetImage(nint inImageRef, EdsImageSource inImageSource, EdsTargetImageType inImageType, EdsRect inSrcRect, EdsSize inDstSize, nint outStreamRef);
+    public static SDKError GetImage(SDKImage? image, EdsImageSource source, EdsTargetImageType type, EdsRect rect, EdsSize dest_size, SDKStream? stream)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsGetImage(nint inImageRef, EdsImageSource inImageSource, EdsTargetImageType inImageType, EdsRect inSrcRect, EdsSize inDstSize, nint outStreamRef);
+
+        return EdsGetImage(CheckValidObject(image), source, type, rect, dest_size, CheckValidObject(stream));
+    }
 
 
-    //----------------------------------------------
-    //   Event handler registering functions
-    //----------------------------------------------            
+    #region EVENT HANDLER REGISTERING FUNCTIONS
+
     /*-----------------------------------------------------------------------------
-   //
-   //  Function:   EdsSetCameraAddedHandler
-   //
-   //  Description:
-   //      Registers a callback function for when a camera is detected.
-   //
-   //  Parameters:
-   //       In:    cameraAddedHandler - Pointer to a callback function
-   //                          called when a camera is connected physically
-   //              inContext - Specifies an application-defined value to be sent to
-   //                          the callback function pointed to by CallBack parameter.
-   //      Out:    None
-   //
-   //  Returns:    Any of the sdk errors.
-   -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSetCameraAddedHandler(EdsCameraAddedHandler cameraAddedHandler, nint inContext);
+    //
+    //  Function:   EdsSetProgressCallback
+    //
+    //  Description:
+    //      Register a progress callback function. 
+    //      An event is received as notification of progress during processing that 
+    //          takes a relatively long time, such as downloading files from a
+    //          remote camera. 
+    //      If you register the callback function, the EDSDK calls the callback
+    //          function during execution or on completion of the following APIs. 
+    //      This timing can be used in updating on-screen progress bars, for example.
+    //
+    //  Parameters:
+    //       In:    inRef - The reference of the stream or image.
+    //              inProgressCallback - Pointer to a progress callback function.
+    //              inProgressOption - The option about progress is specified.
+    //                              Must be one of the following values.
+    //                         kEdsProgressOption_Done 
+    //                             When processing is completed,a callback function
+    //                             is called only at once.
+    //                         kEdsProgressOption_Periodically
+    //                             A callback function is performed periodically.
+    //              inContext - Application information, passed in the argument 
+    //                      when the callback function is called. Any information 
+    //                      required for your program may be added. 
+    //      Out:    None
+    //
+    //  Returns:    Any of the sdk errors.
+    -----------------------------------------------------------------------------*/
+    public static SDKError SetProgressCallback(SDKObject? @object, EdsProgressOption inProgressOption, EdsProgressCallback callback, SDKObject? context = null)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsSetProgressCallback(nint inRef, EdsProgressCallback inProgressFunc, EdsProgressOption inProgressOption, nint inContext);
 
+        nint handle = CheckValidObject(@object);
+
+        return EdsSetProgressCallback(handle, callback, inProgressOption, context?.Handle ?? handle);
+    }
+
+    /*-----------------------------------------------------------------------------
+    //
+    //  Function:   EdsSetCameraAddedHandler
+    //
+    //  Description:
+    //      Registers a callback function for when a camera is detected.
+    //
+    //  Parameters:
+    //       In:    cameraAddedHandler - Pointer to a callback function
+    //                          called when a camera is connected physically
+    //              inContext - Specifies an application-defined value to be sent to
+    //                          the callback function pointed to by CallBack parameter.
+    //      Out:    None
+    //
+    //  Returns:    Any of the sdk errors.
+    -----------------------------------------------------------------------------*/
+    public static SDKError SetCameraAddedHandler(EdsCameraAddedHandler cameraAddedHandler, SDKObject? context = null)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsSetCameraAddedHandler(EdsCameraAddedHandler cameraAddedHandler, nint inContext);
+
+#warning TODO ?
+
+        return EdsSetCameraAddedHandler(cameraAddedHandler, context?.Handle ?? 0);
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -2319,14 +2443,14 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    public static SDKError SetPropertyEventHandler(SDKCamera? camera, PropertyEvent @event, EdsPropertyEventHandler? callback)
+    public static SDKError SetPropertyEventHandler(SDKCamera? camera, PropertyEvent @event, EdsPropertyEventHandler? callback, SDKObject? context = null)
     {
         [DllImport(_DLL_PATH)]
         static extern SDKError EdsSetPropertyEventHandler(nint camera, PropertyEvent @event, EdsPropertyEventHandler? inPropertyEventHandler, nint inContext);
 
         nint handle = CheckValidObject(camera);
 
-        return EdsSetPropertyEventHandler(handle, @event, callback, handle);
+        return EdsSetPropertyEventHandler(handle, @event, callback, context?.Handle ?? handle);
     }
 
     /*-----------------------------------------------------------------------------
@@ -2351,14 +2475,14 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    public static SDKError SetObjectEventHandler(SDKCamera? camera, EdsEvent @event, EdsObjectEventHandler? callback)
+    public static SDKError SetObjectEventHandler(SDKCamera? camera, EdsEvent @event, EdsObjectEventHandler? callback, SDKObject? context = null)
     {
         [DllImport(_DLL_PATH)]
         static extern SDKError EdsSetObjectEventHandler(nint camera, EdsEvent @event, EdsObjectEventHandler? inObjectEventHandler, nint inContext);
 
         nint handle = CheckValidObject(camera);
 
-        return EdsSetObjectEventHandler(handle, @event, callback, handle);
+        return EdsSetObjectEventHandler(handle, @event, callback, context?.Handle ?? handle);
     }
 
     /*-----------------------------------------------------------------------------
@@ -2382,15 +2506,18 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    public static SDKError SetCameraStateEventHandler(SDKCamera? camera, StateEvent @event, EdsStateEventHandler? callback)
+    public static SDKError SetCameraStateEventHandler(SDKCamera? camera, StateEvent @event, EdsStateEventHandler? callback, SDKObject? context = null)
     {
         [DllImport(_DLL_PATH)]
         static extern SDKError EdsSetCameraStateEventHandler(nint camera, StateEvent @event, EdsStateEventHandler? inStateEventHandler, nint inContext);
 
         nint handle = CheckValidObject(camera);
 
-        return EdsSetCameraStateEventHandler(handle, @event, callback, handle);
+        return EdsSetCameraStateEventHandler(handle, @event, callback, context?.Handle ?? handle);
     }
+
+    #endregion
+
 
 
     /*-----------------------------------------------------------------------------
@@ -2405,13 +2532,12 @@ public static unsafe class EDSDK_API
 		//
 		//  Returns:    Any of the sdk errors.
 		-----------------------------------------------------------------------------*/
-    public static SDKError CreateEvfImageRef(nint inStreamRef, SDKWrapper sdk, out SDKElectronicViewfinderImage viewfinderImage)
+    public static SDKError CreateEvfImageRef(SDKStream? stream, SDKWrapper sdk, out SDKElectronicViewfinderImage viewfinderImage)
     {
-
         [DllImport(_DLL_PATH)]
         static extern SDKError EdsCreateEvfImageRef(nint inStreamRef, out nint outEvfImageRef);
 
-        SDKError error = EdsCreateEvfImageRef(inStreamRef, out nint outEvfImageRef);
+        SDKError error = EdsCreateEvfImageRef(CheckValidObject(stream), out nint outEvfImageRef);
         viewfinderImage = new(sdk, outEvfImageRef);
 
         return error;
