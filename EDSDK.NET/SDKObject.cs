@@ -1,10 +1,12 @@
-// #define STRICT_SETGET_4_BYTES_ONLY
+﻿// #define STRICT_SETGET_4_BYTES_ONLY
 
 using System.Runtime.InteropServices;
 using System.Diagnostics.CodeAnalysis;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections;
 using System.Reflection;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System;
@@ -248,11 +250,27 @@ public readonly partial struct SDKProperty(uint id)
     public static bool operator !=(SDKProperty left, SDKProperty right) => !(left == right);
 }
 
-public abstract class SDKObject
+public interface ISDKObject<T>
+    where T : class, ISDKObject<T>
 {
     /// <summary>
     /// The internal SDK object handle.
     /// </summary>
+    public nint Handle { get; }
+
+    public SDKWrapper SDK { get; }
+
+
+    public static abstract T? FromHandle(SDKWrapper sdk, nint handle);
+}
+
+public abstract class SDKObject
+    : ISDKObject<SDKObject>
+    , IEquatable<SDKObject>
+{
+    private static readonly ConcurrentDictionary<Type, bool> _validated = new();
+
+
     public nint Handle { get; }
 
     public SDKWrapper SDK { get; }
@@ -266,12 +284,41 @@ public abstract class SDKObject
 
     public SDKObject(SDKWrapper sdk, nint handle)
     {
+        Type type = GetType();
+
+        if (!_validated.ContainsKey(type))
+            if (type.GetInterfaces().Any(iface => iface.IsGenericType
+                                               && iface.GetGenericTypeDefinition() == typeof(ISDKObject<>)
+                                               && iface.GetGenericArguments()[0] == type))
+                _validated[type] = true;
+            else
+                throw new InvalidProgramException($"The type '{type}' is not a valid '{typeof(SDKObject)}' type. It must implement '{typeof(ISDKObject<>)}' and have '{type}' as its first generic argument.");
+
         if (handle == 0)
             throw new ArgumentNullException(nameof(handle));
 
         SDK = sdk;
         Handle = handle;
     }
+
+    #region BASIC OBJECT FUNCTIONS (COMPARISON, REF. COUNTER, etc.)
+
+    public T As<T>() where T : class, ISDKObject<T> => FromHandle<T>(SDK, Handle) ?? throw new InvalidOperationException($"The internal object handle must not be null or zero.");
+
+    public void Retain() => SDK.Error = EDSDK_API.Retain(this);
+
+    public void Release() => SDK.Error = EDSDK_API.Release(this);
+
+    public override string ToString() => $"{GetType().Name}:0x{Handle:x8}";
+
+    public override int GetHashCode() => (int)Handle;
+
+    public override bool Equals(object? obj) => obj is SDKObject @object && Equals(@object);
+
+    public bool Equals(SDKObject? other) => other is not null && Handle == other.Handle;
+
+    #endregion
+    #region OBJECT PROPERTIY FUNCTIONS
 
     //public List<int> GetAsList(SDKProperty property)
     //{
@@ -284,10 +331,6 @@ public abstract class SDKObject
     //    else
     //        throw new InvalidOperationException("Settings lists are not supported for this property.");
     //}
-
-    public override string ToString() => $"{GetType().Name}:0x{Handle:x8}";
-
-    public void Release() => SDK.Error = EDSDK_API.Release(this);
 
     public uint Get(SDKProperty property) => Get<uint>(property);
 
@@ -430,6 +473,23 @@ public abstract class SDKObject
 
         SDK.Logger.LogInfo($"{(set ? "SET" : "GET")} {this}.{property} {(set ? "<-" : "->")} {repr}");
     }
+
+    #endregion
+
+    public void Download(ulong size, SDKStream destination) => SDK.Error = EDSDK_API.Download(this, size, destination);
+
+    public void DownloadComplete() => SDK.Error = EDSDK_API.DownloadComplete(this);
+
+    public void DownloadCancel() => SDK.Error = EDSDK_API.DownloadCancel(this);
+
+    public static T? FromHandle<T>(SDKWrapper sdk, nint handle) where T : class, ISDKObject<T> => T.FromHandle(sdk, handle);
+
+    internal static SDKObject? FromHandle(SDKWrapper sdk, nint handle) => new __unspecified_SDK_object__(sdk, handle);
+
+    static SDKObject? ISDKObject<SDKObject>.FromHandle(SDKWrapper sdk, nint handle) => FromHandle(sdk, handle);
+
+
+    private sealed class __unspecified_SDK_object__(SDKWrapper sdk, nint handle) : SDKObject(sdk, handle);
 }
 
 /// <summary>
@@ -437,6 +497,7 @@ public abstract class SDKObject
 /// </summary>
 public sealed class SDKCamera
     : SDKObject
+    , ISDKObject<SDKCamera>
 {
     /// <summary>
     /// Information about this camera
@@ -455,6 +516,21 @@ public sealed class SDKCamera
         get => Get<EdsSaveTo>(SDKProperty.SaveTo);
     }
 
+    public EdsStateEventHandler? StateEventHandler
+    {
+        set => SetStateEventHandler(StateEvent.All, value);
+    }
+
+    public EdsObjectEventHandler? ObjectEventHandler
+    {
+        set => SetObjectEventHandler(EdsEvent.All, value);
+    }
+
+    public EdsPropertyEventHandler? PropertyEventHandler
+    {
+        set => SetPropertyEventHandler(PropertyEvent.All, value);
+    }
+
 
     /// <summary>
     /// Creates a new instance of the Camera class
@@ -467,8 +543,23 @@ public sealed class SDKCamera
         Info = info;
     }
 
+    public void SetStateEventHandler(StateEvent options, EdsStateEventHandler? callback)
+    {
+        SDK.Logger.LogInfo($"Setting state event handler for {this} to {callback?.Method?.ToString() ?? "(null)"}.");
+        SDK.Error = EDSDK_API.SetCameraStateEventHandler(this, options, callback);
+    }
 
+    public void SetObjectEventHandler(EdsEvent options, EdsObjectEventHandler? callback)
+    {
+        SDK.Logger.LogInfo($"Setting object event handler for {this} to {callback?.Method?.ToString() ?? "(null)"}.");
+        SDK.Error = EDSDK_API.SetObjectEventHandler(this, options, callback);
+    }
 
+    public void SetPropertyEventHandler(PropertyEvent options, EdsPropertyEventHandler? callback)
+    {
+        SDK.Logger.LogInfo($"Setting property event handler for {this} to {callback?.Method?.ToString() ?? "(null)"}.");
+        SDK.Error = EDSDK_API.SetPropertyEventHandler(this, options, callback);
+    }
 
     public void StartLiveView() => ViewfinderOutputDevice = EvfOutputDevice.PC;
 
@@ -478,66 +569,65 @@ public sealed class SDKCamera
 
     public void SetSaveToHost() => ImageSaveTarget = EdsSaveTo.Host;
 
-    public SDKError OpenSession() => EDSDK_API.OpenSession(this);
+    public void OpenSession() => SDK.Error = EDSDK_API.OpenSession(this);
 
-    public SDKError CloseSession() => EDSDK_API.CloseSession(this);
+    public void CloseSession() => SDK.Error = EDSDK_API.CloseSession(this);
 
-    public SDKError SendCommand(CameraCommand command, int param) => EDSDK_API.SendCommand(this, command, param);
-
-    public SDKError SendStatusCommand(CameraState state, int param) => EDSDK_API.SendStatusCommand(this, state, param);
-
-
-    public EdsStateEventHandler? StateEventHandler
+    public void SendCommand(CameraCommand command, int param)
     {
-        set
-        {
-            SDK.LogInfo($"");
-            SDK.Error = EDSDK_API.SetCameraStateEventHandler(this, StateEvent.All, value);
-        }
+        SDK.Logger.LogInfo($"Sending the command '{command}' to the camera with the param 0x{param:x8} ({param}).");
+        SDK.Error = EDSDK_API.SendCommand(this, command, param);
     }
 
-    public EdsObjectEventHandler? ObjectEventHandler
+    public void SendStatusCommand(CameraState state, int param)
     {
-        set
-        {
-            SDK.Error = EDSDK_API.SetObjectEventHandler(this, EdsEvent.All, value);
-        }
+        SDK.Logger.LogInfo($"Sending the status command '{state}' to the camera with the param 0x{param:x8} ({param}).");
+        SDK.Error = EDSDK_API.SendStatusCommand(this, state, param);
     }
 
-    public EdsPropertyEventHandler? PropertyEventHandler
-    {
-        set
-        {
-            SDK.Error = EDSDK_API.SetPropertyEventHandler(this, PropertyEvent.All, value);
-        }
-    }
-
-
-
-
-
-    //AddCameraHandler(() => Error = EDSDK_API.SetCameraStateEventHandler(MainCamera, StateEvent.All, SDKStateEvent), nameof(EDSDK_API.SetCameraStateEventHandler));
-    //AddCameraHandler(() => Error = EDSDK_API.SetObjectEventHandler(MainCamera, EdsEvent.All, SDKObjectEvent), nameof(EDSDK_API.SetObjectEventHandler));
-    //AddCameraHandler(() => Error = EDSDK_API.SetPropertyEventHandler(MainCamera, PropertyEvent.All, SDKPropertyEvent), nameof(EDSDK_API.SetPropertyEventHandler));
+    public static new SDKCamera? FromHandle(SDKWrapper sdk, nint handle) => handle == 0 ? null : new(sdk, handle);
 }
 
-public sealed class SDKImage(SDKWrapper sdk, nint handle) : SDKObject(sdk, handle);
+public abstract class SDKProgressableObject(SDKWrapper sdk, nint handle)
+    : SDKObject(sdk, handle)
+{
+    public void SetProgressCallback(EdsProgressOption option, EdsProgressCallback callback, SDKObject? context) => SDK.Error = EDSDK_API.SetProgressCallback(this, option, callback, context);
+}
+
+public sealed class SDKImage(SDKWrapper sdk, nint handle)
+    : SDKProgressableObject(sdk, handle)
+    , ISDKObject<SDKImage>
+{
+    public static new SDKImage? FromHandle(SDKWrapper sdk, nint handle) => handle == 0 ? null : new(sdk, handle);
+
+    public static SDKImage FromStream(SDKStream stream)
+    {
+        stream.SDK.Error = EDSDK_API.CreateImageRef(stream, out SDKImage image);
+
+        return image;
+    }
+}
 
 public sealed class SDKElectronicViewfinderImage(SDKWrapper sdk, nint handle)
     : SDKObject(sdk, handle)
+    , ISDKObject<SDKElectronicViewfinderImage>
 {
     public EdsRect ZoomPosition => GetAsStruct<EdsRect>(SDKProperty.Evf_ZoomPosition);
     // EDSDK_API.GetPropertyData(this, SDKProperty.Evf_ZoomPosition, out EdsRect rect);
 
     public EdsSize EVFCoordinateSystem => GetAsStruct<EdsSize>(SDKProperty.Evf_CoordinateSystem);
+
     // EDSDK_API.GetPropertyData(this, SDKProperty.Evf_CoordinateSystem, out EdsSize size);
 
 
     public EdsPoint GetEVFPoint(SDKProperty property) => GetAsStruct<EdsPoint>(property);
+
+    public static new SDKElectronicViewfinderImage? FromHandle(SDKWrapper sdk, nint handle) => handle == 0 ? null : new(sdk, handle);
 }
 
-public sealed class SDKStream(SDKWrapper sdk, nint handle)
-    : SDKObject(sdk, handle)
+public unsafe sealed class SDKStream(SDKWrapper sdk, nint handle)
+    : SDKProgressableObject(sdk, handle)
+    , ISDKObject<SDKStream>
 {
     public nint Pointer
     {
@@ -570,6 +660,54 @@ public sealed class SDKStream(SDKWrapper sdk, nint handle)
     }
 
 
+    public void Seek(EdsSeekOrigin origin) => Seek(0, origin);
+
+    public void Seek(long offset, EdsSeekOrigin origin) => SDK.Error = EDSDK_API.Seek(this, offset, origin);
+
+    public SDKStream Duplicate(ulong size)
+    {
+        SDK.Error = EDSDK_API.CreateMemoryStream(SDK, size, out SDKStream stream);
+
+        CopyTo(size, stream);
+
+        return stream;
+    }
+
+    public void CopyTo(ulong size, SDKStream stream) => SDK.Error = EDSDK_API.CopyData(this, size, stream);
+
+    public ulong Read(ulong size, nint buffer)
+    {
+        SDK.Error = EDSDK_API.Read(this, size, buffer, out ulong count);
+
+        return count;
+    }
+
+    public byte[] Read(ulong size)
+    {
+        byte[] bytes = new byte[size];
+        ulong count;
+
+        fixed (byte* ptr = bytes)
+            count = Read(size, (nint)(void*)ptr);
+
+        if (count != size)
+            Array.Resize(ref bytes, (int)count);
+
+        return bytes;
+    }
+
+    public uint Write(ulong size, nint buffer)
+    {
+        SDK.Error = EDSDK_API.Write(this, size, buffer, out uint count);
+
+        return count;
+    }
+
+    public uint Write(byte[] bytes)
+    {
+        fixed (byte* ptr = bytes)
+            return Write((ulong)bytes.LongLength, (nint)(void*)ptr);
+    }
 
 
     public static SDKStream CreateFileStream(SDKWrapper sdk, string filename, EdsFileCreateDisposition disposition, EdsAccess access)
@@ -594,6 +732,97 @@ public sealed class SDKStream(SDKWrapper sdk, nint handle)
 
         return stream;
     }
+
+    public static new SDKStream? FromHandle(SDKWrapper sdk, nint handle) => handle == 0 ? null : new(sdk, handle);
+}
+
+public class SDKList(SDKWrapper sdk, nint handle)
+    : SDKObject(sdk, handle)
+    , ISDKObject<SDKList>
+    , IEnumerable<SDKObject?>
+{
+    public SDKList? Parent
+    {
+        get
+        {
+            SDK.Error = EDSDK_API.GetParent(this, out SDKList? parent);
+
+            return parent;
+        }
+    }
+
+    public int Count
+    {
+        get
+        {
+            SDK.Error = EDSDK_API.GetChildCount(this, out int count);
+
+            return count;
+        }
+    }
+
+    public SDKObject? this[int index]
+    {
+        get
+        {
+            SDK.Error = EDSDK_API.GetChildAtIndex(this, index, out SDKObject? child);
+
+            return child;
+        }
+    }
+
+
+    public new SDKList<T> As<T>() where T : class, ISDKObject<T> => base.As<SDKList<T>>();
+
+    public T? GetItem<T>(int index) where T : class, ISDKObject<T> => this[index]?.As<T>();
+
+    public IEnumerator<SDKObject?> GetEnumerator()
+    {
+        for (int i = 0; i < Count; ++i)
+            yield return this[i];
+    }
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public static new SDKList? FromHandle(SDKWrapper sdk, nint handle) => handle == 0 ? null : new(sdk, handle);
+
+    public static SDKList<SDKCamera> GetConnectedCameras(SDKWrapper sdk)
+    {
+        sdk.Error = EDSDK_API.GetCameraList(sdk, out SDKList<SDKCamera> list);
+
+        return list;
+    }
+}
+
+public class SDKList<T>(SDKWrapper sdk, nint handle)
+    : SDKList(sdk, handle)
+    , ISDKObject<SDKList<T>>
+    , IEnumerable<T?>
+    where T : class, ISDKObject<T>
+{
+    public new SDKList<SDKList<T>>? Parent => base.Parent?.As<SDKList<T>>();
+
+    public new T? this[int index] => GetItem<T>(index);
+
+
+    public T? GetItem(int index) => GetItem<T>(index);
+
+    public new IEnumerator<T?> GetEnumerator()
+    {
+        for (int i = 0; i < Count; ++i)
+            yield return this[i];
+    }
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public static new SDKList<T>? FromHandle(SDKWrapper sdk, nint handle) => handle == 0 ? null : new(sdk, handle);
+}
+
+
+
+
+
+
 
 
 
