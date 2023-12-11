@@ -1,4 +1,4 @@
-﻿// #define STRICT_SETGET_4_BYTES_ONLY
+// #define STRICT_SETGET_4_BYTES_ONLY
 
 using System.Runtime.InteropServices;
 using System.Diagnostics.CodeAnalysis;
@@ -594,4 +594,47 @@ public sealed class SDKStream(SDKWrapper sdk, nint handle)
 
         return stream;
     }
+
+
+
+//public abstract class CameraFilesystemEntry(SDKWrapper sdk, nint handle);
+
+//public abstract class CameraFilesystemFile(SDKWrapper sdk, nint handle) : CameraFilesystemEntry(sdk, handle);
+
+//public abstract class CameraFilesystemFolder(SDKWrapper sdk, nint handle) : CameraFilesystemEntry(sdk, handle);
+
+//public abstract class CameraFilesystemVolume(SDKWrapper sdk, nint handle) : CameraFilesystemEntry(sdk, handle);
+
+
+
+public class CameraFileEntry(SDKWrapper sdk, nint handle, CameraFileEntryTypes type, string name)
+    : SDKList<CameraFileEntry>(sdk, handle)
+    , ISDKObject<CameraFileEntry>
+{
+    
+
+    public string Name { get; } = name;
+
+    public CameraFileEntryTypes Type { get; } = type;
+
+    public EdsVolumeInfo Volume { get; set; }
+
+    public Bitmap? Thumbnail { get; set; }
+
+    public CameraFileEntry[] SubEntries { get; private set; } = [];
+
+
+    public void AddSubEntries(IEnumerable<CameraFileEntry> entries) => SubEntries = [.. SubEntries, .. entries];
+
+    static CameraFileEntry? ISDKObject<CameraFileEntry>.FromHandle(SDKWrapper sdk, nint handle) => new(sdk, handle, CameraFileEntryTypes.File, $"(unknown 0x{handle:x8})");
+}
+
+
+
+public enum CameraFileEntryTypes
+{
+    Camera = 5,
+    Volume = 10,
+    Folder = 20,
+    File = 30,
 }
