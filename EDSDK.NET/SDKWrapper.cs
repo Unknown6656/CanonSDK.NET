@@ -132,7 +132,7 @@ public sealed class SDKWrapper
         get => _imageSaveFilename;
         set
         {
-            Logger.LogInfo($"Setting ImageSaveFilename to '{value}'.");
+            Logger.LogInfo($"Setting {nameof(ImageSaveFilename)} to '{value}'.");
 
             _imageSaveFilename = value;
         }
@@ -1111,44 +1111,28 @@ public sealed class SDKWrapper
 
     private void RunForEachVolume(Action<nint, EdsVolumeInfo> action)
     {
-        //get the number of volumes currently installed in the camera
-        Error = EDSDK_API.GetChildCount(GetCamera(), out int VolumeCount);
+        var volumes = MainCamera.Filesystem.Volumes;
 
-        for (int i = 0; i < VolumeCount; i++)
+        //get the number of volumes currently installed in the camera
+        var camera_storage = ;
+        int volume_count = camera_storage.Count;
+
+        foreach (SDKCameraStorageVolume volume in volumes)
         {
             //get information about volume
-            Error = EDSDK_API.GetChildAtIndex(MainCamera.Handle, i, out nint childReference);
+            nint childReference = camera_storage[i];
 
             EdsVolumeInfo volumeInfo = new();
-            SendSDKCommand(() => Error = EDSDK_API.EdsGetVolumeInfo(childReference, out volumeInfo));
 
-            if (volumeInfo.StorageType != (uint)EdsStorageType.Non && volumeInfo.Access == (uint)EdsAccess.ReadWrite)
+            SendSDKCommand(() => Error = EDSDK_API.GetVolumeInfo(childReference, out volumeInfo));
+
+
+            if (volumeInfo.StorageType != EdsStorageType.Non && volumeInfo.Access == EdsAccess.ReadWrite)
                 action(childReference, volumeInfo);
 
             Error = EDSDK_API.Release(childReference);
         }
     }
-
-
-    public void FormatVolume(CameraFileEntry volume)
-    {
-        throw new NotImplementedException();
-        // NOTE: Need to marry up obj ref to camera entry then delete based on camera entry / ref
-        SendSDKCommand(() =>
-        {
-            nint ptr = Marshal.AllocHGlobal(Marshal.SizeOf(volume.Volume));
-            try
-            {
-                Marshal.StructureToPtr(volume.Volume, ptr, false);
-                Error = EDSDK_API.EdsFormatVolume(ptr);
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(ptr);
-            }
-        }, sdk_action: nameof(EDSDK_API.EdsFormatVolume));
-    }
-
 
     #endregion
     #region Other
@@ -1176,8 +1160,6 @@ public sealed class SDKWrapper
         }
     }
 
-
-
     /// <summary>
     /// Tells the camera that there is enough space on the HDD if SaveTo is set to Host
     /// This method does not use the actual free space!
@@ -1189,19 +1171,13 @@ public sealed class SDKWrapper
     /// </summary>
     /// <param name="bytesPerSector">Bytes per sector on HD</param>
     /// <param name="numberOfFreeClusters">Number of free clusters on HD</param>
-    public void SetCapacity(int bytesPerSector, int numberOfFreeClusters)
+    public void SetCapacity(int bytesPerSector, int numberOfFreeClusters) => SetCapacity(new EdsCapacity()
     {
-        //create new capacity struct
-        EdsCapacity capacity = new()
-        {
-            //set given values
-            Reset = 1,
-            BytesPerSector = bytesPerSector,
-            NumberOfFreeClusters = numberOfFreeClusters
-        };
-
-        SetCapacity(capacity);
-    }
+        //set given values
+        Reset = 1,
+        BytesPerSector = bytesPerSector,
+        NumberOfFreeClusters = numberOfFreeClusters
+    });
 
     private void SetCapacity(EdsCapacity capacity)
     {
@@ -1210,92 +1186,7 @@ public sealed class SDKWrapper
         SendSDKCommand(() => Error = EDSDK_API.EdsSetCapacity(MainCamera.Handle, capacity));
     }
 
-
-
-    /// <summary>
-    /// Moves the focus (only works while in live view)
-    /// </summary>
-    /// <param name="speed">Speed and direction of focus movement</param>
-    public void SetFocus(uint speed)
-    {
-        if (IsLiveViewOn)
-            SendSDKCommand(() => MainCamera.SendCommand(CameraCommand.DriveLensEvf, (int)speed));
-    }
-
-    /// <summary>
-    /// Sets the WB of the live view while in live view
-    /// </summary>
-    /// <param name="x">X Coordinate</param>
-    /// <param name="y">Y Coordinate</param>
-    public void SetManualWBEvf(ushort x, ushort y)
-    {
-        if (IsLiveViewOn)
-        {
-            //converts the coordinates to a form the camera accepts
-            byte[] xa = BitConverter.GetBytes(x);
-            byte[] ya = BitConverter.GetBytes(y);
-            uint coord = BitConverter.ToUInt32([xa[0], xa[1], ya[0], ya[1]], 0);
-
-            //send command to camera
-            SendSDKCommand(() => MainCamera.SendCommand(CameraCommand.DoClickWBEvf, (int)coord));
-        }
-    }
-
-    public List<CameraFileEntry> GetVolumes() => GetVolumes(GetCamera());
-
-    public List<CameraFileEntry> GetVolumes(CameraFileEntry camera)
-    {
-        //get the number of volumes currently installed in the camera
-        Error = EDSDK_API.EdsGetChildCount(camera.Handle, out int VolumeCount);
-
-        List<CameraFileEntry> volumes = [];
-
-        //iterate through all of them
-        for (int i = 0; i < VolumeCount; i++)
-        {
-            //get information about volume
-            Error = EDSDK_API.EdsGetChildAtIndex(MainCamera.Handle, i, out nint childReference);
-
-            EdsVolumeInfo volumeInfo = new();
-
-            SendSDKCommand(() => EDSDK_API.EdsGetVolumeInfo(childReference, out volumeInfo));
-
-            //ignore the HDD
-            if (volumeInfo.szVolumeLabel != "HDD")
-            {
-                //add volume to the list
-                volumes.Add(new CameraFileEntry(this, $"Volume{i}({volumeInfo.szVolumeLabel})", CameraFileEntryTypes.Volume, childReference) { Volume = volumeInfo });
-            }
-
-            //release the volume
-            Error = EDSDK_API.Release(childReference);
-        }
-
-        return volumes;
-    }
-
-    public CameraFileEntry GetCamera() => new(this, MainCamera.Handle, CameraFileEntryTypes.Camera, "Camera");
-
-    public void DeleteFileItem(CameraFileEntry fileItem)
-    {
-        throw new NotImplementedException();
-        // NOTE: Get original structure from camera to delete
-        SendSDKCommand(() =>
-        {
-            nint ptr = Marshal.AllocHGlobal(Marshal.SizeOf(fileItem));
-            try
-            {
-                Marshal.StructureToPtr(fileItem, ptr, false);
-                Error = EDSDK_API.EdsDeleteDirectoryItem(ptr);
-
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(ptr);
-            }
-        }
-        );
-    }
+    public SDKFilesystemVolume[] GetVolumes() => [.. MainCamera.Filesystem.Volumes.Where(v => v.Name != "HDD")];
 
     /// <summary>
     /// Gets all volumes, folders and files existing on the camera
@@ -1303,23 +1194,15 @@ public sealed class SDKWrapper
     /// <returns>A CameraFileEntry with all informations</returns>
     public CameraFileEntry GetAllEntries()
     {
-        //create the main entry which contains all subentries
-        CameraFileEntry camera = GetCamera();
-
-        List<CameraFileEntry> volumes = GetVolumes(camera);
+        SDKFilesystemVolume[] volumes = GetVolumes();
 
         volumes.ForEach(v => v.AddSubEntries(GetChildren(v.Handle)));
 
         //add all volumes to the main entry and return it
         camera.AddSubEntries(volumes.ToArray());
+
         return camera;
     }
-
-    /// <summary>
-    /// Locks or unlocks the cameras UI
-    /// </summary>
-    /// <param name="lockState">True for locked, false to unlock</param>
-    public void UILock(bool lockState) => SendSDKCommand(() => MainCamera.SendStatusCommand(lockState ? CameraState.UILock : CameraState.UIUnLock, 0));
 
     /// <summary>
     /// Gets the children of a camera folder/volume. Recursive method.
@@ -1347,9 +1230,9 @@ public sealed class SDKWrapper
                 SendSDKCommand(() => EDSDK_API.EdsGetDirectoryItemInfo(childReference, out child));
 
                 //create entry from information
-                children[i] = new CameraFileEntry(this, child.szFileName, child.isFolder != 0 ? CameraFileEntryTypes.Folder : CameraFileEntryTypes.File, childReference);
+                children[i] = new CameraFileEntry(this, child.szFileName, child.isFolder != 0 ? SDKFilesystemEntryType.Folder : SDKFilesystemEntryType.File, childReference);
 
-                if (children[i].Type == CameraFileEntryTypes.File)
+                if (children[i].Type == SDKFilesystemEntryType.File)
                 {
                     if (false) // TODO
                     {
