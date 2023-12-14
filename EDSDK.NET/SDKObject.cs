@@ -297,9 +297,12 @@ public abstract class SDKObject
         if (handle == 0)
             throw new ArgumentNullException(nameof(handle));
 
-        SDK = sdk;
         Handle = handle;
+        SDK = sdk;
+        SDK.Logger.LogInfo($"{this} created.");
     }
+
+    ~SDKObject() => SDK.Logger.LogInfo($"{this} destroyed.");
 
     #region BASIC OBJECT FUNCTIONS (COMPARISON, REF. COUNTER, etc.)
 
@@ -307,7 +310,13 @@ public abstract class SDKObject
 
     public void Retain() => SDK.Error = EDSDK_API.Retain(this);
 
-    public void Release() => SDK.Error = EDSDK_API.Release(this);
+    public void Release()
+    {
+        SDK.Error = EDSDK_API.Release(this);
+        SDK.Logger.LogInfo($"{this} released.");
+    }
+
+    public void Dispose() => Release();
 
     public override string ToString() => $"{GetType().Name}:0x{Handle:x8}";
 
@@ -492,17 +501,51 @@ public abstract class SDKObject
     private sealed class __unspecified_SDK_object__(SDKWrapper sdk, nint handle) : SDKObject(sdk, handle);
 }
 
-/// <summary>
-/// A container for camera related information
-/// </summary>
 public sealed class SDKCamera
     : SDKObject
     , ISDKObject<SDKCamera>
 {
-    /// <summary>
-    /// Information about this camera
-    /// </summary>
     public EdsDeviceInfo Info { get; }
+
+    public SDKFilesystemCamera Filesystem { get; }
+
+
+    /// <summary>
+    /// Moves the focus (only works while in live view)
+    /// </summary>
+    /// <param name="speed">Speed and direction of focus movement</param>
+    public int Focus
+    {
+        set
+        {
+            if (SDK.IsLiveViewOn)
+                SDK.SendSDKCommand(() => SendCommand(CameraCommand.DriveLensEvf, value));
+        }
+    }
+
+    /// <summary>
+    /// Sets the WB of the live view while in live view
+    /// </summary>
+    /// <param name="x">X Coordinate</param>
+    /// <param name="y">Y Coordinate</param>
+    public (ushort X, ushort Y) ManualWBEvf
+    {
+        set
+        {
+            if (SDK.IsLiveViewOn)
+            {
+#warning todo
+                //converts the coordinates to a form the camera accepts
+                byte[] xa = BitConverter.GetBytes(value.X);
+                byte[] ya = BitConverter.GetBytes(value.Y);
+                uint coord = BitConverter.ToUInt32([xa[0], xa[1], ya[0], ya[1]], 0);
+
+                SDK.SendSDKCommand(() => SendCommand(CameraCommand.DoClickWBEvf, (int)coord));
+            }
+        }
+    }
+
+
 
     public EvfOutputDevice ViewfinderOutputDevice
     {
@@ -532,14 +575,11 @@ public sealed class SDKCamera
     }
 
 
-    /// <summary>
-    /// Creates a new instance of the Camera class
-    /// </summary>
-    /// <param name="handle">Pointer to the SDK camera object</param>
     public SDKCamera(SDKWrapper sdk, nint handle)
         : base(sdk, handle)
     {
         sdk.Error = EDSDK_API.EdsGetDeviceInfo(handle, out EdsDeviceInfo info);
+        Filesystem = new(sdk, handle, "Camera");
         Info = info;
     }
 
@@ -572,6 +612,15 @@ public sealed class SDKCamera
     public void OpenSession() => SDK.Error = EDSDK_API.OpenSession(this);
 
     public void CloseSession() => SDK.Error = EDSDK_API.CloseSession(this);
+
+    public void LockUI() => SDK.SendSDKCommand(() => SendStatusCommand(CameraState.UILock, 0));
+
+    public void UnlockUI() => SDK.SendSDKCommand(() => SendStatusCommand(CameraState.UIUnLock, 0));
+
+
+
+
+
 
     public void SendCommand(CameraCommand command, int param)
     {
@@ -819,51 +868,174 @@ public class SDKList<T>(SDKWrapper sdk, nint handle)
 }
 
 
-
-
-
-
-
-
-
-//public abstract class CameraFilesystemEntry(SDKWrapper sdk, nint handle);
-
-//public abstract class CameraFilesystemFile(SDKWrapper sdk, nint handle) : CameraFilesystemEntry(sdk, handle);
-
-//public abstract class CameraFilesystemFolder(SDKWrapper sdk, nint handle) : CameraFilesystemEntry(sdk, handle);
-
-//public abstract class CameraFilesystemVolume(SDKWrapper sdk, nint handle) : CameraFilesystemEntry(sdk, handle);
-
-
-
-public class CameraFileEntry(SDKWrapper sdk, nint handle, CameraFileEntryTypes type, string name)
-    : SDKList<CameraFileEntry>(sdk, handle)
-    , ISDKObject<CameraFileEntry>
-{
-    
-
-    public string Name { get; } = name;
-
-    public CameraFileEntryTypes Type { get; } = type;
-
-    public EdsVolumeInfo Volume { get; set; }
-
-    public Bitmap? Thumbnail { get; set; }
-
-    public CameraFileEntry[] SubEntries { get; private set; } = [];
-
-
-    public void AddSubEntries(IEnumerable<CameraFileEntry> entries) => SubEntries = [.. SubEntries, .. entries];
-
-    static CameraFileEntry? ISDKObject<CameraFileEntry>.FromHandle(SDKWrapper sdk, nint handle) => new(sdk, handle, CameraFileEntryTypes.File, $"(unknown 0x{handle:x8})");
-}
-
-
-
-public enum CameraFileEntryTypes
+public enum SDKFilesystemEntryType
+    : uint
 {
     Camera = 5,
     Volume = 10,
     Folder = 20,
     File = 30,
+}
+
+public abstract class SDKFilesystemEntry(SDKWrapper sdk, nint handle, SDKFilesystemEntryType type, string name)
+    : SDKObject(sdk, handle)
+    , ISDKObject<SDKFilesystemEntry>
+{
+    public virtual string Name { get; } = name;
+
+    public SDKFilesystemEntryType Type { get; } = type;
+
+
+
+    public static new SDKFilesystemEntry? FromHandle(SDKWrapper sdk, nint handle) => handle == 0 ? null : new SDKFilesystemFile(sdk, handle, $"(unknown 0x{handle:x8})");
+}
+
+public abstract class SDKEnumerableFilesystemEntry(SDKWrapper sdk, nint handle, SDKFilesystemEntryType type, string name)
+    : SDKFilesystemEntry(sdk, handle, type, name)
+{
+    private readonly SDKList<SDKFilesystemEntry> _files = new(sdk, handle);
+
+
+    protected int ItemCount => _files.Count;
+
+    protected SDKFilesystemEntry this[int index] => _files[index]!;
+}
+
+public sealed class SDKFilesystemCamera(SDKWrapper sdk, nint handle, string name = "Camera")
+    : SDKEnumerableFilesystemEntry(sdk, handle, SDKFilesystemEntryType.Camera, name)
+    , ISDKObject<SDKFilesystemCamera>
+{
+    public int VolumeCount => ItemCount;
+
+    public SDKFilesystemVolume[] Volumes => [.. from i in Enumerable.Range(0, VolumeCount)
+                                                let volume = this[i]
+                                                where volume != null
+                                                select volume!];
+
+    public new SDKFilesystemVolume? this[int index] => base[index].As<SDKFilesystemVolume>();
+
+
+    public static new SDKFilesystemCamera? FromHandle(SDKWrapper sdk, nint handle) => handle == 0 ? null : new(sdk, handle, $"(camera 0x{handle:x8})");
+}
+
+public sealed class SDKFilesystemVolume
+    : SDKEnumerableFilesystemEntry
+    , ISDKObject<SDKFilesystemVolume>
+{
+    public EdsVolumeInfo VolumeInfo { get; }
+
+    public override string Name => VolumeInfo.szVolumeLabel;
+
+    public EdsStorageType StorageType => VolumeInfo.StorageType;
+
+    public ulong Capacity => VolumeInfo.MaxCapacity;
+
+    public ulong FreeSpace => VolumeInfo.FreeSpaceInBytes;
+
+    public int FileCount => ItemCount;
+
+    public SDKFilesystemEntry[] FilesystemEntries => [.. Enumerable.Range(0, FileCount).Select(i => this[i])];
+
+    public new SDKFilesystemEntry this[int index] => base[index];
+
+
+
+    public SDKFilesystemVolume(SDKWrapper sdk, nint handle, string name)
+        : base(sdk, handle, SDKFilesystemEntryType.Volume, name)
+    {
+        EdsVolumeInfo info = new();
+
+        SDK.SendSDKCommand(() => SDK.Error = EDSDK_API.GetVolumeInfo(this, out info));
+
+        VolumeInfo = info;
+    }
+
+    public void Format()
+    {
+        throw new NotImplementedException();
+
+        SDK.SendSDKCommand(() => SDK.Error = EDSDK_API.FormatVolume(this), sdk_action: nameof(EDSDK_API.FormatVolume));
+    }
+
+    public static new SDKFilesystemVolume? FromHandle(SDKWrapper sdk, nint handle) => handle == 0 ? null : new(sdk, handle, $"(volume 0x{handle:x8})");
+}
+
+public sealed class SDKFilesystemFolder
+    : SDKEnumerableFilesystemEntry
+    , ISDKObject<SDKFilesystemFolder>
+{
+    public EdsDirectoryItemInfo DirectoryInfo { get; }
+
+    public int FileCount => ItemCount;
+
+    public ulong FileSize => DirectoryInfo.Size;
+
+    public override string Name => DirectoryInfo.szFileName;
+
+    public SDKFilesystemEntry[] FilesystemEntries => [.. Enumerable.Range(0, FileCount).Select(i => this[i])];
+
+    public new SDKFilesystemEntry this[int index] => base[index];
+
+
+
+    public SDKFilesystemFolder(SDKWrapper sdk, nint handle, string name)
+        : base(sdk, handle, SDKFilesystemEntryType.Folder, name)
+    {
+        EdsDirectoryItemInfo info = new();
+
+        SDK.SendSDKCommand(() => SDK.Error = EDSDK_API.GetDirectoryItemInfo(this, out info));
+
+        DirectoryInfo = info;
+    }
+
+    public void Delete()
+    {
+        throw new NotImplementedException();
+
+        SDK.SendSDKCommand(() => SDK.Error = EDSDK_API.DeleteDirectoryItem(this));
+    }
+
+    public static new SDKFilesystemFolder? FromHandle(SDKWrapper sdk, nint handle) => handle == 0 ? null : new(sdk, handle, $"(folder 0x{handle:x8})");
+}
+
+public sealed class SDKFilesystemFile
+    : SDKFilesystemEntry
+    , ISDKObject<SDKFilesystemFile>
+{
+    public EdsDirectoryItemInfo FileInfo { get; }
+
+    public ulong FileSize => FileInfo.Size;
+
+    public override string Name => FileInfo.szFileName;
+
+    public Bitmap? Thumbnail { get; set; }
+
+
+    public SDKFilesystemFile(SDKWrapper sdk, nint handle, string name)
+        : base(sdk, handle, SDKFilesystemEntryType.File, name)
+    {
+        EdsDirectoryItemInfo info = new();
+
+        SDK.SendSDKCommand(() => SDK.Error = EDSDK_API.GetDirectoryItemInfo(this, out info));
+
+        FileInfo = info;
+    }
+
+    public void Delete()
+    {
+        throw new NotImplementedException();
+
+        SDK.SendSDKCommand(() => SDK.Error = EDSDK_API.DeleteDirectoryItem(this));
+    }
+
+    public static new SDKFilesystemFile? FromHandle(SDKWrapper sdk, nint handle) => handle == 0 ? null : new(sdk, handle, $"(file 0x{handle:x8})");
+}
+
+
+
+public class __CameraFileEntry
+{
+    public __CameraFileEntry[] SubEntries { get; private set; } = [];
+
+    public void AddSubEntries(IEnumerable<__CameraFileEntry> entries) => SubEntries = [.. SubEntries, .. entries];
 }

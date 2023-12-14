@@ -984,8 +984,8 @@ public struct EdsDeviceInfo
 [StructLayout(LayoutKind.Sequential)]
 public struct EdsVolumeInfo
 {
-    public uint StorageType;
-    public uint Access;
+    public EdsStorageType StorageType;
+    public EdsAccess Access;
     public ulong MaxCapacity;
     public ulong FreeSpaceInBytes;
 
@@ -1022,9 +1022,8 @@ public struct EdsImageInfo
                                            // A black line might be in the top and bottom
                                            // of the thumbnail image. 
 
-    public uint reserved1;
-    public uint reserved2;
-
+    private uint reserved1;
+    private uint reserved2;
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -1694,6 +1693,8 @@ public static unsafe class EDSDK_API
 
 
 
+    #region FILESYSTEM OPERATIONS
+
     /*-----------------------------------------------------------------------------
     //
     //  Function:   EdsSetCapacity
@@ -1722,10 +1723,6 @@ public static unsafe class EDSDK_API
     [DllImport(_DLL_PATH)]
     public static extern SDKError EdsSetCapacity(nint camera, EdsCapacity inCapacity);
 
-
-    /*--------------------------------------------
-      Volume operating functions
-    ---------------------------------------------*/
     /*-----------------------------------------------------------------------------
     //
     //  Function:   EdsGetVolumeInfo
@@ -1739,8 +1736,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetVolumeInfo(nint camera, out EdsVolumeInfo outVolumeInfo);
+    public static SDKError GetVolumeInfo(SDKFilesystemVolume volume, out EdsVolumeInfo info)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsGetVolumeInfo(nint volume, out EdsVolumeInfo outVolumeInfo);
+
+        return EdsGetVolumeInfo(CheckValidObject(volume), out info);
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -1754,14 +1756,14 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsFormatVolume(nint inVolumeRef);
+    public static SDKError FormatVolume(SDKFilesystemVolume volume)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsFormatVolume(nint inVolumeRef);
 
+        return EdsFormatVolume(CheckValidObject(volume));
+    }
 
-
-    /*--------------------------------------------
-      Directory-item operating functions
-    ---------------------------------------------*/
     /*-----------------------------------------------------------------------------
     //
     //  Function:   EdsGetDirectoryItemInfo
@@ -1776,8 +1778,18 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsGetDirectoryItemInfo(nint inDirItemRef, out EdsDirectoryItemInfo outDirItemInfo);
+    public static SDKError GetDirectoryItemInfo(SDKFilesystemEntry entry, out EdsDirectoryItemInfo info)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsGetDirectoryItemInfo(nint inDirItemRef, out EdsDirectoryItemInfo outDirItemInfo);
+
+        if (entry.Type is SDKFilesystemEntryType.Folder or SDKFilesystemEntryType.File)
+            return EdsGetDirectoryItemInfo(CheckValidObject(entry), out info);
+
+        info = default;
+
+        return SDKError.FILE_PERMISSION_ERROR;
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -1796,8 +1808,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsDeleteDirectoryItem(nint inDirItemRef);
+    public static SDKError DeleteDirectoryItem(SDKFilesystemEntry entry)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsDeleteDirectoryItem(nint inDirItemRef);
+
+        return entry.Type is SDKFilesystemEntryType.Folder or SDKFilesystemEntryType.File ? EdsDeleteDirectoryItem(CheckValidObject(entry)) : SDKError.FILE_PERMISSION_ERROR;
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -1819,12 +1836,12 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    public static SDKError Download(SDKObject? @object, ulong size, SDKStream stream)
+    public static SDKError Download(SDKFilesystemFile file, ulong size, SDKStream stream)
     {
         [DllImport(_DLL_PATH)]
         static extern SDKError EdsDownload(nint inDirItemRef, ulong inReadSize, nint outStream);
 
-        return EdsDownload(CheckValidObject(@object), size, stream.Handle);
+        return EdsDownload(CheckValidObject(file), size, stream.Handle);
     }
 
     /*-----------------------------------------------------------------------------
@@ -1842,12 +1859,12 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    public static SDKError DownloadCancel(SDKObject? @object)
+    public static SDKError DownloadCancel(SDKFilesystemFile file)
     {
         [DllImport(_DLL_PATH)]
         static extern SDKError EdsDownloadCancel(nint inDirItemRef);
 
-        return EdsDownloadCancel(CheckValidObject(@object));
+        return EdsDownloadCancel(CheckValidObject(file));
     }
 
     /*-----------------------------------------------------------------------------
@@ -1867,12 +1884,12 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    public static SDKError DownloadComplete(SDKObject? @object)
+    public static SDKError DownloadComplete(SDKFilesystemFile file)
     {
         [DllImport(_DLL_PATH)]
         static extern SDKError EdsDownloadComplete(nint inDirItemRef);
 
-        return EdsDownloadComplete(CheckValidObject(@object));
+        return EdsDownloadComplete(CheckValidObject(file));
     }
 
     /*-----------------------------------------------------------------------------
@@ -1934,7 +1951,7 @@ public static unsafe class EDSDK_API
     [DllImport(_DLL_PATH)]
     public static extern uint EdsSetAttribute(nint inDirItemRef, EdsFileAttribute inFileAttribute);
 
-
+    #endregion
     #region STREAM OPERATING FUNCTIONS
 
     /*-----------------------------------------------------------------------------
