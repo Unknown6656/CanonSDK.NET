@@ -1,4 +1,4 @@
-﻿// #define STRICT_SETGET_4_BYTES_ONLY
+// #define STRICT_SETGET_4_BYTES_ONLY
 
 using Microsoft.Extensions.Logging;
 
@@ -254,6 +254,7 @@ public readonly partial struct SDKProperty(uint id)
 }
 
 public interface ISDKObject<T>
+  //: IDisposable
     where T : class, ISDKObject<T>
 {
     /// <summary>
@@ -270,6 +271,7 @@ public interface ISDKObject<T>
 public abstract class SDKObject
     : ISDKObject<SDKObject>
     , IEquatable<SDKObject>
+  //, IDisposable
 {
     private static readonly ConcurrentDictionary<Type, bool> _validated = new();
 
@@ -707,6 +709,7 @@ public sealed class SDKElectronicViewfinderImage(SDKWrapper sdk, nint handle)
 public unsafe sealed class SDKStream(SDKWrapper sdk, nint handle)
     : SDKProgressableObject(sdk, handle)
     , ISDKObject<SDKStream>
+    , IDisposable
 {
     public nint Pointer
     {
@@ -917,6 +920,7 @@ public abstract class SDKFilesystemEntry(SDKWrapper sdk, nint handle, SDKFilesys
 
     public SDKFilesystemEntryType Type { get; } = type;
 
+    public bool IsFile => this is SDKFilesystemFile;
 
 
     public static new SDKFilesystemEntry? FromHandle(SDKWrapper sdk, nint handle) => handle == 0 ? null : new SDKFilesystemFile(sdk, handle, $"(unknown 0x{handle:x8})");

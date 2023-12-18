@@ -12,6 +12,8 @@ public delegate SDKError EdsCameraAddedHandler(SDKObject? context);
 public delegate SDKError EdsPropertyEventHandler(PropertyEvent @event, SDKProperty property, uint param, SDKObject? context);
 public delegate SDKError EdsObjectEventHandler(EdsEvent @event, SDKObject? @object, SDKObject? context);
 public delegate SDKError EdsStateEventHandler(StateEvent @event, uint param, SDKObject? context);
+public delegate void EdsSDKErrorEventHandler(SDKWrapper sender, SDKErrorEventArgs args);
+
 
 
 public enum EdsDataType
@@ -643,6 +645,9 @@ public enum EvfOutputDevice
     Off = 0,
     TFT = 1,
     PC = 2,
+
+#warning TODO
+    __TODO__THIS_SHIT_IS_UNDEFINED = 3,
 }
 
 /// <summary>

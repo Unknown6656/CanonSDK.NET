@@ -35,6 +35,7 @@ public sealed class SDKWrapper
 {
     private TaskCompletionSource<FileInfo> takePhotoCompletionSource;
     private TaskCompletionSource<FileInfo> videoDownloadDone;
+    private readonly AutoResetEvent cancelLiveViewWait = new(false);
 
     private string _imageSaveFilename;
 
@@ -65,7 +66,7 @@ public sealed class SDKWrapper
 
 
 
-    /* public */ event EventHandler<SDKErrorEventArgs> SDKError;
+    /* public */ event EdsSDKErrorEventHandler OnSDKError;
     /* public */ event EdsCameraAddedHandler SDKCameraAddedEvent;
     /* public */ event EdsObjectEventHandler SDKObjectEvent;
     /* public */ event EdsProgressCallback SDKProgressCallbackEvent;
@@ -92,7 +93,7 @@ public sealed class SDKWrapper
     /// <summary>
     /// If the camera is disconnected or shuts down, this event is fired
     /// </summary>
-    public event EventHandler CameraHasShutdown;
+    public event EventHandler OnCameraShutdown;
 
     /// <summary>
     /// If an image is downloaded, this event fires with the downloaded image.
@@ -185,7 +186,7 @@ public sealed class SDKWrapper
                 Logger.LogError($"SDK Error set to {value} ({property}).");
 
                 if (value is Native.SDKError.COMM_DISCONNECTED or Native.SDKError.DEVICE_INVALID or Native.SDKError.DEVICE_NOT_FOUND)
-                    OnSdkError(new SDKErrorEventArgs(property.Name, LogLevel.Critical));
+                    OnSDKError?.Invoke(this, new(property.Name, LogLevel.Critical));
             }
         }
     }
@@ -281,7 +282,7 @@ public sealed class SDKWrapper
         SDKObjectEvent += Camera_SDKObjectEvent;
     }
 
-    private void STAThread_FatalError(object? sender, EventArgs e) => OnSdkError(new("Execution thread error", LogLevel.Critical));
+    private void STAThread_FatalError(object? sender, EventArgs e) => OnSDKError?.Invoke(this, new("Execution thread error", LogLevel.Critical));
 
 
 
@@ -371,8 +372,6 @@ public sealed class SDKWrapper
         STAThread.Shutdown(); // stop command execution thread
     }
 
-    #endregion
-    #region Eventhandling
 
     /// <summary>
     /// A new camera was plugged into the computer
@@ -499,7 +498,7 @@ public sealed class SDKWrapper
 #warning todo fix this shite
                 }
 
-                OnCameraHasShutdown();
+                OnCameraShutdown?.Invoke(this, new());
 
                 break;
             case StateEvent.WillSoonShutDown:
@@ -516,13 +515,11 @@ public sealed class SDKWrapper
         return Native.SDKError.OK;
     }
 
-    private void OnCameraHasShutdown() => CameraHasShutdown?.Invoke(this, new EventArgs());
 
-    private void OnSdkError(SDKErrorEventArgs e) => SDKError?.Invoke(this, e);
+    // private void RaiseCameraShutdown() => OnCameraShutdown?.Invoke(this, new EventArgs());
+    // 
+    // private void RaiseSDKError(SDKErrorEventArgs e) => OnSDKError?.Invoke(this, e);
 
-    #endregion Eventhandling
-    #region Camera commands
-    #region Download data
 
     /// <summary>
     /// Downloads an image to given directory
@@ -724,11 +721,6 @@ public sealed class SDKWrapper
 
 
 
-
-
-    #endregion
-    #region Live view
-
     /// <summary>
     /// Starts the live view
     /// </summary>
@@ -770,8 +762,6 @@ public sealed class SDKWrapper
                 Logger.LogInfo("LiveView stopped cleanly");
         }
     }
-
-    private readonly AutoResetEvent cancelLiveViewWait = new(false);
 
     /// <summary>
     /// Downloads the live view image
@@ -836,7 +826,6 @@ public sealed class SDKWrapper
                 IsLiveViewOn = false;
             }
         });
-
         LVThread.Start();
     }
 
