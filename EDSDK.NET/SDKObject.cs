@@ -504,10 +504,27 @@ public sealed class SDKCamera
     : SDKObject
     , ISDKObject<SDKCamera>
 {
+    private volatile SDKCameraFilmingInfo? _filming_info;
+    private EdsCapacity? _cached_host_pc_capacity;
+
+
     public EdsDeviceInfo Info { get; }
 
     public SDKFilesystemCamera Filesystem { get; }
 
+    public bool IsFilming => _filming_info is { };
+
+    public EdsCapacity? HostPCCapacity
+    {
+        get => _cached_host_pc_capacity;
+        set
+        {
+            if (value is { } capacity)
+                SDK.SendSDKCommand(() => EDSDK_API.SetCapacity(this, capacity));
+
+            _cached_host_pc_capacity = value;
+        }
+    }
 
     /// <summary>
     /// Moves the focus (only works while in live view)
@@ -544,7 +561,11 @@ public sealed class SDKCamera
         }
     }
 
-
+    public VideoRecordStatus VideoRecordStatus
+    {
+        set => Set(SDKProperty.Record, value);
+        get => Get<VideoRecordStatus>(SDKProperty.Record);
+    }
 
     public EvfOutputDevice ViewfinderOutputDevice
     {
@@ -600,10 +621,6 @@ public sealed class SDKCamera
         SDK.Error = EDSDK_API.SetPropertyEventHandler(this, options, callback);
     }
 
-    public void StartLiveView() => ViewfinderOutputDevice = EvfOutputDevice.PC;
-
-    public void StopLiveView(bool LVoff) => ViewfinderOutputDevice = LVoff ? EvfOutputDevice.Off : EvfOutputDevice.TFT;
-
     public void SetTFTEvf() => ViewfinderOutputDevice = EvfOutputDevice.TFT;
 
     public void SetSaveToHost() => ImageSaveTarget = EdsSaveTo.Host;
@@ -617,38 +634,114 @@ public sealed class SDKCamera
     public void UnlockUI() => SDK.SendSDKCommand(() => SendStatusCommand(CameraState.UIUnLock, 0));
 
 
-
-
-    /// <summary>
-    /// Tells the camera that there is enough space on the HDD if SaveTo is set to Host
-    /// This method does not use the actual free space!
-    /// </summary>
-    public void SetHostPCCapacity() => SetHostPCCapacity(0x1000, 0x7FFFFFFF);
-
     /// <summary>
     /// Tells the camera how much space is available on the host PC
     /// </summary>
     /// <param name="bytesPerSector">Bytes per sector on HDD</param>
     /// <param name="numberOfFreeClusters">Number of free clusters on HDD</param>
-    public void SetHostPCCapacity(int bytesPerSector, int numberOfFreeClusters) => SDK.SendSDKCommand(() => EDSDK_API.SetCapacity(this, new()
+    public void SetHostPCCapacity(int bytesPerSector = 0x1000, int numberOfFreeClusters = 0x7FFFFFFF) => HostPCCapacity = new()
     {
         // set given values
         Reset = 1,
         BytesPerSector = bytesPerSector,
         NumberOfFreeClusters = numberOfFreeClusters
-    }));
+    };
+
+    public void StartLiveView() => ViewfinderOutputDevice = EvfOutputDevice.PC;
+
+    public void StopLiveView(bool LVoff) => ViewfinderOutputDevice = LVoff ? EvfOutputDevice.Off : EvfOutputDevice.TFT;
+
+
+
+    #region FILMING
+
+    public SDKCameraFilmingInfo StartFilming() => StartFilming(null);
+
+    /// <summary>
+    /// Starts recording a video and downloads it when finished
+    /// </summary>
+    /// <param name="destination">Directory to where the final video will be saved to</param>
+    public SDKCameraFilmingInfo StartFilming(FileInfo? destination)
+    {
+        if (!IsFilming)
+        {
+            EdsSaveTo prev_saveto = ImageSaveTarget;
+            EvfOutputDevice prev_device = ViewfinderOutputDevice;
+
+            _filming_info = new(this, destination, prev_device, prev_saveto);
+
+            // [original source comment]
+            //      Set EVF output to TFT to enable film, otherwise
+            //      NOTE: Not working to set it and start video in the same action, disabling
+            //      SetSetting(SDKProperty.Evf_OutputDevice, EvfOutputDevice_TFT);
+            //      SetTFTEvf();
+            ViewfinderOutputDevice = EvfOutputDevice.__TODO__THIS_SHIT_IS_UNDEFINED;
+
+            VideoRecordStatus record_status = VideoRecordStatus;
+
+            if (record_status != VideoRecordStatus.Movie_shooting_ready)
+            {
+                //SetSetting(SDKProperty.Record, EdsDriveMode.Video);
+                //SetSetting(SDKProperty.Record, VideoRecordStatus.Movie_shooting_ready);
+
+                SDK.Logger.LogInfo($"Camera reporting incorrect mode. expected. Continue. {VideoRecordStatus.Movie_shooting_ready}, was: {record_status}");
+                SDK.Logger.LogInfo("Camera physical switch must be in movie record mode. Leave in this mode permanently!");
+
+                throw new InvalidOperationException("Camera is in an invalid mode.");
+            }
+            else
+                ImageSaveTarget = EdsSaveTo.Camera;
+
+            SDK.Logger.LogInfo("Started filming.");
+            SDK.SendSDKCommand(() => VideoRecordStatus = VideoRecordStatus.Begin_movie_shooting);
+        }
+
+        return _filming_info!;
+    }
+
+    public FileInfo? StopFilming()
+    {
+        if (_filming_info is { } info)
+        {
+            SDK.SendSDKCommand(delegate
+            {
+                //Shut off live view (it will hang otherwise)
+                //StopLiveView(false);
+                //stop video recording
+                VideoRecordStatus = VideoRecordStatus.End_movie_shooting;
+                ViewfinderOutputDevice = info.PreviousOutputDevice;
+                ImageSaveTarget = info.PreviousSaveTarget;
+            });
+
+#pragma warning disable CA2245 // Do not assign a property to itself
+            if (HostPCCapacity?.NumberOfFreeClusters is int and not 0)
+                HostPCCapacity = HostPCCapacity; // force update
+#pragma warning restore CA2245
+
+            _filming_info = null;
+
+            return info.DestinationFile;
+        }
+
+        return null;
+    }
+
+    #endregion
+
 
 
     public void SendCommand(CameraCommand command, int param)
     {
         SDK.Logger.LogInfo($"Sending the command '{command}' to the camera with the param 0x{param:x8} ({param}).");
-        SDK.Error = EDSDK_API.SendCommand(this, command, param);
+        // EDSDK_API.SendCommand(this, command, param)
+        SDK.SendSDKCommand(() => EDSDK_API.SendCommand(this, command, param), sdk_action: nameof(EDSDK_API.SendCommand));
     }
 
     public void SendStatusCommand(CameraState state, int param)
     {
         SDK.Logger.LogInfo($"Sending the status command '{state}' to the camera with the param 0x{param:x8} ({param}).");
-        SDK.Error = EDSDK_API.SendStatusCommand(this, state, param);
+        // SDK.Error = EDSDK_API.SendStatusCommand(this, state, param);
+        SDK.SendSDKCommand(() => EDSDK_API.SendStatusCommand(this, state, param), sdk_action: nameof(EDSDK_API.SendCommand));
     }
 
     public static new SDKCamera? FromHandle(SDKWrapper sdk, nint handle) => handle == 0 ? null : new(sdk, handle);
@@ -687,6 +780,11 @@ public sealed class SDKImage(SDKWrapper sdk, nint handle)
 
         return image;
     }
+}
+
+public sealed record SDKCameraFilmingInfo(SDKCamera Camera, FileInfo? DestinationFile, EvfOutputDevice PreviousOutputDevice, EdsSaveTo PreviousSaveTarget)
+{
+    public void StopFilming() => Camera.StopFilming();
 }
 
 public sealed class SDKElectronicViewfinderImage(SDKWrapper sdk, nint handle)
