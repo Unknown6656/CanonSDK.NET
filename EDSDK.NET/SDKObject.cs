@@ -1,4 +1,4 @@
-// #define STRICT_SETGET_4_BYTES_ONLY
+﻿// #define STRICT_SETGET_4_BYTES_ONLY
 
 using Microsoft.Extensions.Logging;
 
@@ -497,6 +497,10 @@ public abstract class SDKObject
 
     static SDKObject? ISDKObject<SDKObject>.FromHandle(SDKWrapper sdk, nint handle) => FromHandle(sdk, handle);
 
+    public static bool operator ==(SDKObject? first, SDKObject? second) => first?.Handle == second?.Handle;
+
+    public static bool operator !=(SDKObject? first, SDKObject? second) => !(first == second);
+
 
     private sealed class __unspecified_SDK_object__(SDKWrapper sdk, nint handle) : SDKObject(sdk, handle);
 }
@@ -760,6 +764,7 @@ public sealed class SDKImage(SDKWrapper sdk, nint handle)
 {
     private readonly Dictionary<EdsImageSource, EdsImageInfo> _cached_info = [];
 
+#warning todo: indexers
 
     public EdsImageInfo GetInfo(EdsImageSource source)
     {

@@ -753,8 +753,6 @@ public sealed class SDKWrapper
     /// <param name="stream"></param>
     private void OnLiveViewUpdated(UnmanagedMemoryStream stream) => LiveViewUpdated?.Invoke(stream);
 
-    #endregion
-    #region Taking photos
 
     /// <summary>
     /// Press the shutter button
@@ -867,9 +865,7 @@ public sealed class SDKWrapper
                 action(volume);
     }
 
-    #endregion
-    #region Other
-
+    
     internal void SendSDKCommand(Func<SDKError> command, string? sdk_action = null, bool long_running = false) =>
         SendSDKCommand(new Action(() => Error = command()), sdk_action, long_running);
 
@@ -901,7 +897,6 @@ public sealed class SDKWrapper
     // public SDKFilesystemEntry[] GetAllEntries() => [.. MainCamera.Filesystem.NonHDDVolumes.SelectMany(volume => volume.GetAllSubEntriesRecursively())];
 
 
-    #endregion
 }
 
 public class SDKLogger
