@@ -1,4 +1,4 @@
-﻿// #define STRICT_SETGET_4_BYTES_ONLY
+// #define STRICT_SETGET_4_BYTES_ONLY
 
 using System.Runtime.InteropServices;
 using System.Diagnostics.CodeAnalysis;
@@ -620,6 +620,24 @@ public sealed class SDKCamera
 
 
 
+    /// <summary>
+    /// Tells the camera that there is enough space on the HDD if SaveTo is set to Host
+    /// This method does not use the actual free space!
+    /// </summary>
+    public void SetHostPCCapacity() => SetHostPCCapacity(0x1000, 0x7FFFFFFF);
+
+    /// <summary>
+    /// Tells the camera how much space is available on the host PC
+    /// </summary>
+    /// <param name="bytesPerSector">Bytes per sector on HDD</param>
+    /// <param name="numberOfFreeClusters">Number of free clusters on HDD</param>
+    public void SetHostPCCapacity(int bytesPerSector, int numberOfFreeClusters) => SDK.SendSDKCommand(() => EDSDK_API.SetCapacity(this, new()
+    {
+        // set given values
+        Reset = 1,
+        BytesPerSector = bytesPerSector,
+        NumberOfFreeClusters = numberOfFreeClusters
+    }));
 
 
     public void SendCommand(CameraCommand command, int param)

@@ -165,7 +165,7 @@ public enum EdsSaveTo
 public enum EdsStorageType
     : uint
 {
-    Non = 0,
+    None = 0,
     CF = 1,
     SD = 2,
 }
@@ -1720,8 +1720,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsSetCapacity(nint camera, EdsCapacity inCapacity);
+    public static SDKError SetCapacity(SDKCamera? camera, EdsCapacity capacity)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsSetCapacity(nint camera, EdsCapacity inCapacity);
+
+        return EdsSetCapacity(CheckValidObject(camera), capacity);
+    }
 
     /*-----------------------------------------------------------------------------
     //
