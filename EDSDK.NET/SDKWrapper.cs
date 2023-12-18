@@ -621,19 +621,6 @@ public sealed class SDKWrapper
 
     protected void OnImageDownloaded(Bitmap bitmap) => ImageDownloaded?.Invoke(bitmap);
 
-    /// <summary>
-    /// Gets the thumbnail of an image (can be raw or jpg)
-    /// </summary>
-    /// <param name="filepath">The filename of the image</param>
-    /// <returns>The thumbnail of the image</returns>
-    public Bitmap GetFileThumb(FileInfo filepath)
-    {
-        SDKStream stream = SDKStream.CreateFileStream(this, filepath, EdsFileCreateDisposition.OpenExisting, EdsAccess.Read);
-
-        return GetImage(stream, EdsImageSource.Thumbnail);
-    }
-
-
     public void __SendCommand(CameraCommand command, int value)
     {
         if (MainCamera.Handle != 0)

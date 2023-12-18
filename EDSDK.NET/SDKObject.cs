@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections;
 using System.Reflection;
+using System.Drawing.Imaging;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -889,7 +890,7 @@ public unsafe sealed class SDKStream(SDKWrapper sdk, nint handle)
             return Write((ulong)bytes.LongLength, (nint)(void*)ptr);
     }
 
-    public Bitmap? ReadBitmap(EdsImageSource source)
+    public Bitmap ToBitmap(EdsImageSource source)
     {
         SDKStream? stream = null;
         SDKImage? img_ref = null;
@@ -908,10 +909,10 @@ public unsafe sealed class SDKStream(SDKWrapper sdk, nint handle)
             nint ptr = new();
             Marshal.StructureToPtr(buffer, ptr, false);
 
-            stream = SDKStream.CreateMemoryStream(this, ptr, (uint)datalength);
+            stream = SDKStream.CreateMemoryStream(SDK, ptr, (uint)datalength);
 
             //load image into the buffer
-            Error = EDSDK_API.GetImage(img_ref, imageSource, EdsTargetImageType.RGB, imageInfo.EffectiveRect, outputSize, stream);
+            SDK.Error = EDSDK_API.GetImage(img_ref, source, EdsTargetImageType.RGB, imageInfo.EffectiveRect, outputSize, stream);
 
             //create output bitmap
             Bitmap bmp = new(outputSize.width, outputSize.height, PixelFormat.Format24bppRgb);
@@ -919,7 +920,7 @@ public unsafe sealed class SDKStream(SDKWrapper sdk, nint handle)
             //assign values to bitmap and make BGR from RGB (System.Drawing (i.e. GDI+) uses BGR)
             unsafe
             {
-                BitmapData data = bmp.LockBits(new(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, bmp.PixelFormat);
+                BitmapData data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, bmp.PixelFormat);
                 byte* outPix = (byte*)data.Scan0;
 
                 fixed (byte* inPix = buffer)
@@ -937,13 +938,12 @@ public unsafe sealed class SDKStream(SDKWrapper sdk, nint handle)
         }
         finally
         {
-            img_stream.Release();
             img_ref?.Release();
             stream?.Release();
+
+            Release();
         }
     }
-
-
 
     public SDKImage ToSDKImage() => SDKImage.FromStream(this);
 
@@ -1223,20 +1223,6 @@ public sealed class SDKFilesystemFile
     public ulong FileSize => FileInfo.Size;
 
     public override string Name => FileInfo.szFileName;
-
-    public Bitmap? Thumbnail { get; set; }
-
-
-
-    public SDKFilesystemFile(SDKWrapper sdk, nint handle, string name)
-        : base(sdk, handle, SDKFilesystemEntryType.File, name)
-    {
-        EdsDirectoryItemInfo info = new();
-
-        SDK.SendSDKCommand(() => SDK.Error = EDSDK_API.GetDirectoryItemInfo(this, out info));
-
-        FileInfo = info;
-    }
 
     public Bitmap Tumbnail
     {

@@ -1919,8 +1919,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern SDKError EdsDownloadThumbnail(nint inDirItemRef, nint outStream);
+    public static SDKError DownloadThumbnail(SDKFilesystemFile file, SDKStream stream)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsDownloadThumbnail(nint inDirItemRef, nint outStream);
+
+        return EdsDownloadThumbnail(CheckValidObject(file), CheckValidObject(stream));
+    }
 
     /*-----------------------------------------------------------------------------
     //
