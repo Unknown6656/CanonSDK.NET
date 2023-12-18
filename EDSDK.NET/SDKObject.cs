@@ -1,4 +1,4 @@
-// #define STRICT_SETGET_4_BYTES_ONLY
+﻿// #define STRICT_SETGET_4_BYTES_ONLY
 
 using Microsoft.Extensions.Logging;
 

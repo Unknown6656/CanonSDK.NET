@@ -34,6 +34,8 @@ public sealed class SDKWrapper
     : IDisposable
 {
     private TaskCompletionSource<FileInfo> takePhotoCompletionSource;
+    private TaskCompletionSource<FileInfo> videoDownloadDone;
+
     private string _imageSaveFilename;
 
 
@@ -270,7 +272,7 @@ public sealed class SDKWrapper
         //subscribe to camera added event (the C# event and the SDK event)
         SDKCameraAddedEvent += SDKHandler_CameraAddedEvent;
 
-        EDSDK_API.SetCameraAddedHandler(SDKCameraAddedEvent, 0);
+        EDSDK_API.SetCameraAddedHandler(SDKCameraAddedEvent);
 
         //subscribe to the camera events (for the C# events)
         SDKStateEvent += Camera_SDKStateEvent;
@@ -414,12 +416,12 @@ public sealed class SDKWrapper
             case EdsEvent.VolumeUpdateItems:
                 break;
             case EdsEvent.DirItemCreated when DownloadVideo:
-                DownloadImage(@object, ImageSaveDirectory, ImageSaveFilename, isVideo: true);
+                DownloadImage(@object.As<SDKFilesystemFile>(), ImageSaveDirectory, ImageSaveFilename, is_video: true);
                 DownloadVideo = false;
 
                 break;
             case EdsEvent.DirItemRequestTransfer:
-                DownloadImage(@object, ImageSaveDirectory, ImageSaveFilename);
+                DownloadImage(@object.As<SDKFilesystemFile>(), ImageSaveDirectory, ImageSaveFilename);
 
                 break;
         }
@@ -525,73 +527,57 @@ public sealed class SDKWrapper
     /// <summary>
     /// Downloads an image to given directory
     /// </summary>
-    /// <param name="object">Pointer to the object. Get it from the SDKObjectEvent.</param>
-    /// <param name="directory">Path to where the image will be saved to</param>
-    public void DownloadImage(SDKObject @object, string directory, string fileName, bool isVideo = false)
+    /// <param name="file">Pointer to the object. Get it from the SDKObjectEvent.</param>
+    /// <param name="target_directory">Path to where the image will be saved to</param>
+    public void DownloadImage(SDKFilesystemFile file, string target_directory, string? target_file_name = null, bool is_video = false)
     {
         try
         {
-            //get information about object
-            Error = EDSDK_API.EdsGetDirectoryItemInfo(@object, out EdsDirectoryItemInfo dirInfo);
+            FileInfo target_file;
 
-            if (string.IsNullOrEmpty(fileName))
-            {
-                fileName = dirInfo.szFileName;
-            }
+            if (string.IsNullOrEmpty(target_file_name))
+                target_file_name = file.Name;
             else
             {
-                FileInfo targetInfo = new(fileName);
-                FileInfo cameraInfo = new(dirInfo.szFileName);
+                target_file = new(target_file_name);
+                string target_extension = Path.GetExtension(file.Name);
 
-                if (!string.Equals(targetInfo.Extension, cameraInfo.Extension, StringComparison.CurrentCultureIgnoreCase))
-                {
-                    fileName = $"{targetInfo.Name[..^targetInfo.Extension.Length]}{cameraInfo.Extension}";
-                }
+                if (!string.Equals(target_file.Extension, target_extension, StringComparison.OrdinalIgnoreCase))
+                    target_file_name = $"{target_file.Name[..^target_file.Extension.Length]}{target_extension}";
             }
 
-            Logger.LogInfo($"Downloading data. Filename: {fileName}");
+            target_file = new(Path.Combine(target_directory, target_file_name));
 
-            string targetImage = Path.Combine(directory, fileName);
+            if (target_file.Exists)
+                throw new IOException($"The destination file '{target_file}' already exists.");
+            else if (!Directory.Exists(target_directory))
+                Directory.CreateDirectory(target_directory);
 
-            if (File.Exists(targetImage))
-            {
-                throw new NotImplementedException("Renaming files not permitted");
-            }
-
-            if (!Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            Logger.LogInfo($"Downloading data {fileName} to {directory}");
+            Logger.LogInfo($"Downloading '{file}' -> '{target_file}'.");
 
             SendSDKCommand(delegate
             {
-                Stopwatch stopWatch = Stopwatch.StartNew();
+                Stopwatch sw = Stopwatch.StartNew();
+                SDKStream stream = SDKStream.CreateFileStream(this, target_file, EdsFileCreateDisposition.CreateAlways, EdsAccess.ReadWrite);
 
-                //create filestream to data
-                SDKStream streamRef = SDKStream.CreateFileStream(this, targetImage, EdsFileCreateDisposition.CreateAlways, EdsAccess.ReadWrite);
+                STAThread.TryLockAndExecute(STAThread.ExecLock, nameof(STAThread.ExecLock), TimeSpan.FromSeconds(30), () => file.Download(stream, SDKProgressCallbackEvent));
 
-                //download file
-                STAThread.TryLockAndExecute(STAThread.ExecLock, nameof(STAThread.ExecLock), TimeSpan.FromSeconds(30), () => DownloadData(@object, streamRef));
+                stream.Release();
+                sw.Stop();
 
-                streamRef.Release();
-                stopWatch.Stop();
+                double mB = target_file.Length * 9.5367431640625e-7;
 
-                FileInfo downloadFile = new(targetImage);
-                double mB = downloadFile.Length / 1000.0 / 1000;
+                Logger.LogInfo($"Downloaded '{file}' -> '{target_file}' ({mB:0.0} MB, {sw.Elapsed.TotalSeconds:0.0} sec, {mB / sw.Elapsed.TotalSeconds:0.0} MBps)");
 
-                Logger.LogInfo($"Downloaded data. Filename: {targetImage}, FileLengthMB: {mB:0.0}, DurationSeconds: {stopWatch.Elapsed.TotalSeconds:0.0}, MBPerSecond: {mB / stopWatch.Elapsed.TotalSeconds:0.0}");
-
-                if (isVideo)
-                    videoDownloadDone?.TrySetResult(targetImage);
+                if (is_video)
+                    videoDownloadDone?.TrySetResult(target_file);
                 else
-                    takePhotoCompletionSource?.TrySetResult(new FileInfo(fileName));
+                    takePhotoCompletionSource?.TrySetResult(target_file);
             }, long_running: true);
         }
         catch (Exception x)
         {
-            Logger.LogError(x, "Error downloading data");
+            Logger.LogError(x, $"Error downloading '{file}'.");
 
             takePhotoCompletionSource.TrySetException(x);
             videoDownloadDone?.TrySetException(x);
@@ -601,28 +587,21 @@ public sealed class SDKWrapper
     /// <summary>
     /// Downloads a jpg image from the camera into a Bitmap. Fires the ImageDownloaded event when done.
     /// </summary>
-    /// <param name="object">Pointer to the object. Get it from the SDKObjectEvent.</param>
-    public unsafe void DownloadImage(SDKObject @object)
+    /// <param name="file">Pointer to the object. Get it from the SDKObjectEvent.</param>
+    public unsafe void DownloadImage(SDKFilesystemFile file)
     {
-        //get information about image
-        EdsDirectoryItemInfo dirInfo = new();
+        Logger.LogInfo($"Downloading image {file.Name}");
 
-        Error = EDSDK_API.EdsGetDirectoryItemInfo(@object, out dirInfo);
-
-        //check the extension. Raw data cannot be read by the bitmap class
-        string ext = Path.GetExtension(dirInfo.szFileName).ToLower();
-
-        Logger.LogInfo($"Downloading image {dirInfo.szFileName}");
+        string ext = Path.GetExtension(file.Name).ToLower();
 
         if (ext is ".jpg" or ".jpeg")
             SendSDKCommand(delegate
             {
                 Bitmap bmp;
-                SDKStream stream = SDKStream.CreateMemoryStream(this, dirInfo.Size);
+                SDKStream stream = SDKStream.CreateMemoryStream(this, file.FileSize);
 
-                //download data to the stream
                 lock (STAThread.ExecLock)
-                    DownloadData(@object, stream);
+                    file.Download(stream, SDKProgressCallbackEvent);
 
                 ulong length = stream.Length;
 
@@ -636,10 +615,10 @@ public sealed class SDKWrapper
             }, long_running: true);
         else
         {
-            //if it's a RAW image, cancel the download and release the image
-            SendSDKCommand(@object.DownloadCancel);
+            // if it's a RAW image, cancel the download and release the image
+            SendSDKCommand(file.DownloadCancel);
 
-            @object.Release();
+            file.Release();
         }
     }
 
@@ -650,33 +629,11 @@ public sealed class SDKWrapper
     /// </summary>
     /// <param name="filepath">The filename of the image</param>
     /// <returns>The thumbnail of the image</returns>
-    public Bitmap GetFileThumb(string filepath)
+    public Bitmap GetFileThumb(FileInfo filepath)
     {
         SDKStream stream = SDKStream.CreateFileStream(this, filepath, EdsFileCreateDisposition.OpenExisting, EdsAccess.Read);
 
         return GetImage(stream, EdsImageSource.Thumbnail);
-    }
-
-    /// <summary>
-    /// Downloads data from the camera
-    /// </summary>
-    /// <param name="object">Pointer to the object</param>
-    /// <param name="stream">Pointer to the stream created in advance</param>
-    private void DownloadData(SDKObject @object, SDKStream stream)
-    {
-        //get information about the object
-        Error = EDSDK_API.EdsGetDirectoryItemInfo(@object, out EdsDirectoryItemInfo dirInfo);
-
-        try
-        {
-            stream.SetProgressCallback(EdsProgressOption.Periodically, SDKProgressCallbackEvent, @object);
-            @object.Download(dirInfo.Size, stream);
-        }
-        finally
-        {
-            @object.DownloadComplete();
-            @object.Release();
-        }
     }
 
     /// <summary>
@@ -689,13 +646,12 @@ public sealed class SDKWrapper
     {
         SDKStream? stream = null;
         SDKImage? img_ref = null;
-        nint streamPointer;
 
         try
         {
             img_ref = SDKImage.FromStream(img_stream);
 
-            Error = EDSDK_API.GetImageInfo(img_ref, imageSource, out EdsImageInfo imageInfo);
+            EdsImageInfo imageInfo = img_ref.GetInfo(imageSource);
 
             EdsSize outputSize = new(imageInfo.EffectiveRect.Width, imageInfo.EffectiveRect.Height);
             int datalength = outputSize.height * outputSize.width * 3; // calculate amount of data
@@ -716,7 +672,7 @@ public sealed class SDKWrapper
             //assign values to bitmap and make BGR from RGB (System.Drawing (i.e. GDI+) uses BGR)
             unsafe
             {
-                BitmapData data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, bmp.PixelFormat);
+                BitmapData data = bmp.LockBits(new(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, bmp.PixelFormat);
                 byte* outPix = (byte*)data.Scan0;
 
                 fixed (byte* inPix = buffer)
@@ -957,8 +913,6 @@ public sealed class SDKWrapper
         }
     }
 
-    private TaskCompletionSource<string> videoDownloadDone;
-
     /// <summary>
     /// Stops recording a video
     /// </summary>
@@ -966,8 +920,9 @@ public sealed class SDKWrapper
     {
         if (IsFilming)
         {
-            videoDownloadDone = new TaskCompletionSource<string>();
+            videoDownloadDone = new();
             long stopMs = 0;
+
             SendSDKCommand(delegate
             {
                 //Shut off live view (it will hang otherwise)
@@ -982,7 +937,7 @@ public sealed class SDKWrapper
             MainCamera.Set(SDKProperty.Evf_OutputDevice, PrevEVFSetting);
 
             if (PrevCapacity.NumberOfFreeClusters != 0)
-                SetCapacity(PrevCapacity);
+                MainCamera.SetHostPCCapacity(PrevCapacity);
 
             IsFilming = false;
             unixTimeMs = stopMs;
@@ -1025,7 +980,7 @@ public sealed class SDKWrapper
             return null;
         }
 
-        takePhotoCompletionSource = new TaskCompletionSource<FileInfo>();
+        takePhotoCompletionSource = new();
         SetSaveToLocation(saveFile.Directory);
         ImageSaveFilename = saveFile.Name;
 
@@ -1066,7 +1021,7 @@ public sealed class SDKWrapper
     {
         //bulbtime has to be at least a second
         if (bulbTime < 1000)
-            throw new ArgumentException("Bulbtime has to be bigger than 1000ms");
+            throw new ArgumentException("Bulb time has to be bigger than 1000ms");
 
         //start thread to not block everything
         SendSDKCommand(delegate
@@ -1085,53 +1040,29 @@ public sealed class SDKWrapper
     }
 
 
-    public void FormatAllVolumes() => RunForEachVolume((childReference, volumeInfo) =>
-    {
-        Logger.LogInformation("Formatting volume. Volume: {Volume}", volumeInfo.szVolumeLabel);
-
-        SendSDKCommand(() => Error = EDSDK_API.EdsFormatVolume(childReference));
-    });
+    public void FormatAllVolumes() => RunForEachVolume(volume => SendSDKCommand(volume.Format));
 
     public float GetMinVolumeSpacePercent()
     {
-        float minPercent = 1f;
+        float min_percent = 1f;
 
-        RunForEachVolume((childReference, volumeInfo) =>
+        RunForEachVolume(volume =>
         {
-            float freePc = volumeInfo.FreeSpaceInBytes / (float)volumeInfo.MaxCapacity;
+            float free = volume.FreeSpace / (float)volume.Capacity;
 
-            Logger.LogInfo($"Camera volume free space. volume: {volumeInfo.szVolumeLabel}, free: {volumeInfo.FreeSpaceInBytes} ({freePc}), capacity: {volumeInfo.MaxCapacity}");
+            Logger.LogInfo($"Camera volume free space. volume: {volume.Name}, free: {volume.FreeSpace} ({free:P}), capacity: {volume.Capacity}");
 
-            if (freePc < minPercent)
-                minPercent = freePc;
+            min_percent = Math.Min(min_percent, free);
         });
 
-        return minPercent;
+        return min_percent;
     }
 
-    private void RunForEachVolume(Action<nint, EdsVolumeInfo> action)
+    private void RunForEachVolume(Action<SDKFilesystemVolume> action)
     {
-        var volumes = MainCamera.Filesystem.Volumes;
-
-        //get the number of volumes currently installed in the camera
-        var camera_storage = ;
-        int volume_count = camera_storage.Count;
-
-        foreach (SDKCameraStorageVolume volume in volumes)
-        {
-            //get information about volume
-            nint childReference = camera_storage[i];
-
-            EdsVolumeInfo volumeInfo = new();
-
-            SendSDKCommand(() => Error = EDSDK_API.GetVolumeInfo(childReference, out volumeInfo));
-
-
-            if (volumeInfo.StorageType != EdsStorageType.Non && volumeInfo.Access == EdsAccess.ReadWrite)
-                action(childReference, volumeInfo);
-
-            Error = EDSDK_API.Release(childReference);
-        }
+        foreach (SDKFilesystemVolume volume in MainCamera.Filesystem.AllVolumes)
+            if (volume is { StorageType: not EdsStorageType.None, Access: EdsAccess.ReadWrite })
+                action(volume);
     }
 
     #endregion
@@ -1160,49 +1091,13 @@ public sealed class SDKWrapper
         }
     }
 
-    /// <summary>
-    /// Tells the camera that there is enough space on the HDD if SaveTo is set to Host
-    /// This method does not use the actual free space!
-    /// </summary>
-    public void SetCapacity() => SetCapacity(0x1000, 0x7FFFFFFF);
 
-    /// <summary>
-    /// Tells the camera how much space is available on the host PC
-    /// </summary>
-    /// <param name="bytesPerSector">Bytes per sector on HD</param>
-    /// <param name="numberOfFreeClusters">Number of free clusters on HD</param>
-    public void SetCapacity(int bytesPerSector, int numberOfFreeClusters) => SetCapacity(new EdsCapacity()
-    {
-        //set given values
-        Reset = 1,
-        BytesPerSector = bytesPerSector,
-        NumberOfFreeClusters = numberOfFreeClusters
-    });
+    // /// <summary>
+    // /// Gets all volumes, folders and files existing on the camera
+    // /// </summary>
+    // /// <returns>A CameraFileEntry with all informations</returns>
+    // public SDKFilesystemEntry[] GetAllEntries() => [.. MainCamera.Filesystem.NonHDDVolumes.SelectMany(volume => volume.GetAllSubEntriesRecursively())];
 
-    private void SetCapacity(EdsCapacity capacity)
-    {
-        PrevCapacity = capacity;
-
-        SendSDKCommand(() => Error = EDSDK_API.EdsSetCapacity(MainCamera.Handle, capacity));
-    }
-
-    public SDKFilesystemVolume[] GetVolumes() => [.. MainCamera.Filesystem.Volumes.Where(v => v.Name != "HDD")];
-
-    /// <summary>
-    /// Gets all volumes, folders and files existing on the camera
-    /// </summary>
-    /// <returns>A CameraFileEntry with all informations</returns>
-    public CameraFileEntry GetAllEntries()
-    {
-        SDKFilesystemVolume[] volumes = GetVolumes();
-
-        volumes.ForEach(v => v.AddSubEntries(GetChildren(v.Handle)));
-
-        //add all volumes to the main entry and return it
-        camera.AddSubEntries(volumes.ToArray());
-
-        return camera;
-    }
 
     /// <summary>
     /// Gets the children of a camera folder/volume. Recursive method.
@@ -1257,9 +1152,7 @@ public sealed class SDKWrapper
             return children;
         }
         else
-        {
             return [];
-        }
     }
 
     #endregion
