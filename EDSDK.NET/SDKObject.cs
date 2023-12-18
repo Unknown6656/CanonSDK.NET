@@ -1,4 +1,4 @@
-// #define STRICT_SETGET_4_BYTES_ONLY
+﻿// #define STRICT_SETGET_4_BYTES_ONLY
 
 using Microsoft.Extensions.Logging;
 
@@ -889,6 +889,63 @@ public unsafe sealed class SDKStream(SDKWrapper sdk, nint handle)
             return Write((ulong)bytes.LongLength, (nint)(void*)ptr);
     }
 
+    public Bitmap? ReadBitmap(EdsImageSource source)
+    {
+        SDKStream? stream = null;
+        SDKImage? img_ref = null;
+
+        try
+        {
+            img_ref = ToSDKImage();
+
+            EdsImageInfo imageInfo = img_ref.GetInfo(source);
+
+            EdsSize outputSize = new(imageInfo.EffectiveRect.Width, imageInfo.EffectiveRect.Height);
+            int datalength = outputSize.height * outputSize.width * 3; // calculate amount of data
+            byte[] buffer = new byte[datalength];
+            // create a stream to the buffer
+
+            nint ptr = new();
+            Marshal.StructureToPtr(buffer, ptr, false);
+
+            stream = SDKStream.CreateMemoryStream(this, ptr, (uint)datalength);
+
+            //load image into the buffer
+            Error = EDSDK_API.GetImage(img_ref, imageSource, EdsTargetImageType.RGB, imageInfo.EffectiveRect, outputSize, stream);
+
+            //create output bitmap
+            Bitmap bmp = new(outputSize.width, outputSize.height, PixelFormat.Format24bppRgb);
+
+            //assign values to bitmap and make BGR from RGB (System.Drawing (i.e. GDI+) uses BGR)
+            unsafe
+            {
+                BitmapData data = bmp.LockBits(new(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, bmp.PixelFormat);
+                byte* outPix = (byte*)data.Scan0;
+
+                fixed (byte* inPix = buffer)
+                    for (int i = 0; i < datalength; i += 3)
+                    {
+                        outPix[i] = inPix[i + 2];// switch B value with R value
+                        outPix[i + 1] = inPix[i + 1];// Set G value
+                        outPix[i + 2] = inPix[i]; // switch R value with B value
+                    }
+
+                bmp.UnlockBits(data);
+            }
+
+            return bmp;
+        }
+        finally
+        {
+            img_stream.Release();
+            img_ref?.Release();
+            stream?.Release();
+        }
+    }
+
+
+
+    public SDKImage ToSDKImage() => SDKImage.FromStream(this);
 
     public static SDKStream CreateFileStream(SDKWrapper sdk, FileInfo destination, EdsFileCreateDisposition disposition, EdsAccess access)
     {
@@ -1158,6 +1215,9 @@ public sealed class SDKFilesystemFile
     : SDKFilesystemEntry
     , ISDKObject<SDKFilesystemFile>
 {
+    private static readonly ConcurrentDictionary<SDKFilesystemFile, Bitmap> _cached_thumbnails = [];
+
+
     public EdsDirectoryItemInfo FileInfo { get; }
 
     public ulong FileSize => FileInfo.Size;
@@ -1165,6 +1225,7 @@ public sealed class SDKFilesystemFile
     public override string Name => FileInfo.szFileName;
 
     public Bitmap? Thumbnail { get; set; }
+
 
 
     public SDKFilesystemFile(SDKWrapper sdk, nint handle, string name)
@@ -1176,6 +1237,33 @@ public sealed class SDKFilesystemFile
 
         FileInfo = info;
     }
+
+    public Bitmap Tumbnail
+    {
+        get
+        {
+            if (!_cached_thumbnails.TryGetValue(this, out Bitmap? bitmap))
+            {
+                using SDKStream stream = SDKStream.CreateMemoryStream(SDK, 0);
+
+                SDK.SendSDKCommand(() => EDSDK_API.EdsDownloadThumbnail(this, stream));
+
+                bitmap = stream.ReadBitmap(EdsImageSource.Thumbnail);
+            }
+
+            return bitmap;
+
+
+        }
+    }
+
+                    //if (false) // TODO
+                    //{
+                    //    //if it's not a folder, create thumbnail and save it to the entry                       
+                    //    
+                    //    
+                    //    children[i].Thumbnail = 
+                    //}
 
     public void Download(SDKStream destination, EdsProgressCallback? callback = null)
     {
