@@ -1,0 +1,40 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Custom for Visual Studio
+*.cs     diff=csharp
+*.css    diff=css
+*.java   diff=java
+*.html   diff=html
+*.xhtml  diff=html
+*.shtml  diff=html
+*.htmls  diff=html
+*.htm    diff=html
+*.xhtm   diff=html
+*.md     diff=markdown
+*.py     diff=python
+*.php    diff=php
+*.tex    diff=tex
+*.c      diff=cpp
+*.h      diff=cpp
+*.cpp    diff=cpp
+*.hpp    diff=cpp
+*.sln    merge=union
+*.csproj merge=union
+*.vxproj merge=union
+*.vcproj merge=union
+*.vbproj merge=union
+*.fsproj merge=union
+*.dbproj merge=union
+
+# Standard to msysgit
+*.doc	 diff=astextplain
+*.DOC	 diff=astextplain
+*.docx diff=astextplain
+*.DOCX diff=astextplain
+*.dot  diff=astextplain
+*.DOT  diff=astextplain
+*.pdf  diff=astextplain
+*.PDF	 diff=astextplain
+*.rtf	 diff=astextplain
+*.RTF	 diff=astextplain
