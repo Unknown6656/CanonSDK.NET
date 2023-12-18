@@ -1,5 +1,7 @@
 // #define STRICT_SETGET_4_BYTES_ONLY
 
+using Microsoft.Extensions.Logging;
+
 using System.Runtime.InteropServices;
 using System.Diagnostics.CodeAnalysis;
 using System.Collections.Concurrent;
@@ -9,6 +11,7 @@ using System.Reflection;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.IO;
 using System;
 
 using EDSDK.Native;
@@ -485,12 +488,6 @@ public abstract class SDKObject
 
     #endregion
 
-    public void Download(ulong size, SDKStream destination) => SDK.Error = EDSDK_API.Download(this, size, destination);
-
-    public void DownloadComplete() => SDK.Error = EDSDK_API.DownloadComplete(this);
-
-    public void DownloadCancel() => SDK.Error = EDSDK_API.DownloadCancel(this);
-
     public static T? FromHandle<T>(SDKWrapper sdk, nint handle) where T : class, ISDKObject<T> => T.FromHandle(sdk, handle);
 
     internal static SDKObject? FromHandle(SDKWrapper sdk, nint handle) => new __unspecified_SDK_object__(sdk, handle);
@@ -665,6 +662,21 @@ public sealed class SDKImage(SDKWrapper sdk, nint handle)
     : SDKProgressableObject(sdk, handle)
     , ISDKObject<SDKImage>
 {
+    private readonly Dictionary<EdsImageSource, EdsImageInfo> _cached_info = [];
+
+
+    public EdsImageInfo GetInfo(EdsImageSource source)
+    {
+        if (!_cached_info.TryGetValue(source, out EdsImageInfo info))
+        {
+            SDK.Error = EDSDK_API.GetImageInfo(this, source, out info);
+
+            _cached_info[source] = info;
+        }
+
+        return info;
+    }
+
     public static new SDKImage? FromHandle(SDKWrapper sdk, nint handle) => handle == 0 ? null : new(sdk, handle);
 
     public static SDKImage FromStream(SDKStream stream)
@@ -777,11 +789,13 @@ public unsafe sealed class SDKStream(SDKWrapper sdk, nint handle)
     }
 
 
-    public static SDKStream CreateFileStream(SDKWrapper sdk, string filename, EdsFileCreateDisposition disposition, EdsAccess access)
+    public static SDKStream CreateFileStream(SDKWrapper sdk, FileInfo destination, EdsFileCreateDisposition disposition, EdsAccess access)
     {
-        sdk.Error = filename.Any(c => c <= 0xff)
-                  ? EDSDK_API.CreateFileStreamA(sdk, filename, disposition, access, out SDKStream stream)
-                  : EDSDK_API.CreateFileStreamW(sdk, filename, disposition, access, out stream);
+        string path = destination.FullName;
+
+        sdk.Error = path.Any(c => c <= 0xff)
+                  ? EDSDK_API.CreateFileStreamA(sdk, path, disposition, access, out SDKStream stream)
+                  : EDSDK_API.CreateFileStreamW(sdk, path, disposition, access, out stream);
 
         return stream;
     }
@@ -917,6 +931,22 @@ public abstract class SDKEnumerableFilesystemEntry(SDKWrapper sdk, nint handle, 
     protected int ItemCount => _files.Count;
 
     protected SDKFilesystemEntry this[int index] => _files[index]!;
+
+    public SDKFilesystemEntry[] GetAllSubEntriesRecursively()
+    {
+        List<SDKFilesystemEntry> entries = [];
+
+        foreach (SDKFilesystemEntry? entry in _files)
+            if (entry != null)
+            {
+                entries.Add(entry);
+
+                if (entry is SDKEnumerableFilesystemEntry enumerable)
+                    entries.AddRange(enumerable.GetAllSubEntriesRecursively());
+            }
+
+        return entries.ToArray();
+    }
 }
 
 public sealed class SDKFilesystemCamera(SDKWrapper sdk, nint handle, string name = "Camera")
@@ -925,10 +955,12 @@ public sealed class SDKFilesystemCamera(SDKWrapper sdk, nint handle, string name
 {
     public int VolumeCount => ItemCount;
 
-    public SDKFilesystemVolume[] Volumes => [.. from i in Enumerable.Range(0, VolumeCount)
+    public SDKFilesystemVolume[] AllVolumes => [.. from i in Enumerable.Range(0, VolumeCount)
                                                 let volume = this[i]
                                                 where volume != null
                                                 select volume!];
+
+    public SDKFilesystemVolume[] NonHDDVolumes => [.. AllVolumes.Where(v => v.Name != "HDD")];
 
     public new SDKFilesystemVolume? this[int index] => base[index].As<SDKFilesystemVolume>();
 
@@ -945,6 +977,8 @@ public sealed class SDKFilesystemVolume
     public override string Name => VolumeInfo.szVolumeLabel;
 
     public EdsStorageType StorageType => VolumeInfo.StorageType;
+
+    public EdsAccess Access => VolumeInfo.Access;
 
     public ulong Capacity => VolumeInfo.MaxCapacity;
 
@@ -970,6 +1004,8 @@ public sealed class SDKFilesystemVolume
 
     public void Format()
     {
+        SDK.Logger.LogInformation($"Formatting volume '{Name}'.");
+
         throw new NotImplementedException();
 
         SDK.SendSDKCommand(() => SDK.Error = EDSDK_API.FormatVolume(this), sdk_action: nameof(EDSDK_API.FormatVolume));
@@ -1038,6 +1074,31 @@ public sealed class SDKFilesystemFile
 
         FileInfo = info;
     }
+
+    public void Download(SDKStream destination, EdsProgressCallback? callback = null)
+    {
+        if (callback != null)
+            destination.SetProgressCallback(EdsProgressOption.Periodically, callback, this);
+
+        Download(destination);
+    }
+
+    private void Download(SDKStream destination)
+    {
+        try
+        {
+            SDK.Error = EDSDK_API.Download(this, FileSize, destination);
+        }
+        finally
+        {
+            DownloadComplete();
+            Release();
+        }
+    }
+
+    public void DownloadComplete() => SDK.Error = EDSDK_API.DownloadComplete(this);
+
+    public void DownloadCancel() => SDK.Error = EDSDK_API.DownloadCancel(this);
 
     public void Delete()
     {
