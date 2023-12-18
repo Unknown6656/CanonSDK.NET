@@ -1088,62 +1088,6 @@ public sealed class SDKWrapper
     // public SDKFilesystemEntry[] GetAllEntries() => [.. MainCamera.Filesystem.NonHDDVolumes.SelectMany(volume => volume.GetAllSubEntriesRecursively())];
 
 
-    /// <summary>
-    /// Gets the children of a camera folder/volume. Recursive method.
-    /// </summary>
-    /// <param name="ptr">Pointer to volume or folder</param>
-    /// <returns></returns>
-    private CameraFileEntry[] GetChildren(nint ptr)
-    {
-        //get children of first pointer
-        Error = EDSDK_API.EdsGetChildCount(ptr, out int childCount);
-
-        if (childCount > 0)
-        {
-            //if it has children, create an array of entries
-            CameraFileEntry[] children = new CameraFileEntry[childCount];
-
-            for (int i = 0; i < childCount; i++)
-            {
-                //get children of children
-                Error = EDSDK_API.EdsGetChildAtIndex(ptr, i, out nint childReference);
-
-                //get the information about this children
-                EdsDirectoryItemInfo child = new();
-
-                SendSDKCommand(() => EDSDK_API.EdsGetDirectoryItemInfo(childReference, out child));
-
-                //create entry from information
-                children[i] = new CameraFileEntry(this, child.szFileName, child.isFolder != 0 ? SDKFilesystemEntryType.Folder : SDKFilesystemEntryType.File, childReference);
-
-                if (children[i].Type == SDKFilesystemEntryType.File)
-                {
-                    if (false) // TODO
-                    {
-                        //if it's not a folder, create thumbnail and save it to the entry                       
-                        SDKStream stream = SDKStream.CreateMemoryStream(this, 0);
-                        SendSDKCommand(() => Error = EDSDK_API.EdsDownloadThumbnail(childReference, stream));
-                        children[i].Thumbnail = GetImage(stream, EdsImageSource.Thumbnail);
-                    }
-                }
-                else
-                {
-                    // if it's a folder, check for children with recursion
-                    CameraFileEntry[] retval = GetChildren(childReference);
-
-                    if (retval != null)
-                        children[i].AddSubEntries(retval);
-                }
-
-                childReference.Release();
-            }
-
-            return children;
-        }
-        else
-            return [];
-    }
-
     #endregion
 }
 
