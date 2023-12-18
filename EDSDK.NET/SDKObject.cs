@@ -1,4 +1,4 @@
-﻿// #define STRICT_SETGET_4_BYTES_ONLY
+// #define STRICT_SETGET_4_BYTES_ONLY
 
 using Microsoft.Extensions.Logging;
 
@@ -1246,24 +1246,48 @@ public sealed class SDKFilesystemFile
             {
                 using SDKStream stream = SDKStream.CreateMemoryStream(SDK, 0);
 
-                SDK.SendSDKCommand(() => EDSDK_API.EdsDownloadThumbnail(this, stream));
+                SDK.SendSDKCommand(() => EDSDK_API.DownloadThumbnail(this, stream));
 
-                bitmap = stream.ReadBitmap(EdsImageSource.Thumbnail);
+                bitmap = stream.ToBitmap(EdsImageSource.Thumbnail);
+                _cached_thumbnails[this] = bitmap;
             }
 
             return bitmap;
-
-
         }
     }
 
-                    //if (false) // TODO
-                    //{
-                    //    //if it's not a folder, create thumbnail and save it to the entry                       
-                    //    
-                    //    
-                    //    children[i].Thumbnail = 
-                    //}
+    public EdsFileAttribute FileAttributes
+    {
+        get
+        {
+            SDK.Error = EDSDK_API.GetAttribute(this, out EdsFileAttribute attributes);
+
+            return attributes;
+        }
+        set => SDK.Error = EDSDK_API.SetAttribute(this, value);
+    }
+
+
+
+    public SDKFilesystemFile(SDKWrapper sdk, nint handle, string name)
+        : base(sdk, handle, SDKFilesystemEntryType.File, name)
+    {
+        EdsDirectoryItemInfo info = new();
+
+        SDK.SendSDKCommand(() => SDK.Error = EDSDK_API.GetDirectoryItemInfo(this, out info));
+
+        FileInfo = info;
+    }
+
+    public bool HasFileAttribute(EdsFileAttribute attribute) => FileAttributes.HasFlag(attribute);
+
+    public void ToggleFileAttribute(EdsFileAttribute attribute, bool active)
+    {
+        if (active)
+            FileAttributes |= attribute;
+        else
+            FileAttributes &= ~attribute;
+    }
 
     public void Download(SDKStream destination, EdsProgressCallback? callback = null)
     {

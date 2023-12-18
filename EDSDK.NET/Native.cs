@@ -1939,8 +1939,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern uint EdsGetAttribute(nint inDirItemRef, out EdsFileAttribute outFileAttribute);
+    public static SDKError GetAttribute(SDKFilesystemFile file, out EdsFileAttribute attributes)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsGetAttribute(nint inDirItemRef, out EdsFileAttribute outFileAttribute);
+
+        return EdsGetAttribute(CheckValidObject(file), out attributes);
+    }
 
     /*-----------------------------------------------------------------------------
     //
@@ -1958,8 +1963,13 @@ public static unsafe class EDSDK_API
     //
     //  Returns:    Any of the sdk errors.
     -----------------------------------------------------------------------------*/
-    [DllImport(_DLL_PATH)]
-    public static extern uint EdsSetAttribute(nint inDirItemRef, EdsFileAttribute inFileAttribute);
+    public static SDKError SetAttribute(SDKFilesystemFile file, EdsFileAttribute attributes)
+    {
+        [DllImport(_DLL_PATH)]
+        static extern SDKError EdsSetAttribute(nint inDirItemRef, EdsFileAttribute inFileAttribute);
+
+        return EdsSetAttribute(CheckValidObject(file), attributes);
+    }
 
     #endregion
     #region STREAM OPERATING FUNCTIONS
