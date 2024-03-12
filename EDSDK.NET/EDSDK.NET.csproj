@@ -8,7 +8,7 @@
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
-        <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+        <PackageReference Include="System.Drawing.Common" Version="8.0.3" />
         <!--<PackageReference Include="Unknown6656.IndexableProperties" Version="1.1.0" />-->
     </ItemGroup>
     <ItemGroup>
